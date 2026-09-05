@@ -174,6 +174,73 @@ public class LiveStationTests
     }
 
     /// <summary>
+    /// Closes a real gap: this SDK's ClientStream mode had never actually
+    /// been proven to round-trip a reply against a real station -- the
+    /// only prior streaming coverage was ServerStream (above), which never
+    /// touches AwaitReplyAsync or CloseSendAsync-then-await-a-reply at all.
+    /// Same shape as macula-go's TestLiveClientStreamReplyRoundTrip
+    /// (stream/live_test.go), which found and pinned the exact bug this
+    /// proves is fixed: the CALLER pushes data and half-closes its own
+    /// send side with <see cref="StreamHandle.CloseSendAsync"/> while it is
+    /// still awaiting the PROVIDER's reply -- macula-station used to tear
+    /// down the whole bidirectional stream route on ANY STREAM_END
+    /// (regardless of mode or which side sent it), so the provider's later
+    /// STREAM_REPLY had nowhere left to be relayed to and
+    /// <see cref="StreamHandle.AwaitReplyAsync"/> would hang until its own
+    /// timeout. Fixed in macula-station (mode-aware half-close semantics,
+    /// commit 07db0d8) -- this asserts the reply is ACTUALLY received with
+    /// the correct payload and responder, not merely that no exception was
+    /// thrown, since a silent indefinite hang was the bug's entire
+    /// symptom.
+    /// </summary>
+    [Fact]
+    public async Task Client_stream_half_close_still_gets_its_reply_against_the_live_fleet()
+    {
+        var providerIdentity = KeyPair.GenerateWithDefaultPuzzle();
+        var callerIdentity = KeyPair.GenerateWithDefaultPuzzle();
+
+        await using var providerSession = await Session.ConnectAsync(StationHost, StationPort, providerIdentity, Connection.Trust.UseWebPki);
+        await using var callerSession = await Session.ConnectAsync(StationHost, StationPort, callerIdentity, Connection.Trust.UseWebPki);
+
+        var realm = new byte[32];
+        Random.Shared.NextBytes(realm);
+        var procedure = $"macula_csharp_sdk.test_client_stream.{Guid.NewGuid():N}";
+
+        await providerSession.AdvertiseAsync(new AdvertiseSpec { Realm = realm, Procedure = procedure, Advertiser = providerIdentity.NodeId() });
+        await Task.Delay(500); // give the station a moment to register the advertisement
+
+        var acceptTask = StreamHandle.AcceptAsync(providerSession, TimeSpan.FromSeconds(10));
+
+        var deadline = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 10_000;
+        var callerHandle = await StreamHandle.OpenAsync(callerSession, procedure, realm, StreamMode.ClientStream, Value.Null, deadline, callerIdentity);
+
+        var (providerHandle, openInfo) = await acceptTask;
+        Assert.Equal(procedure, openInfo.Procedure);
+        Assert.Equal(StreamMode.ClientStream, openInfo.Mode);
+
+        await callerHandle.SendDataAsync(StreamEncoding.Raw, Value.Bytes("hello from the caller"u8.ToArray()), callerIdentity);
+        // Half-close the caller's own send side -- the caller is done
+        // sending, but is NOT done with this exchange: it still expects a
+        // reply. This is the exact half-close that used to tear down the
+        // whole relay route before the provider's reply could ever arrive.
+        await callerHandle.CloseSendAsync(callerIdentity);
+
+        var item = await providerHandle.RecvAsync(TimeSpan.FromSeconds(5));
+        var data = Assert.IsType<StreamItem.Data>(item);
+        Assert.Equal("hello from the caller"u8.ToArray(), data.Body.AsBytes());
+
+        Assert.Equal(StreamItem.Eof, await providerHandle.RecvAsync(TimeSpan.FromSeconds(5)));
+
+        await providerHandle.SendReplyAsync(Value.Text("processed: hello from the caller"), providerIdentity);
+
+        // The actual assertion this test exists for: AwaitReplyAsync must
+        // return the real reply, not hang until its own timeout throws.
+        var (payload, respondedBy) = await callerHandle.AwaitReplyAsync(TimeSpan.FromSeconds(5));
+        Assert.Equal("processed: hello from the caller", payload.AsText());
+        Assert.Equal(providerIdentity.NodeId(), respondedBy);
+    }
+
+    /// <summary>
     /// The unary-RPC counterpart to the streaming provider test: two
     /// independent connections, one advertising and serving inbound CALLs
     /// via <see cref="Session.ServeOneCallAsync"/>, the other dialing in
