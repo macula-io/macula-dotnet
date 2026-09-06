@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <Compile Include="Station.fs" />
+    <Compile Include="00_Quickstart.fs" />
     <Compile Include="01_Handshake.fs" />
     <Compile Include="02_Call.fs" />
     <Compile Include="03_PublishSubscribe.fs" />

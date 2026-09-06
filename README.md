@@ -122,28 +122,66 @@ src/Macula/
   Streaming/                StreamHandle -- caller and provider roles
   Dht/                      DirectDial (resolve/call/advertise via the mesh DHT) + CertChain
   Ucan/                     UcanToken (mint/verify/introspect) + Policy (gated serving)
-examples/                  One example per primitive, plus error handling, a long-running provider, direct-dial, and UCAN (C#)
+examples/                  A quickstart, one example per primitive, plus error handling, a long-running provider, direct-dial, and UCAN (C#)
 examples-fsharp/           The same examples in F#
 tests/Macula.Tests/         Offline unit tests + live station tests
 ```
 
 ## Quick start
 
-Also lives as a runnable example — `dotnet run --project examples -- 01`:
+Also lives as a runnable example — `dotnet run --project examples --
+quickstart`. Advertises and calls its own trivial echo procedure (two
+identities, a provider and a caller, since a station kicks a connection
+the instant a second one arrives under the same identity) rather than
+depending on any particular procedure already being advertised on the
+fleet:
 
 ```csharp
 using Macula.Connection;
+using Macula.Frame;
 using Macula.Identity;
 
-// Puzzle-hardened identity -- required. An unhardened identity fails the
-// handshake silently (QUIC/TLS looks healthy, HELLO never accepts).
-var identity = KeyPair.GenerateWithDefaultPuzzle();
+namespace Macula.Examples;
 
-await using var session = await Session.ConnectAsync(
-    "station-de-frankfurt.macula.io", 4433, identity, Trust.UseWebPki);
+/// <summary>
+/// Connects to a real macula-station, advertises a trivial echo
+/// procedure, and calls it. Two <see cref="Session"/>s, two identities
+/// (a provider and a caller) -- a station kicks a connection the instant
+/// a second one arrives under the same identity.
+/// </summary>
+public static class Quickstart
+{
+    public static async Task RunAsync()
+    {
+        var providerIdentity = KeyPair.GenerateWithDefaultPuzzle();
+        var callerIdentity = KeyPair.GenerateWithDefaultPuzzle();
 
-Console.WriteLine($"connected -- station node_id = {Convert.ToHexStringLower(session.RemoteInfo.NodeId)}");
-// session's own DisposeAsync sends GOODBYE and closes.
+        await using var providerSession = await Session.ConnectAsync(Station.Host, Station.Port, providerIdentity, Trust.UseWebPki);
+        await using var callerSession = await Session.ConnectAsync(Station.Host, Station.Port, callerIdentity, Trust.UseWebPki);
+
+        var realm = new byte[32];
+        // Unique per run -- reusing a fixed procedure name across rapid
+        // repeated runs can hit stale DHT routing state from the prior
+        // run's now-dead advertiser.
+        var procedure = $"macula_dotnet.quickstart_echo.{Guid.NewGuid():N}";
+
+        await providerSession.AdvertiseAsync(new AdvertiseSpec { Realm = realm, Procedure = procedure, Advertiser = providerIdentity.NodeId() });
+        await Task.Delay(500); // ADVERTISE is fire-and-forget; give it a moment to land
+
+        CallLookup lookup = (_, proc) => proc == procedure ? (payload => Task.FromResult(payload)) : null;
+        var serveTask = providerSession.ServeOneCallAsync(lookup, TimeSpan.FromSeconds(15));
+
+        var deadlineMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 10_000;
+        var callTask = callerSession.CallAsync(procedure, realm, Value.Text("hello"), deadlineMs, TimeSpan.FromSeconds(10));
+
+        await Task.WhenAll(serveTask, callTask);
+
+        var response = callTask.Result;
+        Console.WriteLine(response is CallResponse.Result r
+            ? $"call response: {r.Payload}"
+            : $"call response: {response}");
+    }
+}
 ```
 
 ## Examples
@@ -153,6 +191,7 @@ with matching numbers and behavior — same station calls, same output shape.
 
 | # | Run (C#) | Run (F#) | What it shows |
 |---|---|---|---|
+| 00 | `dotnet run --project examples -- 00` | `dotnet run --project examples-fsharp -- 00` | Quickstart: advertise + call its own trivial echo procedure |
 | 01 | `dotnet run --project examples -- 01` | `dotnet run --project examples-fsharp -- 01` | Identity + connect + close |
 | 02 | `dotnet run --project examples -- 02` | `dotnet run --project examples-fsharp -- 02` | Unary RPC caller (CALL/RESULT/ERROR) |
 | 03 | `dotnet run --project examples -- 03` | `dotnet run --project examples-fsharp -- 03` | PubSub (subscribe, publish, receive the EVENT) |

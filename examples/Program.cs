@@ -7,6 +7,7 @@ public static class Program
         var name = args.Length > 0 ? args[0] : "";
         Func<Task>? example = name switch
         {
+            "00" or "quickstart" => Quickstart.RunAsync,
             "01" or "handshake" => Handshake.RunAsync,
             "02" or "call" => Call.RunAsync,
             "03" or "pubsub" => PublishSubscribe.RunAsync,
@@ -24,6 +25,7 @@ public static class Program
         if (example is null)
         {
             Console.Error.WriteLine("Usage: dotnet run --project examples -- <example>");
+            Console.Error.WriteLine("  00 | quickstart             advertise + call its own trivial echo procedure");
             Console.Error.WriteLine("  01 | handshake              identity + connect + close");
             Console.Error.WriteLine("  02 | call                   unary RPC caller");
             Console.Error.WriteLine("  03 | pubsub                 publish/subscribe/event");

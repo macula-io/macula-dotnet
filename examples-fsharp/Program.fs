@@ -10,6 +10,7 @@ let main argv =
     // a C# `async Task` method with no return value would produce.
     let example : (unit -> Task<unit>) option =
         match name with
+        | "00" | "quickstart" -> Some Quickstart.run
         | "01" | "handshake" -> Some Handshake.run
         | "02" | "call" -> Some Call.run
         | "03" | "pubsub" -> Some PublishSubscribe.run
@@ -26,6 +27,7 @@ let main argv =
     match example with
     | None ->
         eprintfn "Usage: dotnet run --project examples-fsharp -- <example>"
+        eprintfn "  00 | quickstart             advertise + call its own trivial echo procedure"
         eprintfn "  01 | handshake              identity + connect + close"
         eprintfn "  02 | call                   unary RPC caller"
         eprintfn "  03 | pubsub                 publish/subscribe/event"
