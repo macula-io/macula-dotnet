@@ -10,6 +10,11 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
 
 ### Changed
 
+- **A CALL handler receives its caller.** A map payload reaches the
+  handler with the caller's 32-byte node id under `"caller"`, the caller
+  the CALL's signature was verified against, replacing any `"caller"` the
+  sender put in the payload. A payload that isn't a map reaches the
+  handler unchanged and carries no caller.
 - **Direct dial tries every authorized provider.** `DirectDial.CallAsync`,
   `CallWithUcanAsync`, `CallWithCertChainAsync`, `OpenStreamDirectAsync`,
   `OpenStreamDirectWithCertChainAsync` and `GetDirectAsync` try each

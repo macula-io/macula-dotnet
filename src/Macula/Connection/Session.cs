@@ -9,7 +9,7 @@ using Macula.Ucan;
 
 namespace Macula.Connection;
 
-/// <summary>A provider-side handler for one advertised (realm, procedure). Throw <see cref="CallHandlerException"/> for an application-level failure with a message; any other exception is treated as a crash.</summary>
+/// <summary>A provider-side handler for one advertised (realm, procedure). Throw <see cref="CallHandlerException"/> for an application-level failure with a message; any other exception is treated as a crash. A map payload arrives with the caller's 32-byte node id under "caller": the caller the CALL's signature was verified against, replacing any "caller" the sender put in the payload. A payload that isn't a map arrives unchanged and carries no caller.</summary>
 public delegate Task<Value> CallHandler(Value payload);
 
 /// <summary>Resolves an inbound CALL's (realm, procedure) to a handler, or null if nothing is advertised for it.</summary>
@@ -451,7 +451,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
 
         try
         {
-            var value = await handler(callInfo.Payload).ConfigureAwait(false);
+            var value = await handler(WithCaller(callInfo.Payload, callInfo.Caller)).ConfigureAwait(false);
             session?.Announce(RpcFacts.Replied(callInfo.Realm, identity, requestId, null));
             return ResultFrame.Build(new ResultSpec { CallId = callInfo.CallId, Payload = value, RespondedBy = selfPub });
         }
@@ -467,6 +467,28 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             return CallErrorFrame.Build(new CallErrorSpec { CallId = callInfo.CallId, Code = Bolt4Code.TemporaryRelayFailure, ReportedBy = selfPub });
         }
     }
+
+    /// <summary>
+    /// The payload a CALL's handler receives: a map payload with
+    /// <paramref name="caller"/>, the node id the CALL's signature was
+    /// verified against, under "caller", replacing a "caller" the sender put
+    /// there under a text or byte-string key; any other payload unchanged.
+    /// Mirrors macula_station_link:with_caller/2.
+    /// </summary>
+    internal static Value WithCaller(Value payload, byte[] caller) =>
+        payload is Value.MapValue map
+            ? Value.Map(map.Entries
+                .Where(entry => !IsCallerKey(entry.Key))
+                .Append(new KeyValuePair<Value, Value>(Value.Text("caller"), Value.Bytes(caller)))
+                .ToList())
+            : payload;
+
+    private static bool IsCallerKey(Value key) => key switch
+    {
+        Value.TextValue text => text.Utf8.AsSpan().SequenceEqual("caller"u8),
+        Value.BytesValue bytes => bytes.Value.AsSpan().SequenceEqual("caller"u8),
+        _ => false,
+    };
 
     /// <summary>Opens a fresh dedicated QUIC stream (streaming RPC session, content transfer).</summary>
     public async Task<FrameStream> OpenDedicatedStreamAsync(CancellationToken ct = default)
