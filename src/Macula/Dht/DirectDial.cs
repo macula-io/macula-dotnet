@@ -52,8 +52,9 @@ namespace Macula.Dht;
 /// open to the provider's station under the same identity (resolveVia
 /// itself, or a StationPool link), streams and content transfers run on that
 /// session, on a dedicated QUIC stream of their own, instead of dialing, and
-/// that session is never closed here. It needs no station_endpoint lookup
-/// either.
+/// that session is never closed here. A session direct dial itself dialed is
+/// shared the same way by the requests that find it, and closes when the
+/// last of them is done. Reuse needs no station_endpoint lookup either.
 /// </summary>
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
@@ -110,15 +111,30 @@ public static class DirectDial
     public sealed record Resolved(byte[] Station, string Host, ushort Port);
 
     /// <summary>
-    /// A stream direct dial opened, and the session it runs on. OwnsSession
-    /// is true when direct dial dialed Session for this stream: the caller
-    /// owns it and closes it once the stream and any other work on it is
-    /// done. It is false when the stream runs on a session this process
-    /// already had open to the provider's station under the same identity,
-    /// such as resolveVia or a StationPool link: close only the stream, never
-    /// that session.
+    /// A stream direct dial opened, and the session it runs on. Dispose it
+    /// once the stream is done: that releases the stream's hold on Session. A
+    /// session direct dial dialed then closes when no other direct-dial
+    /// request still uses it; a session this process already had open under
+    /// its owner, such as resolveVia or a StationPool link, stays open.
     /// </summary>
-    public sealed record OpenedStream(StreamHandle Stream, Session Session, bool OwnsSession);
+    public sealed class OpenedStream : IAsyncDisposable
+    {
+        private readonly StationTarget<Session> _target;
+        private int _released;
+
+        internal OpenedStream(StreamHandle stream, StationTarget<Session> target)
+        {
+            Stream = stream;
+            _target = target;
+        }
+
+        public StreamHandle Stream { get; }
+
+        public Session Session => _target.Session;
+
+        public ValueTask DisposeAsync() =>
+            Interlocked.Exchange(ref _released, 1) == 0 ? _target.ReleaseAsync() : ValueTask.CompletedTask;
+    }
 
     /// <summary>
     /// The two DHT lookups direct-dial resolution makes, as delegates, so
@@ -143,13 +159,25 @@ public static class DirectDial
     internal sealed record CertChainCheck(byte[] RealmCaPem, string ExpectedOrg);
 
     /// <summary>
-    /// The session a direct-dial request runs on: one direct dial opened for
-    /// it (Owned), which is closed after the request or handed to the
-    /// caller, or one this process already had open to that station under
-    /// the same identity, which belongs to its owner and is never closed
-    /// here.
+    /// The session a direct-dial request runs on, and the lease the request
+    /// holds on it when direct dial dialed that session. A session this
+    /// process already had open under its owner (resolveVia, a StationPool
+    /// link) comes with no lease: the request never releases or closes it.
     /// </summary>
-    internal sealed record StationTarget<TSession>(TSession Session, bool Owned) where TSession : class;
+    internal sealed record StationTarget<TSession>(TSession Session, DialedSession<TSession>? Lease) where TSession : class
+    {
+        // Gives back the request's lease, if it holds one.
+        internal ValueTask ReleaseAsync() => Lease?.ReleaseAsync() ?? ValueTask.CompletedTask;
+    }
+
+    // The target for reusing a session found open to a station: without a
+    // lease when its owner opened it, with a new lease when direct dial
+    // dialed it, and none at all when its last lease was already released.
+    internal static StationTarget<TSession>? Reuse<TSession>(TSession? found, Func<TSession, DialedSession<TSession>?> dialedBy) where TSession : class =>
+        found is null ? null
+        : dialedBy(found) is not { } dialed ? new StationTarget<TSession>(found, Lease: null)
+        : dialed.TryLease() ? new StationTarget<TSession>(found, dialed)
+        : null;
 
     /// <summary>
     /// One call's time budget, on a monotonic clock. It covers resolution,
@@ -240,10 +268,6 @@ public static class DirectDial
     private static TTarget? ReusedSession<TTarget>(Func<byte[], TTarget?>? alreadyOpen, byte[] station) where TTarget : class =>
         alreadyOpen?.Invoke(station);
 
-    // Whether a request closes its session once it finishes: only a session
-    // direct dial opened for it.
-    private static bool ClosesSession<TSession>(StationTarget<TSession> target) where TSession : class =>
-        target.Owned;
 
     // What one DHT query came to. A query cut off by the deadline learned
     // nothing.
@@ -482,7 +506,7 @@ public static class DirectDial
     /// <summary>CallAsync, resolved via ResolveWithCertChainAsync instead of ResolveAsync -- see both for the full contract. Opt-in managed-realm authorization; CallAsync itself is unaffected.</summary>
     public static Task<CallResponse> CallWithCertChainAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, byte[] realmCaPem, string expectedOrg, Value payload, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, new CertChainCheck(realmCaPem, expectedOrg), DialerFor(identity),
-            ClosingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c), CloseSession),
+            ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c)),
             timeout, ct);
 
     /// <summary>AdvertiseDirectAsync plus embedding a service-cert chain (leaf-first PEM: leaf ++ org CA) for Slice 7c Direction B authorization. Opt-in; AdvertiseDirectAsync itself is unaffected.</summary>
@@ -619,7 +643,7 @@ public static class DirectDial
     /// </summary>
     private static async Task<Session> DialAndVerifyAsync(string host, ushort port, byte[] station, KeyPair identity, TimeSpan timeout, CancellationToken ct)
     {
-        var target = await Session.ConnectAsync(host, port, identity, Trust.Unsafe, timeout, ct).ConfigureAwait(false);
+        var target = await Session.ConnectDialedAsync(host, port, identity, timeout, ct).ConfigureAwait(false);
         if (!target.RemoteInfo.NodeId.AsSpan().SequenceEqual(station))
         {
             await target.CloseAsync().ConfigureAwait(false);
@@ -640,7 +664,7 @@ public static class DirectDial
             try
             {
                 var session = await DialAndVerifyAsync(station.Host, station.Port, station.Station, identity, timeout, within.Token).ConfigureAwait(false);
-                return new StationTarget<Session>(session, Owned: true);
+                return new StationTarget<Session>(session, session.DialedBy);
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
@@ -653,16 +677,12 @@ public static class DirectDial
     // second connection under the same identity would make the station
     // close that session (see Connection.OpenSessions).
     private static Func<byte[], StationTarget<Session>?> OpenSessionTo(KeyPair identity) =>
-        station => OpenSessions.Live.Find(identity.NodeId(), station) is { } session
-            ? new StationTarget<Session>(session, Owned: false)
-            : null;
+        station => Reuse(OpenSessions.Live.Find(identity.NodeId(), station), session => session.DialedBy);
 
-    private static ValueTask CloseSession(Session session) => session.CloseAsync();
-
-    // A request that closes its session once it finishes, whatever the
-    // outcome, when direct dial opened that session for it. A reused session
-    // stays open for its owner.
-    internal static RequestAt<StationTarget<TSession>, T> ClosingAfter<TSession, T>(RequestAt<TSession, T> request, Func<TSession, ValueTask> close)
+    // A request that releases its lease on its session once it finishes,
+    // whatever the outcome. A session direct dial dialed closes when that was
+    // its last lease; a session its owner opened stays open.
+    internal static RequestAt<StationTarget<TSession>, T> ReleasingAfter<TSession, T>(RequestAt<TSession, T> request)
         where TSession : class =>
         async (target, remaining, ct) =>
         {
@@ -672,10 +692,7 @@ public static class DirectDial
             }
             finally
             {
-                if (ClosesSession(target))
-                {
-                    await close(target.Session).ConfigureAwait(false);
-                }
+                await target.ReleaseAsync().ConfigureAwait(false);
             }
         };
 
@@ -704,7 +721,7 @@ public static class DirectDial
     /// </summary>
     public static Task<CallResponse> CallAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, Value payload, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, null, DialerFor(identity),
-            ClosingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c), CloseSession),
+            ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c)),
             timeout, ct);
 
     /// <summary>
@@ -718,7 +735,7 @@ public static class DirectDial
     /// </summary>
     public static Task<CallResponse> CallWithUcanAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, Value payload, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, null, DialerFor(identity),
-            ClosingAfter<Session, CallResponse>((target, remaining, c) => target.CallWithUcanAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, ucanToken, c), CloseSession),
+            ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallWithUcanAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, ucanToken, c)),
             timeout, ct);
 
     /// <summary>
@@ -829,9 +846,9 @@ public static class DirectDial
     /// The stream runs on a session this process already has open to the
     /// provider's station under identity when there is one (resolveVia, or a
     /// StationPool link), on a dedicated QUIC stream of its own; otherwise
-    /// direct dial opens a session for it. The returned
-    /// <see cref="OpenedStream"/> says which: close its Session only when
-    /// OwnsSession is true.
+    /// direct dial opens a session for it. Dispose the returned
+    /// <see cref="OpenedStream"/> once the stream is done: a session direct
+    /// dial dialed then closes when no other direct-dial request uses it.
     /// </summary>
     public static Task<OpenedStream> OpenStreamDirectAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, StreamMode mode, Value args, long deadlineMs, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, null, DialerFor(identity), OpenStream(identity, realm, procedure, mode, args, deadlineMs), timeout, ct, OpenSessionTo(identity));
@@ -840,23 +857,20 @@ public static class DirectDial
     public static Task<OpenedStream> OpenStreamDirectWithCertChainAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, byte[] realmCaPem, string expectedOrg, StreamMode mode, Value args, long deadlineMs, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, new CertChainCheck(realmCaPem, expectedOrg), DialerFor(identity), OpenStream(identity, realm, procedure, mode, args, deadlineMs), timeout, ct, OpenSessionTo(identity));
 
-    // Opens the stream on the target session and hands both to the caller,
-    // saying whether the caller owns that session. Closes the session only
-    // if the open itself fails and direct dial opened the session for it.
+    // Opens the stream on the target session and hands it to the caller with
+    // the request's lease, which disposing the OpenedStream releases. When the
+    // open itself fails, the lease is released at once.
     private static RequestAt<StationTarget<Session>, OpenedStream> OpenStream(KeyPair identity, byte[] realm, string procedure, StreamMode mode, Value args, long deadlineMs) =>
         async (target, _, ct) =>
         {
             try
             {
                 var handle = await StreamHandle.OpenAsync(target.Session, procedure, realm, mode, args, deadlineMs, identity, ct).ConfigureAwait(false);
-                return new OpenedStream(handle, target.Session, target.Owned);
+                return new OpenedStream(handle, target);
             }
             catch (Exception)
             {
-                if (ClosesSession(target))
-                {
-                    await target.Session.CloseAsync().ConfigureAwait(false);
-                }
+                await target.ReleaseAsync().ConfigureAwait(false);
                 throw;
             }
         };
@@ -880,7 +894,7 @@ public static class DirectDial
     /// </summary>
     public static Task<byte[]> PutDirectAsync(Session resolveVia, KeyPair identity, byte[] station, byte[] data, string name, TimeSpan timeout, CancellationToken ct = default) =>
         ReachStationCoreAsync(DhtLookups.Via(resolveVia), station, DialerFor(identity),
-            ClosingAfter<Session, byte[]>((target, _, c) => ContentTransfer.PutAsync(target, data, name, identity, c), CloseSession),
+            ReleasingAfter<Session, byte[]>((target, _, c) => ContentTransfer.PutAsync(target, data, name, identity, c)),
             timeout, ct, OpenSessionTo(identity));
 
     internal static async Task<T> ReachStationCoreAsync<TTarget, T>(DhtLookups dht, byte[] station, DialVerified<TTarget> dial, RequestAt<TTarget, T> request, TimeSpan timeout, CancellationToken ct, Func<byte[], TTarget?>? alreadyOpen = null)
@@ -932,7 +946,7 @@ public static class DirectDial
     /// </summary>
     public static Task<byte[]> GetDirectAsync(Session resolveVia, KeyPair identity, byte[] mcid, TimeSpan timeout, CancellationToken ct = default) =>
         FetchContentCoreAsync(DhtLookups.Via(resolveVia), mcid, DialerFor(identity),
-            ClosingAfter<Session, byte[]>((target, _, c) => ContentTransfer.GetAsync(target, mcid, identity, c), CloseSession),
+            ReleasingAfter<Session, byte[]>((target, _, c) => ContentTransfer.GetAsync(target, mcid, identity, c)),
             timeout, ct, OpenSessionTo(identity));
 
     internal static Task<T> FetchContentCoreAsync<TTarget, T>(DhtLookups dht, byte[] mcid, DialVerified<TTarget> dial, RequestAt<TTarget, T> fetch, TimeSpan timeout, CancellationToken ct, Func<byte[], TTarget?>? alreadyOpen = null)

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+using Macula.Connection;
 using Macula.Content;
 using Macula.Dht;
 using Macula.Frame;
@@ -721,15 +722,13 @@ public class DirectDialCandidatesTests
     [Fact]
     public async Task A_reused_session_is_never_closed_by_the_request()
     {
-        var closed = new List<string>();
-        var request = DirectDial.ClosingAfter<string, string>(
-            (session, _, _) => Task.FromResult($"answered on {session}"),
-            session => { closed.Add(session); return ValueTask.CompletedTask; });
+        var target = DirectDial.Reuse("the caller's session", dialedBy: _ => null);
+        var request = DirectDial.ReleasingAfter<string, string>((session, _, _) => Task.FromResult($"answered on {session}"));
 
-        var answer = await request(new DirectDial.StationTarget<string>("the caller's session", Owned: false), Roomy, CancellationToken.None);
+        var answer = await request(target!, Roomy, CancellationToken.None);
 
         Assert.Equal("answered on the caller's session", answer);
-        Assert.Empty(closed);
+        Assert.Null(target!.Lease);
     }
 
     // A guard: a session direct dial opened for the request is closed after
@@ -738,14 +737,80 @@ public class DirectDialCandidatesTests
     public async Task A_dialed_session_is_closed_after_the_request_even_when_it_fails()
     {
         var closed = new List<string>();
-        var request = DirectDial.ClosingAfter<string, string>(
-            (_, _, _) => Task.FromException<string>(new IOException("reset after the request went out")),
-            session => { closed.Add(session); return ValueTask.CompletedTask; });
+        var dialed = Dialed("a dialed session", closed);
+        var request = DirectDial.ReleasingAfter<string, string>((_, _, _) => Task.FromException<string>(new IOException("reset after the request went out")));
 
-        await Assert.ThrowsAsync<IOException>(() => request(new DirectDial.StationTarget<string>("a dialed session", Owned: true), Roomy, CancellationToken.None));
+        await Assert.ThrowsAsync<IOException>(() => request(new DirectDial.StationTarget<string>(dialed.Session, dialed), Roomy, CancellationToken.None));
 
         Assert.Equal(new[] { "a dialed session" }, closed);
     }
+
+    // Sharing a session direct dial dialed between the requests that reuse it.
+    // The names match the Rust and Go tests.
+
+    [Fact]
+    public async Task A_dialed_session_stays_open_until_its_last_lease_is_released()
+    {
+        var closed = new List<string>();
+        var dialed = Dialed("a dialed session", closed);
+        Assert.True(dialed.TryLease());
+
+        await dialed.ReleaseAsync();
+        Assert.Empty(closed);
+
+        await dialed.ReleaseAsync();
+        Assert.Equal(new[] { "a dialed session" }, closed);
+    }
+
+    [Fact]
+    public async Task A_session_that_is_closing_is_not_reused()
+    {
+        var dialed = Dialed("a dialed session", new List<string>());
+        await dialed.ReleaseAsync();
+
+        var target = DirectDial.Reuse(dialed.Session, dialedBy: _ => dialed);
+
+        Assert.Null(target);
+    }
+
+    [Fact]
+    public async Task Two_concurrent_transfers_to_one_station_share_the_dialed_session_until_both_finish()
+    {
+        var closed = new List<string>();
+        var dialed = Dialed("a dialed session", closed);
+        var firstStored = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondStored = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = DirectDial.ReleasingAfter<string, string>((_, _, _) => firstStored.Task)(
+            new DirectDial.StationTarget<string>(dialed.Session, dialed), Roomy, CancellationToken.None);
+        var second = DirectDial.ReleasingAfter<string, string>((_, _, _) => secondStored.Task)(
+            DirectDial.Reuse(dialed.Session, dialedBy: _ => dialed)!, Roomy, CancellationToken.None);
+
+        firstStored.SetResult("first stored");
+        await first;
+        Assert.Empty(closed);
+
+        secondStored.SetResult("second stored");
+        await second;
+        Assert.Equal(new[] { "a dialed session" }, closed);
+    }
+
+    [Fact]
+    public async Task A_dialed_session_shared_by_a_stream_and_a_call_closes_only_when_both_release()
+    {
+        var closed = new List<string>();
+        var dialed = Dialed("a dialed session", closed);
+        var stream = new DirectDial.StationTarget<string>(dialed.Session, dialed);
+        var call = DirectDial.ReleasingAfter<string, string>((session, _, _) => Task.FromResult($"answered on {session}"));
+
+        await call(DirectDial.Reuse(dialed.Session, dialedBy: _ => dialed)!, Roomy, CancellationToken.None);
+        Assert.Empty(closed);
+
+        await stream.ReleaseAsync();
+        Assert.Equal(new[] { "a dialed session" }, closed);
+    }
+
+    private static DialedSession<string> Dialed(string session, List<string> closed) =>
+        new(session, s => { closed.Add(s); return ValueTask.CompletedTask; });
 
     private static Task<CallResponse> CallAsync(FakeDht dht, FakeStations stations, TimeSpan timeout, DirectDial.RequestAt<string, CallResponse>? request = null) =>
         DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial, request ?? new DirectDial.RequestAt<string, CallResponse>(Reply), timeout, CancellationToken.None);
