@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.Versioning;
 using System.Threading.Channels;
 using Macula.Connection;
@@ -103,6 +104,85 @@ public class StationPoolReaderTests
 
         channel.Stop(new IOException("the test is done"));
         await consuming.WaitAsync(Wait);
+    }
+
+    [Fact]
+    public async Task A_wildcard_subscription_through_the_pool_receives_matching_events()
+    {
+        var subs = new ConcurrentDictionary<(string RealmHex, string Topic), ConcurrentDictionary<Guid, PoolEventHandler>>();
+        var dedup = new EventDedup(TimeSpan.FromMinutes(1));
+        var wildcard = Handled(subs, "app/*");
+        var exact = Handled(subs, "app/orders");
+
+        // Two links, each holding both subscriptions, as a pool's links do.
+        var channels = new List<ControlChannel>();
+        var stations = new List<FakeStation>();
+        for (var link = 0; link < 2; link++)
+        {
+            var (channel, station, _) = Connect();
+            foreach (var topic in new[] { "app/*", "app/orders" })
+            {
+                var spec = Subscribe(topic);
+                var subscription = await channel.SubscribeAsync(spec, CancellationToken.None);
+                _ = StationPool.ConsumeSubscriptionAsync(subscription, () => channel.SubscribeAsync(spec, CancellationToken.None), evt => StationPool.DeliverEventAsync(subs, dedup, spec, evt));
+            }
+            channels.Add(channel);
+            stations.Add(station);
+        }
+
+        foreach (var station in stations)
+        {
+            await station.SendEventAsync("app/orders", "order 1");
+            await station.SendEventAsync("app/invoices", "invoice 1");
+        }
+
+        Assert.Equal(new[] { "invoice 1", "order 1" }, await TakeAsync(wildcard.Reader, 2));
+        Assert.Equal(new[] { "order 1" }, await TakeAsync(exact.Reader, 1));
+        Assert.True(await NothingWithinAsync(wildcard.Reader, TimeSpan.FromMilliseconds(300)));
+        Assert.True(await NothingWithinAsync(exact.Reader, TimeSpan.FromMilliseconds(100)));
+
+        foreach (var channel in channels)
+        {
+            channel.Stop(new IOException("the test is done"));
+        }
+    }
+
+    // A pool subscriber to topic whose events land on the returned channel.
+    private static Channel<string> Handled(ConcurrentDictionary<(string RealmHex, string Topic), ConcurrentDictionary<Guid, PoolEventHandler>> subs, string topic)
+    {
+        var handled = Channel.CreateUnbounded<string>();
+        subs.GetOrAdd((Convert.ToHexStringLower(Realm), topic), _ => new ConcurrentDictionary<Guid, PoolEventHandler>())[Guid.NewGuid()] = evt =>
+        {
+            handled.Writer.TryWrite(evt.Payload.AsText());
+            return Task.CompletedTask;
+        };
+        return handled;
+    }
+
+    // The next count items on reader, in sorted order.
+    private static async Task<string[]> TakeAsync(ChannelReader<string> reader, int count)
+    {
+        var taken = new List<string>();
+        for (var i = 0; i < count; i++)
+        {
+            taken.Add(await reader.ReadAsync().AsTask().WaitAsync(Wait));
+        }
+        return taken.Order().ToArray();
+    }
+
+    // Whether nothing arrives on reader within window.
+    private static async Task<bool> NothingWithinAsync(ChannelReader<string> reader, TimeSpan window)
+    {
+        using var within = new CancellationTokenSource(window);
+        try
+        {
+            await reader.ReadAsync(within.Token);
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return true;
+        }
     }
 
     // Whether text arrives on reader within window, skipping anything else.
