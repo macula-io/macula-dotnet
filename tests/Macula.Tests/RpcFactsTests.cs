@@ -12,18 +12,11 @@ namespace Macula.Tests;
 /// provider's own bookkeeping. These are FIXED, well-known topic names on
 /// a shared PUBLIC demo fleet -- unlike this test file's siblings, which
 /// dodge collisions with real third-party traffic by randomizing the topic
-/// string, a watcher here must correlate by request_id (draining a batch
-/// per topic and finding a match) rather than trusting first-arrival,
-/// matching the exact lesson macula-go's own equivalent test had to
-/// learn live. Same fleet-flakiness caveat as <see cref="LiveStationTests"/>.
-///
-/// Passes reliably alone or under `dotnet test -- xUnit.MaxParallelThreads=1`
-/// (confirmed: 107/107 full suite, sequential). Can flake under xUnit's
-/// default cross-class parallelism, where several Live test classes hit
-/// the shared demo fleet at once -- confirmed to be fleet contention, not
-/// a code defect, the same class of issue already documented in this SDK
-/// family's Go/Rust ports (which needed `-p 1`/sequential live-test
-/// execution for the identical reason).
+/// string, the watchers here collect everything and the test picks out the
+/// facts it caused: published by its own caller or provider, in pairs that
+/// share one request_id, as macula-go's equivalent test does. Taking the
+/// latest fact instead failed whenever another call on the fleet published
+/// in between. Same fleet-flakiness caveat as <see cref="LiveStationTests"/>.
 /// </summary>
 [Trait("Category", "Live")]
 [SupportedOSPlatform("linux")]
@@ -70,23 +63,11 @@ public class RpcFactsTests
         Assert.IsType<CallResponse.Result>(response);
         await served;
 
-        var sentFact = await sentWatcher.WaitForAnyAsync(TimeSpan.FromSeconds(10));
-        var completedFact = await completedWatcher.WaitForAnyAsync(TimeSpan.FromSeconds(10));
-        var receivedFact = await receivedWatcher.WaitForAnyAsync(TimeSpan.FromSeconds(10));
-        var repliedFact = await repliedWatcher.WaitForAnyAsync(TimeSpan.FromSeconds(10));
+        var (_, completedFact) = await PairAsync(sentWatcher, completedWatcher, callerId.NodeId(), TimeSpan.FromSeconds(10));
+        Assert.Equal("completed", completedFact.Get("outcome")!.AsText());
 
-        Assert.NotNull(sentFact);
-        Assert.NotNull(completedFact);
-        Assert.NotNull(receivedFact);
-        Assert.NotNull(repliedFact);
-
-        var callerRequestId = ((Value.MapValue)sentFact!).Get("request_id")!.AsBytes();
-        Assert.Equal(callerRequestId, ((Value.MapValue)completedFact!).Get("request_id")!.AsBytes());
-        Assert.Equal("completed", ((Value.MapValue)completedFact).Get("outcome")!.AsText());
-
-        var providerRequestId = ((Value.MapValue)receivedFact!).Get("request_id")!.AsBytes();
-        Assert.Equal(providerRequestId, ((Value.MapValue)repliedFact!).Get("request_id")!.AsBytes());
-        Assert.Equal("replied", ((Value.MapValue)repliedFact!).Get("outcome")!.AsText());
+        var (_, repliedFact) = await PairAsync(receivedWatcher, repliedWatcher, providerId.NodeId(), TimeSpan.FromSeconds(10));
+        Assert.Equal("replied", repliedFact.Get("outcome")!.AsText());
 
         await sentWatcher.StopAsync();
         await completedWatcher.StopAsync();
@@ -95,16 +76,48 @@ public class RpcFactsTests
     }
 
     /// <summary>
+    /// A fact from firsts and a fact from seconds that share one request_id,
+    /// both published by publisher, waiting up to timeout for such a pair to
+    /// arrive.
+    /// </summary>
+    private static async Task<(Value.MapValue First, Value.MapValue Second)> PairAsync(FactWatcher firsts, FactWatcher seconds, byte[] publisher, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (true)
+        {
+            var candidates = seconds.PublishedBy(publisher);
+            foreach (var first in firsts.PublishedBy(publisher))
+            {
+                if (candidates.FirstOrDefault(candidate => RequestId(candidate).AsSpan().SequenceEqual(RequestId(first))) is { } second)
+                {
+                    return (first, second);
+                }
+            }
+            if (DateTime.UtcNow >= deadline)
+            {
+                Assert.Fail($"no {firsts.Topic}/{seconds.Topic} pair from this publisher shared a request_id within {timeout}; {firsts.Count} and {seconds.Count} fact(s) seen from anyone");
+            }
+            await Task.Delay(TimeSpan.FromMilliseconds(200));
+        }
+    }
+
+    private static byte[] RequestId(Value.MapValue fact)
+    {
+        var id = fact.Get("request_id")!.AsBytes();
+        Assert.Equal(16, id.Length);
+        return id;
+    }
+
+    /// <summary>
     /// Subscribes to one fixed, shared topic and buffers whatever real
     /// events arrive (including unrelated third-party traffic on this
-    /// public fleet), so the test above can pick out the one it actually
-    /// caused rather than trusting first-arrival.
+    /// public fleet), so the test above can pick out the ones it actually
+    /// caused rather than trusting the latest arrival.
     /// </summary>
     private sealed class FactWatcher
     {
         private readonly byte[] _realm;
-        private readonly string _topic;
-        private readonly List<Value> _received = new();
+        private readonly List<EventInfo> _received = new();
         private readonly object _lock = new();
         private Session? _session;
         private CancellationTokenSource? _cts;
@@ -113,7 +126,21 @@ public class RpcFactsTests
         public FactWatcher(byte[] realm, string topic)
         {
             _realm = realm;
-            _topic = topic;
+            Topic = topic;
+        }
+
+        public string Topic { get; }
+
+        /// <summary>How many facts arrived on this topic, from anyone.</summary>
+        public int Count
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _received.Count;
+                }
+            }
         }
 
         public async Task StartAsync(string host, int port)
@@ -123,34 +150,29 @@ public class RpcFactsTests
             _cts = new CancellationTokenSource();
             _task = SupervisedPubSub.RunSubscriberAsync(
                 _session,
-                new SubscribeSpec { Topic = _topic, Realm = _realm, Subscriber = id.NodeId() },
+                new SubscribeSpec { Topic = Topic, Realm = _realm, Subscriber = id.NodeId() },
                 id,
                 evt =>
                 {
                     lock (_lock)
                     {
-                        _received.Add(evt.Payload);
+                        _received.Add(evt);
                     }
                     return Task.CompletedTask;
                 },
                 _cts.Token);
         }
 
-        public async Task<Value?> WaitForAnyAsync(TimeSpan timeout)
+        /// <summary>The payloads of the facts so far that publisher published.</summary>
+        public List<Value.MapValue> PublishedBy(byte[] publisher)
         {
-            var deadline = DateTime.UtcNow + timeout;
-            while (DateTime.UtcNow < deadline)
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    if (_received.Count > 0)
-                    {
-                        return _received[^1];
-                    }
-                }
-                await Task.Delay(TimeSpan.FromMilliseconds(200));
+                return _received
+                    .Where(evt => evt.Publisher.AsSpan().SequenceEqual(publisher))
+                    .Select(evt => (Value.MapValue)evt.Payload)
+                    .ToList();
             }
-            return null;
         }
 
         public async Task StopAsync()
