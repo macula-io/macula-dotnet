@@ -77,6 +77,41 @@ public class DirectDialTests
         Assert.Equal("hello direct-dial", handlerSaw.AsText());
     }
 
+    /// <summary>
+    /// A direct call to a provider on the resolver's own station runs on the
+    /// resolver's session instead of dialing a second connection under the
+    /// same identity, which the station would answer by closing the resolver.
+    /// Reuse needs no station_endpoint lookup, so stale endpoint records on
+    /// the fleet don't affect this one.
+    /// </summary>
+    [Fact]
+    public async Task Resolver_session_still_connected_after_a_direct_call()
+    {
+        var providerId = KeyPair.GenerateWithDefaultPuzzle();
+        var callerId = KeyPair.GenerateWithDefaultPuzzle();
+        var procedure = $"macula_dotnet_sdk.direct_dial_reuse_test.{Guid.NewGuid():N}";
+        var realm = new byte[32];
+
+        await using var provider = await Session.ConnectAsync(StationHost, StationPort, providerId, Connection.Trust.UseWebPki);
+        await DirectDial.AdvertiseDirectAsync(provider, providerId, realm, procedure, TimeSpan.FromHours(1));
+        CallLookup lookup = (_, proc) => proc != procedure ? null : payload => Task.FromResult(payload);
+        var served = Task.Run(() => provider.ServeOneCallAsync(lookup, TimeSpan.FromSeconds(20)));
+
+        await using var resolver = await Session.ConnectAsync(StationHost, StationPort, callerId, Connection.Trust.UseWebPki);
+        // Reuse needs the resolver on the provider's own station.
+        Assert.True(resolver.RemoteInfo.NodeId.AsSpan().SequenceEqual(provider.RemoteInfo.NodeId),
+            $"the resolver reached station {Convert.ToHexStringLower(resolver.RemoteInfo.NodeId)} and the provider {Convert.ToHexStringLower(provider.RemoteInfo.NodeId)}");
+        var response = await DirectDial.CallAsync(resolver, callerId, realm, procedure, Value.Text("hello again"), TimeSpan.FromSeconds(15));
+        Assert.Equal("hello again", Assert.IsType<CallResponse.Result>(response).Payload.AsText());
+        await served;
+
+        // A second connection under callerId would have made the station close
+        // the resolver by now.
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        Assert.False(resolver.Ended.IsCompleted);
+        await DirectDial.ResolveAsync(resolver, realm, procedure);
+    }
+
     [Fact]
     public async Task Resolve_reports_not_advertised_for_an_unadvertised_procedure()
     {

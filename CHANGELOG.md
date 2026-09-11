@@ -15,8 +15,9 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   `OpenStreamDirectWithCertChainAsync` and `GetDirectAsync` try each
   advertised provider in the order the DHT returns them, instead of only
   the first. A provider that can't be reached before the request is sent
-  is skipped for the next one, and a request that has been sent is never
-  sent again. `GetDirectAsync` also retries while no provider has
+  is skipped for the next one, as is one whose CALL was never sent because
+  its session had ended or its turn to write didn't come in time, and a
+  request that has been sent is never sent again. `GetDirectAsync` also retries while no provider has
   announced the content yet, and a DHT lookup that fails is retried within
   the timeout instead of ending the call.
 - **Breaking: a direct-dial call that runs out of time throws what it
@@ -50,7 +51,8 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   when the last of them is done. The stream calls return
   `DirectDial.OpenedStream` (`Stream`, `Session`) instead of a
   `(Session, StreamHandle)` tuple: dispose it once the stream is done.
-  `CallAsync` and its variants still dial their own connection.
+  `CallAsync`, `CallWithUcanAsync` and `CallWithCertChainAsync` run on
+  such a session too.
 - **Breaking: one reader per session, so calls, subscriptions and serving
   run at the same time.** Each `Session` reads its own control stream and
   routes every frame: a reply to its call, an event to each matching
