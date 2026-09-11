@@ -91,7 +91,8 @@ public sealed class SessionEndedException : IOException
 ///
 /// When the channel ends, every waiting call, every subscription, the call
 /// queue and every later operation fail with <see cref="SessionEndedException"/>
-/// carrying the reason, and onEnded runs once.
+/// carrying the reason, the end is reported once through Trace with the
+/// reason, the session's node id and the station's, and onEnded runs once.
 /// </summary>
 internal sealed class ControlChannel
 {
@@ -158,7 +159,7 @@ internal sealed class ControlChannel
     }
 
     /// <summary>Ends the channel with reason, stopping the reader and every writer still waiting for a turn.</summary>
-    internal void Stop(Exception reason) => End(reason);
+    internal void Stop(Exception reason) => End(reason, closedHere: true);
 
     /// <summary>
     /// Signs frame and sends it whole. Waiting for the turn to write is bounded
@@ -355,20 +356,20 @@ internal sealed class ControlChannel
                 var frame = await _frames.RecvFrameAsync(ct).ConfigureAwait(false);
                 if (Route(frame) is { } reason)
                 {
-                    End(reason);
+                    End(reason, closedHere: false);
                     return;
                 }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            End(new IOException("the session was closed"));
+            End(new IOException("the session was closed"), closedHere: false);
         }
         catch (Exception e)
         {
             // Includes a frame that can't be decoded: nothing after it can be
             // read in step.
-            End(e as IOException ?? new IOException($"the control stream failed: {e.Message}", e));
+            End(e as IOException ?? new IOException($"the control stream failed: {e.Message}", e), closedHere: false);
         }
     }
 
@@ -528,7 +529,7 @@ internal sealed class ControlChannel
             catch (OperationCanceledException) when (bounded.IsCancellationRequested)
             {
                 var stalled = new SendTimeoutException($"a write on the control stream stalled for more than {_sendTimeout}");
-                End(stalled);
+                End(stalled, closedHere: false);
                 throw stalled;
             }
         }
@@ -582,11 +583,23 @@ internal sealed class ControlChannel
         }
     }
 
-    private void End(Exception reason)
+    private void End(Exception reason, bool closedHere)
     {
         if (!_ended.TrySetResult(reason))
         {
             return;
+        }
+        // Every end is reported once, so why a session went away can be found
+        // afterwards: a warning when the station or the connection ended it,
+        // information when it was closed here.
+        var report = $"macula: session {Convert.ToHexStringLower(_identity.NodeId())} to station {Convert.ToHexStringLower(_stationId)} ended: {reason.Message} ({reason.GetType().Name})";
+        if (closedHere)
+        {
+            Trace.TraceInformation(report);
+        }
+        else
+        {
+            Trace.TraceWarning(report);
         }
         // Stops the reader and every writer still waiting for a turn; a write
         // in progress finishes within the send timeout.

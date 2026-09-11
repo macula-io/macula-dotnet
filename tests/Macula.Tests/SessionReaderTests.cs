@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text;
 using Macula.Bolt4;
@@ -387,6 +389,37 @@ public class SessionReaderTests
     }
 
     [Fact]
+    public async Task A_session_end_is_logged_once_with_its_reason()
+    {
+        var goodbye = $"maintenance {Guid.NewGuid():N}";
+        var afterTheGoodbye = $"closed after the goodbye {Guid.NewGuid():N}";
+        var closedHere = $"closed here {Guid.NewGuid():N}";
+        var listener = new CapturingListener();
+        Trace.Listeners.Add(listener);
+        try
+        {
+            var (endedByStation, station, ended) = Connect();
+            await station.SendAsync(GoodbyeFrame.Build(goodbye));
+            await ended.Task.WaitAsync(Wait);
+            endedByStation.Stop(new IOException(afterTheGoodbye));
+
+            var (endedHere, _, _) = Connect();
+            endedHere.Stop(new IOException(closedHere));
+
+            var byStation = Assert.Single(listener.Events, e => e.Message.Contains(goodbye));
+            Assert.Equal(TraceEventType.Warning, byStation.Level);
+            Assert.Contains(Convert.ToHexStringLower(FakeStation.NodeId), byStation.Message);
+            Assert.DoesNotContain(listener.Events, e => e.Message.Contains(afterTheGoodbye));
+            var byUs = Assert.Single(listener.Events, e => e.Message.Contains(closedHere));
+            Assert.Equal(TraceEventType.Information, byUs.Level);
+        }
+        finally
+        {
+            Trace.Listeners.Remove(listener);
+        }
+    }
+
+    [Fact]
     public async Task An_unrouted_frame_is_counted_by_type()
     {
         var (channel, station, _) = Connect();
@@ -443,6 +476,30 @@ public class SessionReaderTests
 
         Assert.Equal("app/genuine", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
         Assert.Equal(1, channel.UnroutedFrames["call"]);
+    }
+
+    /// <summary>Keeps every trace event, with its level, written while it is listening.</summary>
+    private sealed class CapturingListener : TraceListener
+    {
+        private readonly ConcurrentQueue<(TraceEventType Level, string Message)> _events = new();
+
+        public IReadOnlyList<(TraceEventType Level, string Message)> Events => _events.ToArray();
+
+        public override void TraceEvent(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, string? message)
+        {
+            if (message is not null)
+            {
+                _events.Enqueue((eventType, message));
+            }
+        }
+
+        public override void Write(string? message)
+        {
+        }
+
+        public override void WriteLine(string? message)
+        {
+        }
     }
 
     private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec
