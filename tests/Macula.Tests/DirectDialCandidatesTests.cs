@@ -460,6 +460,94 @@ public class DirectDialCandidatesTests
         Assert.Contains("refused", e.Message);
     }
 
+    // Reusing a session this process already has open to a station, instead
+    // of dialing a second connection under the same identity that would make
+    // the station close the first. The names match the Rust and Go tests.
+
+    [Fact]
+    public async Task Open_stream_direct_reuses_an_open_session_to_the_provider_station()
+    {
+        // No endpoint is published for a, so only reuse can reach it.
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        var stations = new FakeStations();
+
+        var stream = await DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial,
+            new DirectDial.RequestAt<string, string>((session, _, _) => Task.FromResult($"stream on {session}")),
+            TimeSpan.FromSeconds(1), CancellationToken.None,
+            alreadyOpen: station => station.AsSpan().SequenceEqual(a.Station.NodeId()) ? "the caller's session to a" : null);
+
+        Assert.Equal("stream on the caller's session to a", stream);
+        Assert.Empty(stations.Reached);
+    }
+
+    [Fact]
+    public async Task Get_direct_reuses_an_open_session_to_the_provider_station()
+    {
+        var p = new Provider("p.test");
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.Answer(RecordFactory.ContentKey(mcid), [Announcement(p, mcid)]);
+        var stations = new FakeStations();
+        stations.Refuse(p.Host);
+
+        var content = await DirectDial.FetchContentCoreAsync(dht.Lookups, mcid, stations.Dial,
+            new DirectDial.RequestAt<string, byte[]>((session, _, _) => session == "the caller's session to p"
+                ? Task.FromResult(Content)
+                : Task.FromException<byte[]>(new IOException($"fetched on {session}"))),
+            TimeSpan.FromSeconds(1), CancellationToken.None,
+            alreadyOpen: station => station.AsSpan().SequenceEqual(p.Station.NodeId()) ? "the caller's session to p" : null);
+
+        Assert.Equal(Content, content);
+        Assert.Empty(stations.Reached);
+    }
+
+    [Fact]
+    public async Task Put_direct_reuses_an_open_session_to_the_station()
+    {
+        // No endpoint is published for the station, so only reuse can reach it.
+        var station = KeyPair.Generate();
+        var stations = new FakeStations();
+
+        var stored = await DirectDial.ReachStationCoreAsync(new FakeDht().Lookups, station.NodeId(), stations.Dial,
+            new DirectDial.RequestAt<string, string>((session, _, _) => Task.FromResult($"stored on {session}")),
+            Short, CancellationToken.None,
+            alreadyOpen: s => s.AsSpan().SequenceEqual(station.NodeId()) ? "the caller's session to the station" : null);
+
+        Assert.Equal("stored on the caller's session to the station", stored);
+        Assert.Empty(stations.Reached);
+    }
+
+    [Fact]
+    public async Task A_reused_session_is_never_closed_by_the_request()
+    {
+        var closed = new List<string>();
+        var request = DirectDial.ClosingAfter<string, string>(
+            (session, _, _) => Task.FromResult($"answered on {session}"),
+            session => { closed.Add(session); return ValueTask.CompletedTask; });
+
+        var answer = await request(new DirectDial.StationTarget<string>("the caller's session", Owned: false), Roomy, CancellationToken.None);
+
+        Assert.Equal("answered on the caller's session", answer);
+        Assert.Empty(closed);
+    }
+
+    // A guard: a session direct dial opened for the request is closed after
+    // it, even when the request fails.
+    [Fact]
+    public async Task A_dialed_session_is_closed_after_the_request_even_when_it_fails()
+    {
+        var closed = new List<string>();
+        var request = DirectDial.ClosingAfter<string, string>(
+            (_, _, _) => Task.FromException<string>(new IOException("reset after the request went out")),
+            session => { closed.Add(session); return ValueTask.CompletedTask; });
+
+        await Assert.ThrowsAsync<IOException>(() => request(new DirectDial.StationTarget<string>("a dialed session", Owned: true), Roomy, CancellationToken.None));
+
+        Assert.Equal(new[] { "a dialed session" }, closed);
+    }
+
     private static Task<CallResponse> CallAsync(FakeDht dht, FakeStations stations, TimeSpan timeout, DirectDial.RequestAt<string, CallResponse>? request = null) =>
         DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial, request ?? new DirectDial.RequestAt<string, CallResponse>(Reply), timeout, CancellationToken.None);
 
