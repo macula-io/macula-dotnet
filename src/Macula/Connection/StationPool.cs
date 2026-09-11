@@ -613,16 +613,16 @@ public sealed partial class StationPool : IAsyncDisposable
     }
 
     /// <summary>
-    /// Issue a CALL, trying each currently-connected link in turn. A
-    /// wire-level RESULT short-circuits immediately; a wire-level ERROR or
-    /// a transport failure moves to the next link UNLESS it was the last
-    /// one, in which case that outcome is what's returned/thrown -- mirrors
-    /// macula_client:call_first_success/5 exactly, including its choice to
-    /// surface the LAST attempt's own outcome rather than a generic
-    /// failure when every link was actually tried. <paramref name="timeout"/>
-    /// is applied PER LINK, not to the call as a whole -- matching the
-    /// reference, the worst case is N * timeout across N connected links,
-    /// not timeout total.
+    /// Issue a CALL on the first connected link, moving to the next link only
+    /// when the CALL was not sent on this one: its Session had ended, or its
+    /// turn to write didn't come within <paramref name="timeout"/>. A reply,
+    /// RESULT or ERROR, is returned from the link that gave it, and a call that
+    /// timed out after its write started throws
+    /// <see cref="CallTimeoutException"/>, so a provider never runs one call
+    /// twice. When no link could take it, the last link's own failure is
+    /// thrown. <paramref name="timeout"/> applies PER LINK, not to the call as
+    /// a whole, so the worst case is N * timeout across N connected links.
+    /// Pool calls publish no RPC telemetry facts, as macula's pool doesn't.
     /// </summary>
     public async Task<CallResponse> CallAsync(byte[] realm, string procedure, Value payload, TimeSpan timeout, byte[]? ucanToken = null, CancellationToken ct = default)
     {
@@ -646,44 +646,43 @@ public sealed partial class StationPool : IAsyncDisposable
             throw new NoHealthyStationException();
         }
 
-        for (var i = 0; i < connected.Count; i++)
+        return await CallUntilSentAsync(connected
+            .Select(link => (Func<Task<CallResponse>>)(() => CallOnLinkAsync(link, realm, procedure, payload, timeout, ucanToken ?? Array.Empty<byte>(), ct)))
+            .ToList()).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Runs calls in turn until one is sent, and returns its reply. It moves
+    /// on only when a call's failure says its CALL was never sent
+    /// (<see cref="ControlChannel.NotSent"/>); any other failure, a caller's
+    /// cancellation included, and the last call's failure are thrown.
+    /// </summary>
+    internal static async Task<CallResponse> CallUntilSentAsync(IReadOnlyList<Func<Task<CallResponse>>> calls)
+    {
+        for (var i = 0; ; i++)
         {
-            var isLast = i == connected.Count - 1;
             try
             {
-                var resp = await CallOnLinkAsync(connected[i], realm, procedure, payload, timeout, ucanToken ?? Array.Empty<byte>(), ct).ConfigureAwait(false);
-                if (resp is CallResponse.Result || isLast)
-                {
-                    return resp;
-                }
+                return await calls[i]().ConfigureAwait(false);
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            catch (Exception e) when (i < calls.Count - 1 && ControlChannel.NotSent(e))
             {
-                // Genuine caller cancellation, as opposed to a per-link
-                // timeout (a CallTimeoutException) -- never retry across links
-                // on this, unlike a per-link failure.
-                throw;
-            }
-            catch (Exception) when (!isLast)
-            {
-                // A per-link timeout or transport-level failure -- try the next one.
+                // Never sent on this link, so the next one can't run it twice.
             }
         }
-
-        throw new NoHealthyStationException();
     }
 
     /// <summary>
     /// One CALL on one link, the whole of it bounded by
     /// <paramref name="timeout"/>: the turn to write on the link's Session,
     /// the write and the wait for a reply. A slow write by anything else on
-    /// the link can't stretch it, and its RPC telemetry facts go to the
-    /// Session's own writer, so they don't either. Running out of time throws
-    /// <see cref="CallTimeoutException"/>.
+    /// the link can't stretch it. Running out of time throws
+    /// <see cref="CallTimeoutException"/>, and a link that isn't connected
+    /// throws <see cref="SessionEndedException"/>, as its Session has ended.
     /// </summary>
     private async Task<CallResponse> CallOnLinkAsync(PooledLink link, byte[] realm, string procedure, Value payload, TimeSpan timeout, byte[] ucanToken, CancellationToken ct)
     {
-        var session = link.Session ?? throw new IOException($"link to {link.Seed.Host}:{link.Seed.Port} is not connected");
+        var session = link.Session ?? throw new SessionEndedException(new IOException($"link to {link.Seed.Host}:{link.Seed.Port} is not connected"), writeStarted: false);
         var callId = new byte[16];
         Random.Shared.NextBytes(callId);
 
@@ -698,7 +697,7 @@ public sealed partial class StationPool : IAsyncDisposable
             UcanToken = ucanToken,
         };
 
-        return await session.CallAnnouncedAsync(spec, timeout, ct).ConfigureAwait(false);
+        return await session.LinkCallAsync(spec, timeout, ct).ConfigureAwait(false);
     }
 
     /// <summary>

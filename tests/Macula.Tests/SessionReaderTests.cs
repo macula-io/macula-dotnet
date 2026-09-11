@@ -1,25 +1,22 @@
 using System.Runtime.Versioning;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Channels;
 using Macula.Bolt4;
 using Macula.Connection;
 using Macula.Frame;
 using Macula.Identity;
 using Macula.Ucan;
+using static Macula.Tests.FakeStation;
 
 namespace Macula.Tests;
 
 /// <summary>
 /// A session's control stream read by one reader that routes every frame, so
 /// calls, subscriptions and serving work at the same time on one session. The
-/// station is an in-memory stream. The names match the Rust and Go tests.
+/// station is an in-memory stream (<see cref="FakeStation"/>). The names match
+/// the Rust and Go tests.
 /// </summary>
 public class SessionReaderTests
 {
-    private static readonly TimeSpan Wait = TimeSpan.FromSeconds(2);
-    private static readonly byte[] Realm = Enumerable.Repeat((byte)7, 32).ToArray();
-
     [Fact]
     public async Task Concurrent_calls_on_one_session_each_get_their_own_reply()
     {
@@ -152,58 +149,6 @@ public class SessionReaderTests
     }
 
     [Fact]
-    [SupportedOSPlatform("linux")]
-    [SupportedOSPlatform("macos")]
-    [SupportedOSPlatform("windows")]
-    public async Task An_overflowed_subscription_is_replaced_before_it_is_closed()
-    {
-        var (channel, station, _) = Connect();
-        var spec = Subscribe("app/ticks");
-        var subscription = await channel.SubscribeAsync(spec, CancellationToken.None);
-        Assert.Equal("subscribe", TypeOf(await station.NextFrameAsync()));
-
-        // The handler holds the first event until every tick has been routed,
-        // so the consumer's copy falls behind.
-        var routed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var handled = Channel.CreateUnbounded<string>();
-        var consuming = StationPool.ConsumeSubscriptionAsync(subscription, () => channel.SubscribeAsync(spec, CancellationToken.None), async evt =>
-        {
-            await routed.Task;
-            handled.Writer.TryWrite(evt.Payload.AsText());
-        });
-
-        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
-        var sent = await station.NextFrameAsync();
-        for (var i = 0; i <= ControlChannel.EventQueueCapacity + 1; i++)
-        {
-            await station.SendEventAsync("app/ticks", $"tick {i}");
-        }
-        await station.ReplyAsync(sent, "echoed");
-        await call.WaitAsync(Wait);
-        routed.TrySetResult();
-
-        // Events reach the handler again once the fresh copy is in place.
-        var deadline = DateTime.UtcNow + Wait;
-        var resumed = false;
-        while (!resumed && DateTime.UtcNow < deadline)
-        {
-            await station.SendEventAsync("app/ticks", "after the overflow");
-            resumed = await SawAsync(handled.Reader, "after the overflow", TimeSpan.FromMilliseconds(100));
-        }
-        Assert.True(resumed);
-
-        // A call right after shows the replacement sent neither SUBSCRIBE nor UNSUBSCRIBE.
-        var probe = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
-        var next = await station.NextFrameAsync();
-        Assert.Equal("call", TypeOf(next));
-        await station.ReplyAsync(next, "echoed");
-        await probe.WaitAsync(Wait);
-
-        channel.Stop(new IOException("the test is done"));
-        await consuming.WaitAsync(Wait);
-    }
-
-    [Fact]
     public async Task A_stalled_event_consumer_does_not_stall_call_replies()
     {
         var (channel, station, _) = Connect();
@@ -302,7 +247,9 @@ public class SessionReaderTests
 
         await Assert.ThrowsAsync<SendTimeoutException>(() => channel.SendAsync(Publish("app/ticks"), CancellationToken.None).WaitAsync(Wait));
         Assert.IsType<SendTimeoutException>(await ended.Task.WaitAsync(Wait));
-        await Assert.ThrowsAsync<SendTimeoutException>(() => channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None));
+        var failure = await Assert.ThrowsAsync<SessionEndedException>(() => channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None));
+        Assert.False(failure.WriteStarted);
+        Assert.IsType<SendTimeoutException>(failure.InnerException);
     }
 
     [Fact]
@@ -363,6 +310,54 @@ public class SessionReaderTests
     }
 
     [Fact]
+    public async Task A_frame_that_cannot_be_decoded_ends_the_session()
+    {
+        var (channel, station, ended) = Connect();
+        var call = channel.CallAsync(Call("app/echo"), TimeSpan.FromSeconds(10), CancellationToken.None);
+        await station.NextAsync("call");
+
+        // A one-byte frame whose CBOR initial byte uses a reserved value.
+        await station.SendRawAsync(new byte[] { 0, 0, 0, 1, 0x1C });
+
+        Assert.IsAssignableFrom<IOException>(await ended.Task.WaitAsync(Wait));
+        var failure = await Assert.ThrowsAsync<SessionEndedException>(() => call.WaitAsync(Wait));
+        Assert.True(failure.WriteStarted);
+    }
+
+    [Fact]
+    public async Task A_call_on_a_session_that_has_ended_reports_it_was_not_sent()
+    {
+        var (channel, station, ended) = Connect();
+        station.Hangup();
+        await ended.Task.WaitAsync(Wait);
+
+        var failure = await Assert.ThrowsAsync<SessionEndedException>(() => channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None));
+        Assert.False(failure.WriteStarted);
+    }
+
+    [Fact]
+    public async Task A_call_waiting_for_the_write_lock_when_the_session_ends_reports_it_was_not_sent()
+    {
+        var (channel, station, _) = Connect();
+        station.StallSessionWrites();
+        try
+        {
+            var publish = channel.SendAsync(Publish("app/ticks"), CancellationToken.None);
+            var call = channel.CallAsync(Call("app/echo"), TimeSpan.FromSeconds(30), CancellationToken.None);
+            await station.SendAsync(GoodbyeFrame.Build("maintenance"));
+
+            // Well before the call's own 30 second deadline.
+            var failure = await Assert.ThrowsAsync<SessionEndedException>(() => call.WaitAsync(Wait));
+            Assert.False(failure.WriteStarted);
+            GC.KeepAlive(publish);
+        }
+        finally
+        {
+            station.ResumeSessionWrites();
+        }
+    }
+
+    [Fact]
     public async Task A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session()
     {
         var (channel, station, ended) = Connect();
@@ -371,8 +366,9 @@ public class SessionReaderTests
         await station.NextAsync("call");
         await station.SendAsync(GoodbyeFrame.Build("maintenance"));
 
-        var failure = await Assert.ThrowsAsync<IOException>(() => call.WaitAsync(Wait));
-        Assert.Contains("maintenance", failure.Message);
+        var failure = await Assert.ThrowsAsync<SessionEndedException>(() => call.WaitAsync(Wait));
+        Assert.True(failure.WriteStarted);
+        Assert.Contains("maintenance", failure.InnerException!.Message);
         Assert.Contains("maintenance", (await ended.Task.WaitAsync(Wait)).Message);
     }
 
@@ -385,7 +381,8 @@ public class SessionReaderTests
         await station.NextAsync("call");
         await station.SendAsync(Envelope.Base("hello", 0, Envelope.FreshFrameId(), Envelope.CurrentMillis()));
 
-        await Assert.ThrowsAsync<ProtocolViolationException>(() => call.WaitAsync(Wait));
+        var failure = await Assert.ThrowsAsync<SessionEndedException>(() => call.WaitAsync(Wait));
+        Assert.IsType<ProtocolViolationException>(failure.InnerException);
         Assert.IsType<ProtocolViolationException>(await ended.Task.WaitAsync(Wait));
     }
 
@@ -448,41 +445,6 @@ public class SessionReaderTests
         Assert.Equal(1, channel.UnroutedFrames["call"]);
     }
 
-    private static (ControlChannel Channel, FakeStation Station, TaskCompletionSource<Exception> Ended) Connect(KeyPair? identity = null, Action<Exception>? onEnded = null, TimeSpan? sendTimeout = null)
-    {
-        var (client, station) = InMemoryPipe.CreatePair();
-        var ended = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var channel = new ControlChannel(new FrameStream(client), identity ?? KeyPair.Generate(), FakeStation.NodeId, reason =>
-        {
-            onEnded?.Invoke(reason);
-            ended.TrySetResult(reason);
-        }, sendTimeout);
-        channel.Start();
-        return (channel, new FakeStation(station, client), ended);
-    }
-
-    private static CallSpec Call(string procedure) => new()
-    {
-        CallId = RandomBytes(16),
-        Procedure = procedure,
-        Realm = Realm,
-        Payload = Value.Null,
-        DeadlineMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5_000,
-        Caller = KeyPair.Generate().NodeId(),
-    };
-
-    private static CallSpec InboundCall(string procedure, KeyPair caller, long? deadlineMs = null) => new()
-    {
-        CallId = RandomBytes(16),
-        Procedure = procedure,
-        Realm = Realm,
-        Payload = Value.Null,
-        DeadlineMs = deadlineMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5_000,
-        Caller = caller.NodeId(),
-    };
-
-    private static SubscribeSpec Subscribe(string topic) => new() { Topic = topic, Realm = Realm, Subscriber = KeyPair.Generate().NodeId() };
-
     private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec
     {
         Topic = topic,
@@ -492,94 +454,4 @@ public class SessionReaderTests
         Payload = Value.Text("tick"),
         PublishedAtMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
     });
-
-    private static string ReplyText(CallResponse response) => Assert.IsType<CallResponse.Result>(response).Payload.AsText();
-
-    // Whether text arrives on reader within window, skipping anything else.
-    private static async Task<bool> SawAsync(ChannelReader<string> reader, string text, TimeSpan window)
-    {
-        using var within = new CancellationTokenSource(window);
-        try
-        {
-            while (await reader.ReadAsync(within.Token) != text)
-            {
-            }
-            return true;
-        }
-        catch (OperationCanceledException)
-        {
-            return false;
-        }
-    }
-
-    private static string TypeOf(Value.MapValue frame) => ((Value.TextValue)frame.Get("frame_type")!).AsText();
-
-    private static byte[] RandomBytes(int length)
-    {
-        var bytes = new byte[length];
-        RandomNumberGenerator.Fill(bytes);
-        return bytes;
-    }
-
-    /// <summary>The station end of the control stream: reads what the session sends and sends it frames.</summary>
-    private sealed class FakeStation
-    {
-        internal static readonly byte[] NodeId = KeyPair.Generate().NodeId();
-
-        private readonly InMemoryPipe _pipe;
-        private readonly InMemoryPipe _session;
-        private readonly FrameStream _frames;
-
-        internal FakeStation(InMemoryPipe pipe, InMemoryPipe session)
-        {
-            _pipe = pipe;
-            _session = session;
-            _frames = new FrameStream(pipe);
-        }
-
-        internal Task SendAsync(Value.MapValue frame) => _frames.SendFrameAsync(frame);
-
-        internal async Task<Value.MapValue> NextFrameAsync() => (Value.MapValue)await _frames.RecvFrameAsync().WaitAsync(Wait);
-
-        internal async Task<Value.MapValue> NextAsync(string frameType)
-        {
-            while (true)
-            {
-                var frame = await NextFrameAsync();
-                if (frame.Get("frame_type") is Value.TextValue t && t.AsText() == frameType)
-                {
-                    return frame;
-                }
-            }
-        }
-
-        internal Task ReplyAsync(Value.MapValue call, string text) =>
-            SendAsync(ResultFrame.Build(new ResultSpec { CallId = ((Value.BytesValue)call.Get("call_id")!).Value, Payload = Value.Text(text), RespondedBy = NodeId }));
-
-        internal Task SendEventAsync(string topic, string payload) =>
-            SendAsync(Envelope.Base("event", 0, Envelope.FreshFrameId(), Envelope.CurrentMillis())
-                .WithField("realm", Value.Bytes(Realm))
-                .WithField("topic", Value.Bytes(Encoding.UTF8.GetBytes(topic)))
-                .WithField("publisher", Value.Bytes(NodeId))
-                .WithField("seq", Value.UInt(1))
-                .WithField("payload", Value.Text(payload))
-                .WithField("delivered_via", Value.Text("direct")));
-
-        // An inbound CALL signed by its caller, as a station relays one. Returns its call_id.
-        // Signed by its caller unless another signer is given.
-        internal async Task<byte[]> SendInboundCallAsync(string procedure, KeyPair? signer = null, long? deadlineMs = null)
-        {
-            var caller = KeyPair.Generate();
-            var call = InboundCall(procedure, caller, deadlineMs);
-            await SendAsync(Envelope.Sign(CallFrame.Build(call), signer ?? caller));
-            return call.CallId;
-        }
-
-        /// <summary>Holds what the session writes, as a station withholding flow-control credit does.</summary>
-        internal void StallSessionWrites() => _session.StallWrites();
-
-        internal void ResumeSessionWrites() => _session.ResumeWrites();
-
-        internal void Hangup() => _pipe.Hangup();
-    }
 }

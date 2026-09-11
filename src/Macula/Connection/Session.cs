@@ -63,7 +63,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
 {
     private readonly QuicConnection _connection;
     private readonly ControlChannel _channel;
-    private bool _closed;
+    private readonly object _closeGate = new();
+    private Task? _closing;
 
     public KeyPair Identity { get; }
     public HelloInfo RemoteInfo { get; }
@@ -91,8 +92,13 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         _connection = connection;
         Identity = identity;
         RemoteInfo = remoteInfo;
-        // A session whose control stream ends is no longer offered for reuse.
-        _channel = new ControlChannel(control, identity, remoteInfo.NodeId, _ => OpenSessions.Live.Unregister(identity.NodeId(), remoteInfo.NodeId, this));
+        // A session whose control stream ends is no longer offered for reuse,
+        // and closes its connection.
+        _channel = new ControlChannel(control, identity, remoteInfo.NodeId, reason =>
+        {
+            OpenSessions.Live.Unregister(identity.NodeId(), remoteInfo.NodeId, this);
+            _ = Task.Run(() => CloseAsync().AsTask());
+        });
     }
 
     /// <summary>
@@ -228,11 +234,11 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// Send a signed CALL on the control stream and wait for the matching
     /// RESULT or ERROR, correlated by call_id. Calls, subscriptions and
     /// serving run concurrently on one session: its reader hands each reply
-    /// to its own call and every other frame to whatever waits for it. If the
-    /// session ends first, the call throws the reason. The timeout covers the
-    /// whole call, its turn to write included; when it runs out the call
-    /// throws <see cref="CallTimeoutException"/>, whose WriteStarted says
-    /// whether the CALL may have reached the station.
+    /// to its own call and every other frame to whatever waits for it. The
+    /// timeout covers the whole call, its turn to write included; when it runs
+    /// out the call throws <see cref="CallTimeoutException"/>, and when the
+    /// session ends first, <see cref="SessionEndedException"/>. Both say, in
+    /// WriteStarted, whether the CALL may have reached the station.
     /// </summary>
     public Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default) =>
         CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, Array.Empty<byte>()), timeout, ct);
@@ -242,12 +248,18 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, ucanToken), timeout, ct);
 
     /// <summary>
+    /// A CALL on this session without RPC telemetry facts, for a pool calling
+    /// on its links, as macula's pool calls through macula_station_link:call.
+    /// </summary>
+    internal Task<CallResponse> LinkCallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) =>
+        _channel.CallAsync(spec, timeout, ct);
+
+    /// <summary>
     /// A CALL on this session with its RPC telemetry facts: rpc.sent_v1 once
     /// the CALL is written, and rpc.completed_v1 when the call returns. Both go
-    /// to this session's own writer, so they never cost the call time. A pool
-    /// calls on its links through this too.
+    /// to this session's own writer, so they never cost the call time.
     /// </summary>
-    internal async Task<CallResponse> CallAnnouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct)
+    private async Task<CallResponse> CallAnnouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct)
     {
         var requestId = RpcFacts.RandomRequestId();
         CallResponse? resp = null;
@@ -474,7 +486,11 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         return new FrameStream(stream);
     }
 
-    /// <summary>Sends GOODBYE and closes the connection. Idempotent.</summary>
+    /// <summary>
+    /// Sends GOODBYE and closes the connection. Idempotent: every call shares
+    /// the first close, including the one a session starts itself once its
+    /// control stream ends.
+    /// </summary>
     /// <remarks>
     /// RESOLVED 2026-08-30 (previously flagged as an unverified risk since
     /// 2026-08-29): the Go and Rust ports of this exact method (connect,
@@ -497,13 +513,17 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// without a new reproduction; this finding is based on real live
     /// evidence, not merely "no counter-evidence found."
     /// </remarks>
-    public async ValueTask CloseAsync(string reason = "normal", string? detail = null)
+    public ValueTask CloseAsync(string reason = "normal", string? detail = null)
     {
-        if (_closed)
+        lock (_closeGate)
         {
-            return;
+            _closing ??= CloseOnceAsync(reason, detail);
+            return new ValueTask(_closing);
         }
-        _closed = true;
+    }
+
+    private async Task CloseOnceAsync(string reason, string? detail)
+    {
         OpenSessions.Live.Unregister(Identity.NodeId(), RemoteInfo.NodeId, this);
 
         try
