@@ -68,6 +68,13 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     public KeyPair Identity { get; }
     public HelloInfo RemoteInfo { get; }
 
+    /// <summary>
+    /// Set when direct dial dialed this session: it then closes once no
+    /// direct-dial request still uses it. Null for a session the application
+    /// opened, which direct dial reuses but never closes.
+    /// </summary>
+    internal DialedSession<Session>? DialedBy { get; private set; }
+
     private Session(QuicConnection connection, FrameStream control, KeyPair identity, HelloInfo remoteInfo)
     {
         _connection = connection;
@@ -86,13 +93,24 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// real-world trigger is a protocol version mismatch, which looks like
     /// a plain timeout, not an explicit error frame).
     /// </summary>
-    public static async Task<Session> ConnectAsync(
+    public static Task<Session> ConnectAsync(
         string host,
         int port,
         KeyPair identity,
         Trust trust,
         TimeSpan? handshakeTimeout = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        ConnectCoreAsync(host, port, identity, trust, handshakeTimeout, dialedByDirectDial: false, ct);
+
+    /// <summary>
+    /// ConnectAsync for direct dial: the session is marked as dialed before it
+    /// becomes findable for reuse, so every request that reuses it takes a
+    /// lease on it.
+    /// </summary>
+    internal static Task<Session> ConnectDialedAsync(string host, int port, KeyPair identity, TimeSpan handshakeTimeout, CancellationToken ct) =>
+        ConnectCoreAsync(host, port, identity, Trust.Unsafe, handshakeTimeout, dialedByDirectDial: true, ct);
+
+    private static async Task<Session> ConnectCoreAsync(string host, int port, KeyPair identity, Trust trust, TimeSpan? handshakeTimeout, bool dialedByDirectDial, CancellationToken ct)
     {
         var clientOptions = new QuicClientConnectionOptions
         {
@@ -164,6 +182,10 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             }
 
             var session = new Session(connection, control, identity, helloInfo);
+            if (dialedByDirectDial)
+            {
+                session.DialedBy = new DialedSession<Session>(session, s => s.CloseAsync());
+            }
             OpenSessions.Live.Register(identity.NodeId(), helloInfo.NodeId, session);
             return session;
         }

@@ -45,11 +45,12 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   arrives, so a second dial used to close `resolveVia` or a `StationPool`
   link. `OpenStreamDirectAsync`, `OpenStreamDirectWithCertChainAsync`,
   `PutDirectAsync` and `GetDirectAsync` now run on that open session, on a
-  dedicated QUIC stream, and leave it open. The stream calls return
-  `DirectDial.OpenedStream` (`Stream`, `Session`, `OwnsSession`) instead of
-  a `(Session, StreamHandle)` tuple: close `Session` only when
-  `OwnsSession` is true. `CallAsync` and its variants still dial their own
-  connection.
+  dedicated QUIC stream, and leave it open. A session direct dial dials
+  itself is shared the same way by the requests that find it, and closes
+  when the last of them is done. The stream calls return
+  `DirectDial.OpenedStream` (`Stream`, `Session`) instead of a
+  `(Session, StreamHandle)` tuple: dispose it once the stream is done.
+  `CallAsync` and its variants still dial their own connection.
 - **Breaking: a UCAN-gated procedure binds the token to its caller.**
   `Policy.Check` takes the CALL's caller as well as its token, and a
   `Policy.Required` procedure accepts a token only when its `aud` is that
