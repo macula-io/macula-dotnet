@@ -352,6 +352,15 @@ needs *something* registered to route an inbound CALL to once dialed;
 direct-dial only changes how the caller *finds* the station, not whether
 a handler is waiting once it gets there.
 
+When several providers advertise the same procedure, `DirectDial` tries
+them in the order the DHT returns them. A provider that can't be reached
+before the request goes out is skipped for the next one, and a request
+that has been sent is never sent again. The `timeout` given to
+`CallAsync` and its siblings bounds the whole call, finding the provider
+included, and must be positive. `ResolveAsync` and
+`ResolveStationEndpointAsync`, which take no timeout, give up after 10
+seconds.
+
 **NuGet publish:** not live yet. `.github/workflows/release.yml` publishes
 via [NuGet Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
 (OIDC, no stored API key) on every `v*` tag push — set up and ready, just
