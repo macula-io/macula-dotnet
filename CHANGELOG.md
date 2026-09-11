@@ -27,6 +27,17 @@ called out below. Releases before 0.5.0 predate this file; see the git tags.
   `PutDirectAsync`'s timeout covers the endpoint lookup and the dial.
   When the timeout cuts off a `GetDirectAsync` transfer, the
   `TimeoutException` carries the previous failure as its inner exception.
+- **Breaking: direct dial reuses a session this process already has open
+  to the provider's station under the same identity.** A station keeps one
+  connection per identity and closes the older one when a newer one
+  arrives, so a second dial used to close `resolveVia` or a `StationPool`
+  link. `OpenStreamDirectAsync`, `OpenStreamDirectWithCertChainAsync`,
+  `PutDirectAsync` and `GetDirectAsync` now run on that open session, on a
+  dedicated QUIC stream, and leave it open. The stream calls return
+  `DirectDial.OpenedStream` (`Stream`, `Session`, `OwnsSession`) instead of
+  a `(Session, StreamHandle)` tuple: close `Session` only when
+  `OwnsSession` is true. `CallAsync` and its variants still dial their own
+  connection.
 - **Breaking: a UCAN-gated procedure binds the token to its caller.**
   `Policy.Check` takes the CALL's caller as well as its token, and a
   `Policy.Required` procedure accepts a token only when its `aud` is that

@@ -101,7 +101,7 @@ it doesn't.
 | Pubkey-pinned trust | ✅ | — | `Trust.Pin(nodeId)` — Ed25519 SPKI match, no CA chain needed |
 | Direct-dial (RPC) | ✅ | ✅ | `DirectDial.ResolveAsync`/`CallAsync`/`AdvertiseDirectAsync` — resolve+dial via the mesh DHT, no advertise-gossip propagation needed |
 | Direct-dial, cert-chain-authorized | ✅ | ✅ | `...WithCertChainAsync` variants — opt-in org/realm authorization on top of plain direct-dial |
-| Direct-dial (streaming, content) | ✅ | — | `DirectDial.OpenStreamDirectAsync`/`PutDirectAsync`/`GetDirectAsync` |
+| Direct-dial (streaming, content) | ✅ | — | `DirectDial.OpenStreamDirectAsync`/`PutDirectAsync`/`GetDirectAsync` — runs on a session already open to the same station under the same identity instead of dialing a second one, which the station would answer by closing the first |
 | Periodic re-advertise | — | ✅ | `DirectDial.KeepAdvertisedDirectAsync` — keeps a station-side registration fresh for a long-lived provider |
 | Supervised PubSub pair | ✅ | ✅ | `SupervisedPubSub.RunPublisherAsync`/`RunSubscriberAsync` — callback-driven, auto-publishes `pubsub.publish_started_v1`/`publish_completed_v1` |
 | UCAN (mint/verify/introspect) | ✅ | ✅ | `UcanToken.Create`/`Verify`/`Decode` and friends — no library exists for the exact spec version macula uses, hand-rolled to match the reference exactly |

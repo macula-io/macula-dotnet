@@ -163,7 +163,9 @@ public sealed class Session : IAsyncDisposable, IFrameSink
                 throw new ConnectRefusedException(helloInfo.RefusalCode);
             }
 
-            return new Session(connection, control, identity, helloInfo);
+            var session = new Session(connection, control, identity, helloInfo);
+            OpenSessions.Live.Register(identity.NodeId(), helloInfo.NodeId, session);
+            return session;
         }
         catch
         {
@@ -487,6 +489,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             return;
         }
         _closed = true;
+        OpenSessions.Live.Unregister(Identity.NodeId(), RemoteInfo.NodeId, this);
 
         try
         {
