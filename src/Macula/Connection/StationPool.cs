@@ -659,10 +659,9 @@ public sealed partial class StationPool : IAsyncDisposable
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                // Genuine caller cancellation, as opposed to CallOnLinkAsync's
-                // own per-link timeout (which it converts to a TimeoutException
-                // before it ever reaches here) -- never retry across links on
-                // this, unlike a per-link failure.
+                // Genuine caller cancellation, as opposed to a per-link
+                // timeout (a CallTimeoutException) -- never retry across links
+                // on this, unlike a per-link failure.
                 throw;
             }
             catch (Exception) when (!isLast)
@@ -675,29 +674,18 @@ public sealed partial class StationPool : IAsyncDisposable
     }
 
     /// <summary>
-    /// The whole operation (send, RPC-telemetry writes, and the wait for a
-    /// reply) is bounded by ONE deadline derived from <paramref name="timeout"/>,
-    /// not just the reply-wait -- a caller with a 5s budget must not be able
-    /// to block indefinitely on a send while some other write on the link
-    /// (e.g. a slow inbound-CALL reply) holds the stream. `boundedCt` firing from the deadline (as opposed to
-    /// from <paramref name="ct"/> itself) is converted to
-    /// <see cref="TimeoutException"/>, mirroring the same
-    /// `OperationCanceledException) when (!ct.IsCancellationRequested)`
-    /// pattern <see cref="Session.CallAsync"/> already uses for the
-    /// identical reason.
+    /// One CALL on one link, the whole of it bounded by
+    /// <paramref name="timeout"/>: the turn to write on the link's Session,
+    /// the write and the wait for a reply. A slow write by anything else on
+    /// the link can't stretch it, and its RPC telemetry facts go to the
+    /// Session's own writer, so they don't either. Running out of time throws
+    /// <see cref="CallTimeoutException"/>.
     /// </summary>
     private async Task<CallResponse> CallOnLinkAsync(PooledLink link, byte[] realm, string procedure, Value payload, TimeSpan timeout, byte[] ucanToken, CancellationToken ct)
     {
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(timeout);
-        var boundedCt = timeoutCts.Token;
-
+        var session = link.Session ?? throw new IOException($"link to {link.Seed.Host}:{link.Seed.Port} is not connected");
         var callId = new byte[16];
         Random.Shared.NextBytes(callId);
-        var key = Convert.ToHexStringLower(callId);
-
-        var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceSentAsync(link, realm, _identity, requestId, boundedCt).ConfigureAwait(false);
 
         var spec = new CallSpec
         {
@@ -710,43 +698,7 @@ public sealed partial class StationPool : IAsyncDisposable
             UcanToken = ucanToken,
         };
 
-        CallResponse? resp = null;
-        Exception? err = null;
-        try
-        {
-            var session = link.Session ?? throw new IOException($"link to {link.Seed.Host}:{link.Seed.Port} is not connected");
-            resp = await session.CallUnannouncedAsync(spec, timeout, boundedCt).ConfigureAwait(false);
-            return resp;
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            err = new TimeoutException($"no response for call_id {key} within {timeout}");
-            throw err;
-        }
-        catch (Exception e)
-        {
-            err = e;
-            throw;
-        }
-        finally
-        {
-            // A FRESH, independent budget for the announce write, not
-            // boundedCt -- found in adversarial review 2026-09-05: on the
-            // exact paths this fact exists to report (a per-link timeout or
-            // caller cancellation), boundedCt is ALREADY cancelled by the
-            // time this finally block runs, so awaiting the gated write
-            // with that same token failed instantly and was swallowed by
-            // AnnounceAsync's own catch-all -- rpc.completed_v1
-            // outcome=failed was silently never emitted for a timed-out or
-            // cancelled call, exactly the outcome most worth recording.
-            // Linked to the ORIGINAL ct (not boundedCt), so a genuine
-            // caller cancellation still aborts this promptly instead of
-            // waiting out a full WireWriteTimeout on a connection that's
-            // being torn down anyway.
-            using var announceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            announceCts.CancelAfter(_options.WireWriteTimeout);
-            await RpcFacts.AnnounceCompletedAsync(link, realm, _identity, requestId, resp, err, announceCts.Token).ConfigureAwait(false);
-        }
+        return await session.CallAnnouncedAsync(spec, timeout, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1045,18 +997,18 @@ public sealed partial class StationPool : IAsyncDisposable
         {
             return;
         }
-        link.AddConsumer(ConsumeSubscriptionAsync(target, spec, subscription));
+        link.AddConsumer(ConsumeSubscriptionAsync(subscription, () => target.SubscribeAsync(spec), HandleEventAsync));
     }
 
     /// <summary>
-    /// Hands one link subscription's events to the pool's subscribers strictly
-    /// in arrival order, each event's dedup and fan-out finished before the
-    /// next starts, so one subscriber's handler is never re-entered for two
-    /// events from the same link. When this link's copy falls behind, a fresh
-    /// one takes its place and the station-side subscription stays. Ends with
-    /// the link's Session.
+    /// Hands one link subscription's events to handle (the pool's dedup and
+    /// fan-out) strictly in arrival order, each finished before the next
+    /// starts, so one subscriber's handler is never re-entered for two events
+    /// from the same link. When this copy falls behind, subscribeAgain makes a
+    /// fresh one before the overflowed one is closed, so the station-side
+    /// subscription never lapses. Ends with the link's Session.
     /// </summary>
-    private async Task ConsumeSubscriptionAsync(Session session, SubscribeSpec spec, Subscription subscription)
+    internal static async Task ConsumeSubscriptionAsync(Subscription subscription, Func<Task<Subscription>> subscribeAgain, Func<EventInfo, Task> handle)
     {
         try
         {
@@ -1069,12 +1021,12 @@ public sealed partial class StationPool : IAsyncDisposable
                 }
                 catch (ConsumerOverflowException)
                 {
-                    var fresh = await session.SubscribeAsync(spec).ConfigureAwait(false);
+                    var fresh = await subscribeAgain().ConfigureAwait(false);
                     await subscription.DisposeAsync().ConfigureAwait(false);
                     subscription = fresh;
                     continue;
                 }
-                await HandleEventAsync(evt).ConfigureAwait(false);
+                await handle(evt).ConfigureAwait(false);
             }
         }
         catch (Exception)
@@ -1100,12 +1052,6 @@ public sealed partial class StationPool : IAsyncDisposable
             try
             {
                 call = await session.NextInboundCallAsync(poolCt).ConfigureAwait(false);
-            }
-            catch (ConsumerOverflowException)
-            {
-                // The calls that didn't fit got temporary_relay_failure;
-                // serving carries on with a fresh queue.
-                continue;
             }
             catch (Exception)
             {
@@ -1250,7 +1196,7 @@ public sealed partial class StationPool : IAsyncDisposable
         CallLookup lookup = (_, _) => snapshot?.Handler;
         PolicyLookup policyLookup = (_, _) => snapshot?.Policy ?? Policy.Open;
 
-        var reply = await Session.BuildCallReplyAsync(session, callInfo, lookup, policyLookup, _identity, ct).ConfigureAwait(false);
+        var reply = await Session.BuildCallReplyAsync(session, callInfo, lookup, policyLookup, _identity).ConfigureAwait(false);
         try
         {
             await session.SendAsync(reply, ct).ConfigureAwait(false);
@@ -1276,7 +1222,7 @@ public sealed partial class StationPool : IAsyncDisposable
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
 [SupportedOSPlatform("windows")]
-internal sealed class PooledLink : IFrameSink
+internal sealed class PooledLink
 {
     public Seed Seed { get; }
 

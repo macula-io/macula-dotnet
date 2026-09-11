@@ -1,9 +1,12 @@
+using System.Runtime.Versioning;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Channels;
 using Macula.Bolt4;
 using Macula.Connection;
 using Macula.Frame;
 using Macula.Identity;
+using Macula.Ucan;
 
 namespace Macula.Tests;
 
@@ -99,6 +102,108 @@ public class SessionReaderTests
     }
 
     [Fact]
+    public async Task Closing_the_last_subscription_for_a_topic_unsubscribes()
+    {
+        var (channel, station, _) = Connect();
+        var first = await channel.SubscribeAsync(Subscribe("app/orders"), CancellationToken.None);
+        var second = await channel.SubscribeAsync(Subscribe("app/orders"), CancellationToken.None);
+        Assert.Equal("subscribe", TypeOf(await station.NextFrameAsync()));
+
+        await first.DisposeAsync();
+        // A call right after shows what the session sent in between: nothing.
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextFrameAsync();
+        Assert.Equal("call", TypeOf(sent));
+        await station.ReplyAsync(sent, "echoed");
+        await call.WaitAsync(Wait);
+
+        await second.DisposeAsync();
+        Assert.Equal("unsubscribe", TypeOf(await station.NextFrameAsync()));
+    }
+
+    [Fact]
+    public async Task An_overflowed_subscription_keeps_the_station_subscribed_until_it_is_closed()
+    {
+        var (channel, station, _) = Connect();
+        var behind = await channel.SubscribeAsync(Subscribe("app/ticks"), CancellationToken.None);
+        Assert.Equal("subscribe", TypeOf(await station.NextFrameAsync()));
+
+        // The call's reply comes after every event, so by the time it arrives
+        // the reader has routed all of them.
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextFrameAsync();
+        for (var i = 0; i <= ControlChannel.EventQueueCapacity; i++)
+        {
+            await station.SendEventAsync("app/ticks", $"tick {i}");
+        }
+        await station.ReplyAsync(sent, "echoed");
+        await call.WaitAsync(Wait);
+        Assert.True(behind.Overflowed);
+
+        // A call right after shows what the session sent since: nothing.
+        var probe = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var next = await station.NextFrameAsync();
+        Assert.Equal("call", TypeOf(next));
+        await station.ReplyAsync(next, "echoed");
+        await probe.WaitAsync(Wait);
+
+        await behind.DisposeAsync();
+        Assert.Equal("unsubscribe", TypeOf(await station.NextFrameAsync()));
+    }
+
+    [Fact]
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform("windows")]
+    public async Task An_overflowed_subscription_is_replaced_before_it_is_closed()
+    {
+        var (channel, station, _) = Connect();
+        var spec = Subscribe("app/ticks");
+        var subscription = await channel.SubscribeAsync(spec, CancellationToken.None);
+        Assert.Equal("subscribe", TypeOf(await station.NextFrameAsync()));
+
+        // The handler holds the first event until every tick has been routed,
+        // so the consumer's copy falls behind.
+        var routed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handled = Channel.CreateUnbounded<string>();
+        var consuming = StationPool.ConsumeSubscriptionAsync(subscription, () => channel.SubscribeAsync(spec, CancellationToken.None), async evt =>
+        {
+            await routed.Task;
+            handled.Writer.TryWrite(evt.Payload.AsText());
+        });
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextFrameAsync();
+        for (var i = 0; i <= ControlChannel.EventQueueCapacity + 1; i++)
+        {
+            await station.SendEventAsync("app/ticks", $"tick {i}");
+        }
+        await station.ReplyAsync(sent, "echoed");
+        await call.WaitAsync(Wait);
+        routed.TrySetResult();
+
+        // Events reach the handler again once the fresh copy is in place.
+        var deadline = DateTime.UtcNow + Wait;
+        var resumed = false;
+        while (!resumed && DateTime.UtcNow < deadline)
+        {
+            await station.SendEventAsync("app/ticks", "after the overflow");
+            resumed = await SawAsync(handled.Reader, "after the overflow", TimeSpan.FromMilliseconds(100));
+        }
+        Assert.True(resumed);
+
+        // A call right after shows the replacement sent neither SUBSCRIBE nor UNSUBSCRIBE.
+        var probe = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var next = await station.NextFrameAsync();
+        Assert.Equal("call", TypeOf(next));
+        await station.ReplyAsync(next, "echoed");
+        await probe.WaitAsync(Wait);
+
+        channel.Stop(new IOException("the test is done"));
+        await consuming.WaitAsync(Wait);
+    }
+
+    [Fact]
     public async Task A_stalled_event_consumer_does_not_stall_call_replies()
     {
         var (channel, station, _) = Connect();
@@ -144,7 +249,7 @@ public class SessionReaderTests
     }
 
     [Fact]
-    public async Task An_overflowing_call_queue_answers_the_extra_call_with_an_error()
+    public async Task An_overflowing_call_queue_answers_the_extra_call_and_keeps_serving()
     {
         var (channel, station, _) = Connect();
 
@@ -158,14 +263,103 @@ public class SessionReaderTests
         Assert.Equal(inbound[^1], ((Value.BytesValue)refusal.Get("call_id")!).Value);
         Assert.Equal(Bolt4Code.TemporaryRelayFailure.Name, Assert.IsType<CallResponse.Error>(CallFrameParsing.ParseCallResponse(refusal)).Name);
 
+        // Serving carries on: the queued calls, then the next one to arrive.
         for (var i = 0; i < ControlChannel.CallQueueCapacity; i++)
         {
             Assert.Equal($"app/job_{i}", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
         }
-        await Assert.ThrowsAsync<ConsumerOverflowException>(() => channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait));
-
         await station.SendInboundCallAsync("app/after_the_overflow");
         Assert.Equal("app/after_the_overflow", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
+    }
+
+    [Fact]
+    public async Task A_call_that_cannot_get_the_write_lock_in_time_times_out_and_the_session_stays_up()
+    {
+        var (channel, station, ended) = Connect();
+        station.StallSessionWrites();
+        var publish = channel.SendAsync(Publish("app/ticks"), CancellationToken.None);
+
+        var timedOut = await Assert.ThrowsAsync<CallTimeoutException>(() => channel.CallAsync(Call("app/echo"), TimeSpan.FromMilliseconds(100), CancellationToken.None));
+        Assert.False(timedOut.WriteStarted);
+        Assert.False(ended.Task.IsCompleted);
+
+        station.ResumeSessionWrites();
+        await publish.WaitAsync(Wait);
+        Assert.Equal("publish", TypeOf(await station.NextFrameAsync()));
+        var next = Call("app/echo");
+        var call = channel.CallAsync(next, Wait, CancellationToken.None);
+        var sent = await station.NextFrameAsync();
+        Assert.Equal(next.CallId, ((Value.BytesValue)sent.Get("call_id")!).Value);
+        await station.ReplyAsync(sent, "echoed");
+        Assert.Equal("echoed", ReplyText(await call.WaitAsync(Wait)));
+    }
+
+    [Fact]
+    public async Task A_write_stalled_past_the_send_timeout_ends_the_session()
+    {
+        var (channel, station, ended) = Connect(sendTimeout: TimeSpan.FromMilliseconds(200));
+        station.StallSessionWrites();
+
+        await Assert.ThrowsAsync<SendTimeoutException>(() => channel.SendAsync(Publish("app/ticks"), CancellationToken.None).WaitAsync(Wait));
+        Assert.IsType<SendTimeoutException>(await ended.Task.WaitAsync(Wait));
+        await Assert.ThrowsAsync<SendTimeoutException>(() => channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task The_reader_keeps_delivering_while_a_write_is_stalled()
+    {
+        var (channel, station, _) = Connect();
+        await using var ticks = await channel.SubscribeAsync(Subscribe("app/ticks"), CancellationToken.None);
+        await station.NextAsync("subscribe");
+        station.StallSessionWrites();
+        try
+        {
+            // The extra calls' refusals can't go out while writes are stalled.
+            for (var i = 0; i < ControlChannel.CallQueueCapacity + 4; i++)
+            {
+                await station.SendInboundCallAsync($"app/job_{i}");
+            }
+            await station.SendEventAsync("app/ticks", "tick 1");
+
+            Assert.Equal("tick 1", (await ticks.RecvEventAsync(Wait)).Payload.AsText());
+        }
+        finally
+        {
+            station.ResumeSessionWrites();
+        }
+    }
+
+    [Fact]
+    public async Task A_call_timing_out_while_its_frame_is_being_written_reports_it_may_have_been_sent()
+    {
+        var (channel, station, ended) = Connect();
+        station.StallSessionWrites();
+        try
+        {
+            var timedOut = await Assert.ThrowsAsync<CallTimeoutException>(() => channel.CallAsync(Call("app/echo"), TimeSpan.FromMilliseconds(100), CancellationToken.None));
+            Assert.True(timedOut.WriteStarted);
+            Assert.False(ended.Task.IsCompleted);
+        }
+        finally
+        {
+            station.ResumeSessionWrites();
+        }
+    }
+
+    [Fact]
+    [SupportedOSPlatform("linux")]
+    [SupportedOSPlatform("macos")]
+    [SupportedOSPlatform("windows")]
+    public async Task A_queued_call_past_its_deadline_is_still_served()
+    {
+        var (channel, station, _) = Connect();
+
+        await station.SendInboundCallAsync("app/echo", deadlineMs: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1_000);
+
+        var call = await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait);
+        CallLookup lookup = (_, procedure) => procedure != "app/echo" ? null : payload => Task.FromResult(payload);
+        var reply = await Session.BuildCallReplyAsync(null, call, lookup, (_, _) => Policy.Open, KeyPair.Generate());
+        Assert.IsType<CallResponse.Result>(CallFrameParsing.ParseCallResponse(reply));
     }
 
     [Fact]
@@ -254,7 +448,7 @@ public class SessionReaderTests
         Assert.Equal(1, channel.UnroutedFrames["call"]);
     }
 
-    private static (ControlChannel Channel, FakeStation Station, TaskCompletionSource<Exception> Ended) Connect(KeyPair? identity = null, Action<Exception>? onEnded = null)
+    private static (ControlChannel Channel, FakeStation Station, TaskCompletionSource<Exception> Ended) Connect(KeyPair? identity = null, Action<Exception>? onEnded = null, TimeSpan? sendTimeout = null)
     {
         var (client, station) = InMemoryPipe.CreatePair();
         var ended = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -262,9 +456,9 @@ public class SessionReaderTests
         {
             onEnded?.Invoke(reason);
             ended.TrySetResult(reason);
-        });
+        }, sendTimeout);
         channel.Start();
-        return (channel, new FakeStation(station), ended);
+        return (channel, new FakeStation(station, client), ended);
     }
 
     private static CallSpec Call(string procedure) => new()
@@ -277,19 +471,48 @@ public class SessionReaderTests
         Caller = KeyPair.Generate().NodeId(),
     };
 
-    private static CallSpec InboundCall(string procedure, KeyPair caller) => new()
+    private static CallSpec InboundCall(string procedure, KeyPair caller, long? deadlineMs = null) => new()
     {
         CallId = RandomBytes(16),
         Procedure = procedure,
         Realm = Realm,
         Payload = Value.Null,
-        DeadlineMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5_000,
+        DeadlineMs = deadlineMs ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 5_000,
         Caller = caller.NodeId(),
     };
 
     private static SubscribeSpec Subscribe(string topic) => new() { Topic = topic, Realm = Realm, Subscriber = KeyPair.Generate().NodeId() };
 
+    private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec
+    {
+        Topic = topic,
+        Realm = Realm,
+        Publisher = KeyPair.Generate().NodeId(),
+        Seq = 1,
+        Payload = Value.Text("tick"),
+        PublishedAtMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+    });
+
     private static string ReplyText(CallResponse response) => Assert.IsType<CallResponse.Result>(response).Payload.AsText();
+
+    // Whether text arrives on reader within window, skipping anything else.
+    private static async Task<bool> SawAsync(ChannelReader<string> reader, string text, TimeSpan window)
+    {
+        using var within = new CancellationTokenSource(window);
+        try
+        {
+            while (await reader.ReadAsync(within.Token) != text)
+            {
+            }
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    private static string TypeOf(Value.MapValue frame) => ((Value.TextValue)frame.Get("frame_type")!).AsText();
 
     private static byte[] RandomBytes(int length)
     {
@@ -304,21 +527,25 @@ public class SessionReaderTests
         internal static readonly byte[] NodeId = KeyPair.Generate().NodeId();
 
         private readonly InMemoryPipe _pipe;
+        private readonly InMemoryPipe _session;
         private readonly FrameStream _frames;
 
-        internal FakeStation(InMemoryPipe pipe)
+        internal FakeStation(InMemoryPipe pipe, InMemoryPipe session)
         {
             _pipe = pipe;
+            _session = session;
             _frames = new FrameStream(pipe);
         }
 
         internal Task SendAsync(Value.MapValue frame) => _frames.SendFrameAsync(frame);
 
+        internal async Task<Value.MapValue> NextFrameAsync() => (Value.MapValue)await _frames.RecvFrameAsync().WaitAsync(Wait);
+
         internal async Task<Value.MapValue> NextAsync(string frameType)
         {
             while (true)
             {
-                var frame = (Value.MapValue)await _frames.RecvFrameAsync().WaitAsync(Wait);
+                var frame = await NextFrameAsync();
                 if (frame.Get("frame_type") is Value.TextValue t && t.AsText() == frameType)
                 {
                     return frame;
@@ -340,13 +567,18 @@ public class SessionReaderTests
 
         // An inbound CALL signed by its caller, as a station relays one. Returns its call_id.
         // Signed by its caller unless another signer is given.
-        internal async Task<byte[]> SendInboundCallAsync(string procedure, KeyPair? signer = null)
+        internal async Task<byte[]> SendInboundCallAsync(string procedure, KeyPair? signer = null, long? deadlineMs = null)
         {
             var caller = KeyPair.Generate();
-            var call = InboundCall(procedure, caller);
+            var call = InboundCall(procedure, caller, deadlineMs);
             await SendAsync(Envelope.Sign(CallFrame.Build(call), signer ?? caller));
             return call.CallId;
         }
+
+        /// <summary>Holds what the session writes, as a station withholding flow-control credit does.</summary>
+        internal void StallSessionWrites() => _session.StallWrites();
+
+        internal void ResumeSessionWrites() => _session.ResumeWrites();
 
         internal void Hangup() => _pipe.Hangup();
     }
