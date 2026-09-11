@@ -9,30 +9,11 @@ open Macula.Identity
 /// Subscribe to a topic, publish to it, and receive the resulting EVENT --
 /// a subscriber does receive its own publish, delivered_via "direct".
 ///
-/// <see cref="Session.RecvEventAsync"/> errors on the first non-EVENT
-/// frame rather than silently skipping it, matching the sibling Go/Rust/
-/// PHP/C# SDKs. In practice against the real station, that needs a
-/// caveat: it periodically sends unprompted `advertise` frames for its
-/// own built-in `_content.*` procedures over every connected client's
-/// control stream (observed directly building the C# examples, not
-/// documented anywhere), so a real caller should loop past frames it
-/// doesn't care about rather than call RecvEventAsync exactly once.
-let private recvEventSkippingOtherTraffic (session: Session) (timeout: TimeSpan) =
-    task {
-        use cts = new Threading.CancellationTokenSource(timeout)
-        let mutable result = None
-        while result.IsNone do
-            let! frame = session.RecvAsync(cts.Token)
-            match frame with
-            | :? Value.MapValue as map ->
-                match map.Get "frame_type" with
-                | :? Value.TextValue as ft when ft.AsText() = "event" ->
-                    result <- Some(EventFrameParsing.Parse frame)
-                | _ -> ()
-            | _ -> ()
-        return result.Value
-    }
-
+/// The subscription gets only the events that match its realm and topic.
+/// Anything else the station sends on the same session, such as its own
+/// periodic advertise broadcasts for built-in `_content.*` procedures, is
+/// routed elsewhere or counted in Session.UnroutedFrameCounts, so one
+/// RecvEventAsync is enough.
 let run () =
     task {
         let identity = KeyPair.GenerateWithDefaultPuzzle()
@@ -46,7 +27,7 @@ let run () =
         Random.Shared.NextBytes realm
         let topic = sprintf "macula_csharp_sdk.examples_fsharp.%s" (Guid.NewGuid().ToString "N")
 
-        do! session.SubscribeAsync(SubscribeSpec(Topic = topic, Realm = realm, Subscriber = identity.NodeId()))
+        let! subscription = session.SubscribeAsync(SubscribeSpec(Topic = topic, Realm = realm, Subscriber = identity.NodeId()))
         printfn "subscribed to %s" topic
 
         do!
@@ -60,8 +41,9 @@ let run () =
                     PublishedAtMs = uint64 (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds())))
         printfn "published"
 
-        let! evt = recvEventSkippingOtherTraffic session (TimeSpan.FromSeconds 10.0)
+        let! evt = subscription.RecvEventAsync(TimeSpan.FromSeconds 10.0)
         printfn "received EVENT: topic=%s payload=%s delivered_via=%s" evt.Topic (evt.Payload.AsText()) evt.DeliveredVia
 
+        do! subscription.DisposeAsync()
         do! session.CloseAsync()
     }

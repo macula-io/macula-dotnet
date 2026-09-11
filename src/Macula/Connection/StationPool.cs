@@ -173,36 +173,25 @@ public sealed class StationPoolOptions
 /// delivery. Port of macula_client.erl (macula-io/macula, src/client/) --
 /// see that module's own doc for the design this mirrors.
 ///
-/// == Why a pump, not Session's own Call/RecvEvent/ServeOneCall ==
+/// == One link, one Session, every role at once ==
 ///
-/// <see cref="Session"/>'s control-stream methods are documented as "one
-/// thing at a time": CallAsync, RecvEventAsync and ServeOneCallGatedAsync
-/// each directly await the next frame off the SAME stream, and would
-/// steal each other's frames if run concurrently on one Session. A pool
-/// link needs all three roles at once (deliver EVENTs to subscribers,
-/// serve inbound CALLs against advertised procedures, correlate RESULT/
-/// ERROR replies to this pool's own outbound calls) over ONE shared
-/// connection -- opening a second Session to the same seed under the
-/// pool's shared identity gets the whole link kicked (a station drops a
-/// connection the instant a second one arrives under the same identity).
+/// A pool link needs every role at once over ONE connection: deliver
+/// EVENTs to subscribers, serve inbound CALLs against advertised
+/// procedures, and make this pool's own outbound calls. A second Session
+/// to the same seed under the pool's shared identity would get the link
+/// kicked (a station closes a connection when a second one arrives under
+/// the same identity). Each <see cref="Session"/> reads its own control
+/// stream and routes every frame, so the pool uses the link's one Session
+/// for all of them: a <see cref="Subscription"/> per tracked (realm,
+/// topic), whose events are deduped across links and fanned out to
+/// subscribers; the Session's inbound CALL queue; and its calls.
 ///
-/// So each <see cref="PooledLink"/> runs a single background pump Task
-/// that is the ONLY reader of its Session's control stream, and demuxes
-/// each frame by type: EVENT -> dedup then fan out to subscribers; CALL ->
-/// dispatch to the registered handler (off-pump -- see below); RESULT/
-/// ERROR -> complete the matching pending call. This is .NET's mailbox
-/// equivalent for this specific problem (one physical stream, N local
-/// logical readers, no stolen frames) -- a single-reader pump plus
-/// Channels/ConcurrentDictionary/TaskCompletionSource, not a shortcut
-/// under-delivering relative to Erlang's per-connection process mailbox.
-///
-/// Handler dispatch for an inbound CALL is spawned OFF the pump loop, never
-/// awaited inline -- awaiting it inline is exactly the
+/// Handler dispatch for an inbound CALL is spawned OFF the serving loop,
+/// never awaited inline -- awaiting it inline is exactly the
 /// macula_link_inline_handler_deadlock shape macula itself shipped and
 /// fixed in 10.18.0 (macula_station_link.erl spawns a child per CALL for
 /// the same reason): a handler that calls back through this same link
-/// would otherwise deadlock waiting for a RESULT the pump can never read,
-/// because the pump is the one blocked awaiting the handler.
+/// would otherwise hold up every other inbound CALL on it.
 ///
 /// == What is NOT ported this pass (documented, not silent) ==
 ///
@@ -216,8 +205,8 @@ public sealed class StationPoolOptions
 /// <see cref="PickConnectedSession"/> to get a live Session and drive
 /// <see cref="Streaming.StreamHandle"/> against it directly, exactly as a
 /// caller would against a single Session today. A dedicated stream is a
-/// separate QUIC stream from the control stream the pump owns, so this is
-/// safe to do concurrently with the pump.
+/// separate QUIC stream from the control stream, so this is safe to do
+/// concurrently with everything else on the link.
 /// </summary>
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
@@ -308,7 +297,7 @@ public sealed partial class StationPool : IAsyncDisposable
     }
 
     /// <summary>
-    /// Spawn one link's RunLinkAsync/ConsumeEventsAsync task pair --
+    /// Spawn one link's RunLinkAsync task --
     /// shared by Connect's own bootstrap-seed loop and
     /// StationDiscovery.cs's SpawnSeedLinkIfAbsent, so both paths spawn
     /// a link identically.
@@ -331,9 +320,6 @@ public sealed partial class StationPool : IAsyncDisposable
         // that window entirely.
         var token = _poolCts.Token;
         _linkTasks.Enqueue(Task.Run(() => RunLinkAsync(link, token)));
-        // One consumer for this link's whole lifetime, not per pump
-        // incarnation -- see PooledLink.Events's own doc.
-        _linkTasks.Enqueue(Task.Run(() => ConsumeEventsAsync(link.Events.Reader, token)));
     }
 
     /// <summary>
@@ -477,7 +463,7 @@ public sealed partial class StationPool : IAsyncDisposable
             var spec = new SubscribeSpec { Topic = topic, Realm = realm, Subscriber = _identity.NodeId() };
             foreach (var link in connected)
             {
-                await TrySendReplayAsync(link, ct, (s, c) => s.SubscribeAsync(spec, c)).ConfigureAwait(false);
+                await SubscribeLinkAsync(link, spec, ct).ConfigureAwait(false);
             }
         }
 
@@ -692,9 +678,8 @@ public sealed partial class StationPool : IAsyncDisposable
     /// The whole operation (send, RPC-telemetry writes, and the wait for a
     /// reply) is bounded by ONE deadline derived from <paramref name="timeout"/>,
     /// not just the reply-wait -- a caller with a 5s budget must not be able
-    /// to block indefinitely on <see cref="PooledLink.SendGatedAsync"/> if
-    /// some other write (e.g. a slow inbound-CALL reply) is holding the
-    /// link's send gate. `boundedCt` firing from the deadline (as opposed to
+    /// to block indefinitely on a send while some other write on the link
+    /// (e.g. a slow inbound-CALL reply) holds the stream. `boundedCt` firing from the deadline (as opposed to
     /// from <paramref name="ct"/> itself) is converted to
     /// <see cref="TimeoutException"/>, mirroring the same
     /// `OperationCanceledException) when (!ct.IsCancellationRequested)`
@@ -710,8 +695,6 @@ public sealed partial class StationPool : IAsyncDisposable
         var callId = new byte[16];
         Random.Shared.NextBytes(callId);
         var key = Convert.ToHexStringLower(callId);
-        var tcs = new TaskCompletionSource<CallResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
-        link.PendingCalls[key] = tcs;
 
         var requestId = RpcFacts.RandomRequestId();
         await RpcFacts.AnnounceSentAsync(link, realm, _identity, requestId, boundedCt).ConfigureAwait(false);
@@ -731,8 +714,8 @@ public sealed partial class StationPool : IAsyncDisposable
         Exception? err = null;
         try
         {
-            await link.SendGatedAsync((s, c) => s.SendAsync(CallFrame.Build(spec), c), boundedCt).ConfigureAwait(false);
-            resp = await tcs.Task.WaitAsync(boundedCt).ConfigureAwait(false);
+            var session = link.Session ?? throw new IOException($"link to {link.Seed.Host}:{link.Seed.Port} is not connected");
+            resp = await session.CallUnannouncedAsync(spec, timeout, boundedCt).ConfigureAwait(false);
             return resp;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
@@ -747,7 +730,6 @@ public sealed partial class StationPool : IAsyncDisposable
         }
         finally
         {
-            link.PendingCalls.TryRemove(key, out _);
             // A FRESH, independent budget for the announce write, not
             // boundedCt -- found in adversarial review 2026-09-05: on the
             // exact paths this fact exists to report (a per-link timeout or
@@ -770,13 +752,10 @@ public sealed partial class StationPool : IAsyncDisposable
     /// <summary>
     /// A live Session from a currently-connected link, for driving
     /// dedicated-stream operations (<see cref="Streaming.StreamHandle"/>,
-    /// content transfer) directly against a pooled connection. Safe to use
-    /// concurrently with the pool's own pump -- a dedicated stream is a
-    /// separate QUIC stream from the control stream the pump reads.
-    /// Do NOT call Session.CallAsync/RecvEventAsync/ServeOneCallGatedAsync
-    /// on the returned Session -- those read the control stream the pump
-    /// already owns and would race it. Returns null if no link is
-    /// currently connected.
+    /// content transfer) or its own calls and subscriptions directly against
+    /// a pooled connection, concurrently with the pool's own use of it. Don't
+    /// serve inbound CALLs on it: the pool already serves that link's queue.
+    /// Returns null if no link is currently connected.
     /// </summary>
     public Session? PickConnectedSession()
     {
@@ -846,7 +825,6 @@ public sealed partial class StationPool : IAsyncDisposable
             }
             catch (OperationCanceledException) when (poolCt.IsCancellationRequested)
             {
-                link.Events.Writer.TryComplete();
                 return;
             }
             catch (Exception)
@@ -905,48 +883,50 @@ public sealed partial class StationPool : IAsyncDisposable
                 // session on the pool-shutdown path (the state lock wait
                 // itself was what got cancelled), so there is nothing to
                 // unmark -- just close it and stop.
-                link.Events.Writer.TryComplete();
                 await CloseSessionAsync(session).ConfigureAwait(false);
                 return;
             }
 
+            var serving = Task.CompletedTask;
             try
             {
-                await ReplayAsync(link, subsSnapshot, procsSnapshot, streamProcsSnapshot, poolCt).ConfigureAwait(false);
-                await PumpAsync(link, session, poolCt).ConfigureAwait(false);
+                await ReplayAsync(link, session, subsSnapshot, procsSnapshot, streamProcsSnapshot, poolCt).ConfigureAwait(false);
+                serving = ServeLinkCallsAsync(session, poolCt);
+                // The link lives as long as its Session's control stream. An
+                // unrecognized frame (e.g. the station's own unprompted
+                // content-procedure advertise broadcasts) doesn't end it: the
+                // Session counts those.
+                await session.Ended.WaitAsync(poolCt).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (poolCt.IsCancellationRequested)
             {
                 // Pool shutdown, not a fault -- still unmark the link (a
                 // caller mid-CallAsync against it, or Status/Links read
                 // after DisposeAsync returns, must not see a stale
-                // Connected=true) before closing. This link's Events
-                // writer is now permanently done -- no future incarnation
-                // will ever write to it again.
-                link.Events.Writer.TryComplete();
+                // Connected=true) before closing. No subscriber handler runs
+                // after this returns.
                 await MarkDisconnectedAsync(link).ConfigureAwait(false);
                 await CloseSessionAsync(session).ConfigureAwait(false);
+                await serving.ConfigureAwait(false);
+                await link.ConsumersEnded().ConfigureAwait(false);
                 return;
             }
             catch (Exception)
             {
-                // Transport-level fault on the control stream (or a replay
-                // write's own genuine failure -- rare, since
+                // A replay write's own genuine failure -- rare, since
                 // TrySendReplayAsync swallows everything but real poolCt
-                // cancellation) -- fall through to respawn. A tolerable
-                // per-frame issue (an unrecognized frame type, e.g. the
-                // station's own unprompted content-procedure advertise
-                // broadcasts) never reaches here -- PumpAsync only lets a
-                // raw RecvAsync failure propagate, never a parse mismatch.
+                // cancellation -- falls through to respawn.
             }
 
             await MarkDisconnectedAsync(link).ConfigureAwait(false);
             await CloseSessionAsync(session).ConfigureAwait(false);
+            await serving.ConfigureAwait(false);
+            await link.ConsumersEnded().ConfigureAwait(false);
             await DelayRespawnAsync(poolCt).ConfigureAwait(false);
         }
     }
 
-    /// <summary>Flip a link to disconnected and fail its in-flight calls immediately, rather than letting them wait out their own timeout against a link that's already known to be gone.</summary>
+    /// <summary>Flip a link to disconnected. Its in-flight calls fail as soon as its Session closes, rather than waiting out their own timeout against a link that's already known to be gone.</summary>
     private async Task MarkDisconnectedAsync(PooledLink link)
     {
         await _stateLock.WaitAsync(CancellationToken.None).ConfigureAwait(false);
@@ -959,7 +939,6 @@ public sealed partial class StationPool : IAsyncDisposable
         {
             _stateLock.Release();
         }
-        FailPendingCalls(link, new IOException($"link to {link.Seed.Host}:{link.Seed.Port} disconnected"));
     }
 
     /// <summary>
@@ -978,6 +957,7 @@ public sealed partial class StationPool : IAsyncDisposable
     /// </summary>
     private async Task ReplayAsync(
         PooledLink link,
+        Session session,
         List<(string RealmHex, string Topic)> subsSnapshot,
         List<(string RealmHex, string Procedure)> procsSnapshot,
         List<(string RealmHex, string Procedure)> streamProcsSnapshot,
@@ -986,7 +966,7 @@ public sealed partial class StationPool : IAsyncDisposable
         foreach (var (realmHex, topic) in subsSnapshot)
         {
             var spec = new SubscribeSpec { Topic = topic, Realm = FromHex(realmHex), Subscriber = _identity.NodeId() };
-            await TrySendReplayAsync(link, ct, (s, c) => s.SubscribeAsync(spec, c)).ConfigureAwait(false);
+            await SubscribeLinkAsync(link, spec, ct, session).ConfigureAwait(false);
         }
         foreach (var (realmHex, procedure) in procsSnapshot)
         {
@@ -1018,11 +998,15 @@ public sealed partial class StationPool : IAsyncDisposable
     /// </summary>
     private async Task TrySendReplayAsync(PooledLink link, CancellationToken ct, Func<Session, CancellationToken, Task> send)
     {
+        if (link.Session is not { } session)
+        {
+            return;
+        }
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(_options.WireWriteTimeout);
         try
         {
-            await link.SendGatedAsync(send, cts.Token).ConfigureAwait(false);
+            await send(session, cts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -1031,6 +1015,103 @@ public sealed partial class StationPool : IAsyncDisposable
         catch (Exception)
         {
             // swallowed -- see summary.
+        }
+    }
+
+    /// <summary>
+    /// Starts this link's copy of a pool subscription, and the task that hands
+    /// its events to the pool's subscribers. Bounded by WireWriteTimeout and
+    /// swallowed on failure like a replay write: the link's next respawn
+    /// subscribes again.
+    /// </summary>
+    private async Task SubscribeLinkAsync(PooledLink link, SubscribeSpec spec, CancellationToken ct, Session? session = null)
+    {
+        if ((session ?? link.Session) is not { } target)
+        {
+            return;
+        }
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(_options.WireWriteTimeout);
+        Subscription subscription;
+        try
+        {
+            subscription = await target.SubscribeAsync(spec, cts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            return;
+        }
+        link.AddConsumer(ConsumeSubscriptionAsync(target, spec, subscription));
+    }
+
+    /// <summary>
+    /// Hands one link subscription's events to the pool's subscribers strictly
+    /// in arrival order, each event's dedup and fan-out finished before the
+    /// next starts, so one subscriber's handler is never re-entered for two
+    /// events from the same link. When this link's copy falls behind, a fresh
+    /// one takes its place and the station-side subscription stays. Ends with
+    /// the link's Session.
+    /// </summary>
+    private async Task ConsumeSubscriptionAsync(Session session, SubscribeSpec spec, Subscription subscription)
+    {
+        try
+        {
+            while (true)
+            {
+                EventInfo evt;
+                try
+                {
+                    evt = await subscription.RecvEventAsync(Timeout.InfiniteTimeSpan).ConfigureAwait(false);
+                }
+                catch (ConsumerOverflowException)
+                {
+                    var fresh = await session.SubscribeAsync(spec).ConfigureAwait(false);
+                    await subscription.DisposeAsync().ConfigureAwait(false);
+                    subscription = fresh;
+                    continue;
+                }
+                await HandleEventAsync(evt).ConfigureAwait(false);
+            }
+        }
+        catch (Exception)
+        {
+            // The link's Session ended or was closed; its next incarnation
+            // subscribes again.
+        }
+        finally
+        {
+            await subscription.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Serves this link Session's inbound CALLs until the Session ends. Each
+    /// handler runs off this loop -- see this class's own doc on why.
+    /// </summary>
+    private async Task ServeLinkCallsAsync(Session session, CancellationToken poolCt)
+    {
+        while (true)
+        {
+            CallInfo call;
+            try
+            {
+                call = await session.NextInboundCallAsync(poolCt).ConfigureAwait(false);
+            }
+            catch (ConsumerOverflowException)
+            {
+                // The calls that didn't fit got temporary_relay_failure;
+                // serving carries on with a fresh queue.
+                continue;
+            }
+            catch (Exception)
+            {
+                return; // the Session ended, or the pool is disposing
+            }
+            _ = Task.Run(() => HandleInboundCallAsync(session, call, poolCt), CancellationToken.None);
         }
     }
 
@@ -1061,17 +1142,6 @@ public sealed partial class StationPool : IAsyncDisposable
             // timeout." A dead identity must never dial its replacement
             // before this returns -- see this class's own doc on the
             // same-identity-double-connect hazard.
-        }
-    }
-
-    private static void FailPendingCalls(PooledLink link, Exception reason)
-    {
-        foreach (var key in link.PendingCalls.Keys.ToList())
-        {
-            if (link.PendingCalls.TryRemove(key, out var tcs))
-            {
-                tcs.TrySetException(reason);
-            }
         }
     }
 
@@ -1131,90 +1201,11 @@ public sealed partial class StationPool : IAsyncDisposable
             : configured;
 
     //====================================================================
-    // Pump -- the sole reader of a link's control stream
+    // Events and inbound calls on a link's Session
     //====================================================================
 
-    /// <summary>
-    /// EVENT frames go through <see cref="PooledLink.Events"/>, a per-link,
-    /// single-consumer Channel that lives for the link's whole lifetime
-    /// (see that property's own doc for why it is NOT recreated per pump
-    /// incarnation) rather than a bare `Task.Run` per frame: dispatching
-    /// each EVENT to its own fire-and-forget Task let the threadpool
-    /// reorder them relative to arrival, and let the SAME subscriber's
-    /// handler be re-entered concurrently for two events that arrived a
-    /// moment apart on this link -- neither matches the reference (one
-    /// link's frames arrive in strict order off one QUIC stream; a
-    /// gen_server-owned mailbox delivers to a subscriber pid one message
-    /// at a time). The dedicated consumer task (spawned once in
-    /// StationPool.Connect) drains the channel strictly in receipt order,
-    /// awaiting each event's full dedup+fan-out before starting the next --
-    /// ordering and non-reentrancy are per link, matching the bound this
-    /// class's own doc already states (no CROSS-link ordering is
-    /// attempted; that would need the reorder buffer this pass
-    /// deliberately doesn't port), and now hold ACROSS a respawn too, not
-    /// just within one incarnation.
-    ///
-    /// The channel write itself is a fast, non-blocking TryWrite (unbounded
-    /// channel), so the pump loop's own promptness at reading CALL/RESULT/
-    /// ERROR frames is unaffected by how quickly the event consumer keeps up.
-    /// </summary>
-    private async Task PumpAsync(PooledLink link, Session session, CancellationToken poolCt)
+    private async Task HandleEventAsync(EventInfo evt)
     {
-        while (true)
-        {
-            var frame = await session.RecvAsync(poolCt).ConfigureAwait(false);
-            switch (FrameType(frame))
-            {
-                case "event":
-                    link.Events.Writer.TryWrite(frame);
-                    break;
-                case "call":
-                    _ = Task.Run(() => HandleInboundCallAsync(link, frame, poolCt), CancellationToken.None);
-                    break;
-                case "result":
-                case "error":
-                    CompletePendingCall(link, frame);
-                    break;
-                default:
-                    // Tolerated, not fatal -- e.g. the live station's own
-                    // unprompted advertise broadcasts for its built-in
-                    // _content.* procedures, periodically sent on every
-                    // connected client's control stream.
-                    break;
-            }
-        }
-    }
-
-    private async Task ConsumeEventsAsync(ChannelReader<Value> reader, CancellationToken poolCt)
-    {
-        try
-        {
-            await foreach (var frame in reader.ReadAllAsync(poolCt).ConfigureAwait(false))
-            {
-                await HandleEventAsync(frame, poolCt).ConfigureAwait(false);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Pool disposing -- whatever is still buffered is abandoned.
-        }
-    }
-
-    private static string FrameType(Value frame) =>
-        frame is Value.MapValue map && map.Get("frame_type") is Value.TextValue t ? t.AsText() : "";
-
-    private async Task HandleEventAsync(Value frame, CancellationToken ct)
-    {
-        EventInfo evt;
-        try
-        {
-            evt = EventFrameParsing.Parse(frame);
-        }
-        catch (ParseFrameException)
-        {
-            return;
-        }
-
         if (!_dedup.CheckNew(evt.Realm, evt.Publisher, evt.Seq, evt.Topic))
         {
             return; // another link already delivered this fact.
@@ -1239,41 +1230,14 @@ public sealed partial class StationPool : IAsyncDisposable
         }
     }
 
-    private void CompletePendingCall(PooledLink link, Value frame)
-    {
-        var callId = CallFrameParsing.FrameCallId(frame);
-        if (callId is null)
-        {
-            return;
-        }
-        if (!link.PendingCalls.TryRemove(Convert.ToHexStringLower(callId), out var tcs))
-        {
-            return; // unmatched (stale, foreign, or already timed out and removed) -- ignore.
-        }
-        try
-        {
-            tcs.TrySetResult(CallFrameParsing.ParseCallResponse(frame));
-        }
-        catch (ParseFrameException e)
-        {
-            tcs.TrySetException(e);
-        }
-    }
-
     /// <summary>
-    /// Off-pump: the pump loop only ever reads frames and dispatches, it
-    /// never awaits handler logic itself -- see this class's own doc on
-    /// why (macula_link_inline_handler_deadlock).
+    /// Off the serving loop: the loop only ever takes calls and dispatches,
+    /// it never awaits handler logic itself -- see this class's own doc on
+    /// why (macula_link_inline_handler_deadlock). The Session queues only a
+    /// CALL signed by the caller it names.
     /// </summary>
-    private async Task HandleInboundCallAsync(PooledLink link, Value frame, CancellationToken ct)
+    private async Task HandleInboundCallAsync(Session session, CallInfo callInfo, CancellationToken ct)
     {
-        // A CALL that isn't signed by the caller it names gets no reply --
-        // see CallFrameParsing.ParseSignedCall.
-        if (CallFrameParsing.ParseSignedCall(frame) is not { } callInfo)
-        {
-            return;
-        }
-
         // Read _procs exactly ONCE, so the policy check and the handler
         // dispatch that follows it always agree on the same registration --
         // two independent TryGetValue calls here would let a concurrent
@@ -1286,15 +1250,15 @@ public sealed partial class StationPool : IAsyncDisposable
         CallLookup lookup = (_, _) => snapshot?.Handler;
         PolicyLookup policyLookup = (_, _) => snapshot?.Policy ?? Policy.Open;
 
-        var reply = await Session.BuildCallReplyAsync(link, callInfo, lookup, policyLookup, _identity, ct).ConfigureAwait(false);
+        var reply = await Session.BuildCallReplyAsync(session, callInfo, lookup, policyLookup, _identity, ct).ConfigureAwait(false);
         try
         {
-            await link.SendGatedAsync((s, c) => s.SendAsync(reply, c), ct).ConfigureAwait(false);
+            await session.SendAsync(reply, ct).ConfigureAwait(false);
         }
         catch (Exception)
         {
-            // The link may already be dead -- RunLinkAsync's own pump
-            // failure path notices separately and respawns.
+            // The link may already be dead -- RunLinkAsync notices its
+            // Session ending separately and respawns.
         }
     }
 
@@ -1351,28 +1315,11 @@ internal sealed class PooledLink : IFrameSink
     /// </summary>
     public byte[]? LastKnownNodeId { get; set; }
 
-    public ConcurrentDictionary<string, TaskCompletionSource<CallResponse>> PendingCalls { get; } = new();
-
-    /// <summary>
-    /// This link's own EVENT queue, created ONCE for the link's whole
-    /// lifetime and only ever completed when the link is torn down for
-    /// good (pool disposal) -- NOT recreated on every respawn. Found in
-    /// adversarial review 2026-09-05: a fresh Channel per pump incarnation
-    /// reintroduced, at every respawn boundary, exactly the reordering/
-    /// re-entrancy bug the per-link Channel was built to fix in the first
-    /// place (209785a) -- a slow-draining OLD incarnation's consumer task
-    /// was never awaited before the NEW incarnation's consumer started, so
-    /// a subscriber's handler could be invoked concurrently from both, and
-    /// an old-link straggler event could be delivered after a new-link
-    /// event that arrived later in wall-clock time. One long-lived Channel
-    /// plus one long-lived consumer task (spawned once in
-    /// StationPool.Connect) removes the boundary entirely: every
-    /// PumpAsync incarnation only ever writes to it, never owns its
-    /// lifecycle.
-    /// </summary>
-    public Channel<Value> Events { get; } = Channel.CreateUnbounded<Value>(new UnboundedChannelOptions { SingleWriter = true, SingleReader = true });
-
-    private readonly SemaphoreSlim _sendGate = new(1, 1);
+    // The tasks handing this link's subscriptions to the pool's subscribers,
+    // for the current Session. RunLinkAsync waits for them to end before a
+    // respawn dials again, so an old incarnation's handler never runs
+    // alongside a new one's for the same subscriber.
+    private ConcurrentQueue<Task> _consumers = new();
 
     public PooledLink(Seed seed, long ordinal)
     {
@@ -1380,31 +1327,13 @@ internal sealed class PooledLink : IFrameSink
         Ordinal = ordinal;
     }
 
-    /// <summary>
-    /// The single choke point for every outbound write on this link's
-    /// Session -- every caller (pool PublishAsync/SubscribeAsync/
-    /// AdvertiseAsync/CallAsync, replay, an inbound CALL's reply, and the
-    /// RPC-telemetry facts fired around a call) goes through this, because
-    /// QuicStream.WriteAsync throws on an overlapping write and this SDK's
-    /// FrameStream/Session have no serialization of their own -- correct
-    /// for a Session used by one caller at a time (the documented single-
-    /// Session contract), not for N concurrent pool operations sharing one
-    /// physical connection.
-    /// </summary>
-    public async Task SendGatedAsync(Func<Session, CancellationToken, Task> send, CancellationToken ct)
-    {
-        var session = Session ?? throw new InvalidOperationException("link is not connected");
-        await _sendGate.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            await send(session, ct).ConfigureAwait(false);
-        }
-        finally
-        {
-            _sendGate.Release();
-        }
-    }
+    /// <summary>Tracks a task handing one of this link's subscriptions to the pool's subscribers.</summary>
+    public void AddConsumer(Task consumer) => _consumers.Enqueue(consumer);
 
+    /// <summary>Completes once every subscription consumer tracked for this link so far has ended.</summary>
+    public Task ConsumersEnded() => Task.WhenAll(Interlocked.Exchange(ref _consumers, new ConcurrentQueue<Task>()));
+
+    /// <summary>Publishes on this link's Session. Sends on a Session take turns, so this needs no gate of its own.</summary>
     public Task PublishAsync(PublishSpec spec, CancellationToken ct = default) =>
-        SendGatedAsync((s, c) => s.PublishAsync(spec, c), ct);
+        (Session ?? throw new InvalidOperationException("link is not connected")).PublishAsync(spec, ct);
 }

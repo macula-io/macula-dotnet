@@ -72,7 +72,7 @@ public class LiveStationTests
         var realm = new byte[32];
         var topic = $"macula_csharp_sdk.test.{Guid.NewGuid():N}";
 
-        await session.SubscribeAsync(new SubscribeSpec { Topic = topic, Realm = realm, Subscriber = identity.NodeId() });
+        await using var subscription = await session.SubscribeAsync(new SubscribeSpec { Topic = topic, Realm = realm, Subscriber = identity.NodeId() });
 
         await session.PublishAsync(new PublishSpec
         {
@@ -84,7 +84,7 @@ public class LiveStationTests
             PublishedAtMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         });
 
-        var evt = await session.RecvEventAsync(TimeSpan.FromSeconds(10));
+        var evt = await subscription.RecvEventAsync(TimeSpan.FromSeconds(10));
         Assert.Equal(topic, evt.Topic);
         Assert.Equal("hello mesh", evt.Payload.AsText());
         Assert.Equal("direct", evt.DeliveredVia);

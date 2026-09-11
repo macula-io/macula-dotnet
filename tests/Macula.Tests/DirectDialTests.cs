@@ -90,18 +90,10 @@ public class DirectDialTests
     /// <summary>
     /// Verifies re-publish directly via the DHT record's own CreatedAt,
     /// matching this session's Go sibling's own test design for the same
-    /// property -- NOT by running ServeOneCallAsync concurrently on the
-    /// same session as the KeepAdvertisedDirectAsync loop. FrameStream has
-    /// no internal read synchronization (a pre-existing property of this
-    /// SDK, not introduced here), so a concurrent RecvFrameAsync (the
-    /// re-advertise loop's own put_record reply wait) racing against
-    /// ServeOneCallAsync's blocking read on the SAME session's control
-    /// stream throws `InvalidOperationException: This method may not be
-    /// called when another read operation is pending` -- found live
-    /// writing this test's first draft. A real server wanting both
-    /// behaviors concurrently needs two Sessions, same as
-    /// CallAsync/ServeOneCallAsync's own documented "control stream, one
-    /// thing at a time" limitation already states.
+    /// property, rather than by serving a call on the provider session while
+    /// the KeepAdvertisedDirectAsync loop runs. Both can share one session;
+    /// the record's CreatedAt is the direct evidence that a re-publish
+    /// happened.
     /// </summary>
     [Fact]
     public async Task Keep_advertised_direct_republishes_and_stops_on_cancellation()
