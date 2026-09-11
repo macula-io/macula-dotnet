@@ -720,6 +720,103 @@ public class DirectDialCandidatesTests
     }
 
     [Fact]
+    public async Task Call_reuses_an_open_session_to_the_provider_station()
+    {
+        // No endpoint is published for a, so only reuse can reach it.
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        var stations = new FakeStations();
+
+        var response = await DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial,
+            new DirectDial.RequestAt<string, CallResponse>(Reply),
+            Roomy, CancellationToken.None,
+            alreadyOpen: station => station.AsSpan().SequenceEqual(a.Station.NodeId()) ? "the caller's session to a" : null);
+
+        Assert.Equal("reply from the caller's session to a", ReplyText(response));
+        Assert.Empty(stations.Reached);
+    }
+
+    [Fact]
+    public async Task A_direct_call_whose_reused_session_has_ended_dials_the_station_fresh()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        dht.PublishEndpoint(a.Station, StationEndpoint(a.Station, a.Host));
+        var stations = new FakeStations();
+        // The caller's session to a is open until the call finds it has ended,
+        // and a session that ends leaves the open set.
+        var open = true;
+
+        var response = await DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial,
+            new DirectDial.RequestAt<string, CallResponse>((session, remaining, ct) =>
+            {
+                if (session != "the caller's session to a")
+                {
+                    return Reply(session, remaining, ct);
+                }
+                open = false;
+                return Task.FromException<CallResponse>(new SessionEndedException(new IOException("the station went away"), writeStarted: false));
+            }),
+            Roomy, CancellationToken.None,
+            alreadyOpen: _ => open ? "the caller's session to a" : null);
+
+        Assert.Equal($"reply from {a.Host}", ReplyText(response));
+        Assert.Equal(new[] { a.Host }, stations.Reached);
+    }
+
+    // Whether a call may go on to the next candidate after its request failed:
+    // only when its CALL was never sent. The names match the Rust and Go tests.
+
+    [Fact]
+    public async Task A_direct_call_that_was_not_sent_is_tried_again_on_the_next_pass()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        dht.PublishEndpoint(a.Station, StationEndpoint(a.Station, a.Host));
+        var stations = new FakeStations();
+        var attempts = 0;
+
+        var response = await CallAsync(dht, stations, Roomy, new DirectDial.RequestAt<string, CallResponse>((host, remaining, ct) =>
+            ++attempts == 1
+                ? Task.FromException<CallResponse>(new CallTimeoutException("no turn to write the CALL in time", writeStarted: false))
+                : Reply(host, remaining, ct)));
+
+        Assert.Equal($"reply from {a.Host}", ReplyText(response));
+        Assert.Equal(new[] { a.Host, a.Host }, stations.Reached);
+    }
+
+    [Fact]
+    public async Task A_direct_call_that_timed_out_waiting_for_the_write_lock_may_try_the_next_candidate()
+    {
+        var (dht, a, b) = TwoProvidersWithEndpoints();
+        var stations = new FakeStations();
+
+        var response = await CallAsync(dht, stations, Roomy, new DirectDial.RequestAt<string, CallResponse>((host, remaining, ct) => host == a.Host
+            ? Task.FromException<CallResponse>(new CallTimeoutException("no turn to write the CALL in time", writeStarted: false))
+            : Reply(host, remaining, ct)));
+
+        Assert.Equal($"reply from {b.Host}", ReplyText(response));
+        Assert.Equal(new[] { a.Host, b.Host }, stations.Reached);
+    }
+
+    [Fact]
+    public async Task A_direct_call_that_timed_out_after_its_write_started_is_not_tried_on_another_candidate()
+    {
+        var (dht, a, _) = TwoProvidersWithEndpoints();
+        var stations = new FakeStations();
+
+        var timedOut = await Assert.ThrowsAsync<CallTimeoutException>(() => CallAsync(dht, stations, Roomy, new DirectDial.RequestAt<string, CallResponse>((host, _, _) => host == a.Host
+            ? Task.FromException<CallResponse>(new CallTimeoutException("no response in time", writeStarted: true))
+            : Task.FromException<CallResponse>(new InvalidOperationException("the CALL was sent a second time")))));
+
+        Assert.True(timedOut.WriteStarted);
+        Assert.Equal(new[] { a.Host }, stations.Reached);
+    }
+
+    [Fact]
     public async Task A_reused_session_is_never_closed_by_the_request()
     {
         var target = DirectDial.Reuse("the caller's session", dialedBy: _ => null);

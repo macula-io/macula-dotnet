@@ -32,8 +32,10 @@ namespace Macula.Dht;
 /// is a candidate, tried in the order the DHT returned them. A candidate
 /// whose endpoint record doesn't resolve, whose dial fails, or whose dialed
 /// identity doesn't match is skipped for the next one, because nothing has
-/// reached the provider yet. Once a CALL or STREAM_OPEN has gone out, its
-/// result is the call's result and it is never sent again. When a query
+/// reached the provider yet, and so is one whose CALL was never sent because
+/// its session had ended or its turn to write didn't come in time. Once a
+/// CALL or STREAM_OPEN has gone out, its result is the call's result and it
+/// is never sent again. When a query
 /// fails, no candidate qualifies, or every one failed before sending, the
 /// DHT is queried again with a backoff of 100 ms doubling to 1 s; within one
 /// call
@@ -50,8 +52,8 @@ namespace Macula.Dht;
 /// Reuse: a station keeps one connection per identity and closes the older
 /// one when a newer one arrives. So when this process already has a session
 /// open to the provider's station under the same identity (resolveVia
-/// itself, or a StationPool link), streams and content transfers run on that
-/// session, on a dedicated QUIC stream of their own, instead of dialing, and
+/// itself, or a StationPool link), calls run on that session, and streams and
+/// content transfers on a dedicated QUIC stream of it, instead of dialing, and
 /// that session is never closed here. A session direct dial itself dialed is
 /// shared the same way by the requests that find it, and closes when the
 /// last of them is done. Reuse needs no station_endpoint lookup either.
@@ -471,7 +473,7 @@ public static class DirectDial
         {
             if (ReusedSession(alreadyOpen, candidate.Station) is { } reused)
             {
-                return Attempt<T>.Answered(await request(reused, deadline.Remaining, ct).ConfigureAwait(false));
+                return await RequestAsync(request, reused, deadline, ct).ConfigureAwait(false);
             }
             var signer = Convert.ToHexString(candidate.Advertisement.Key);
             var remembered = failures.GetValueOrDefault(signer);
@@ -496,8 +498,25 @@ public static class DirectDial
                 failures[signer] = new RememberedFailure(candidate.Advertisement.Version, lookup.SeenVersion, e);
                 return Attempt<T>.Failed(e);
             }
-            return Attempt<T>.Answered(await request(target, deadline.Remaining, ct).ConfigureAwait(false));
+            return await RequestAsync(request, target, deadline, ct).ConfigureAwait(false);
         };
+    }
+
+    // The request with whatever remains of the deadline. One whose CALL was
+    // never sent, because its session had ended or its turn to write didn't
+    // come in time, lets the next candidate be tried, and isn't remembered as
+    // a failure, so the same station may be tried again on a later pass. Any
+    // other failure is thrown, so a provider never runs one request twice.
+    private static async Task<Attempt<T>> RequestAsync<TTarget, T>(RequestAt<TTarget, T> request, TTarget target, CallDeadline deadline, CancellationToken ct)
+    {
+        try
+        {
+            return Attempt<T>.Answered(await request(target, deadline.Remaining, ct).ConfigureAwait(false));
+        }
+        catch (Exception e) when (ControlChannel.NotSent(e))
+        {
+            return Attempt<T>.Failed(e);
+        }
     }
 
     private static bool SameVersion(byte[]? a, byte[]? b) =>
@@ -507,7 +526,7 @@ public static class DirectDial
     public static Task<CallResponse> CallWithCertChainAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, byte[] realmCaPem, string expectedOrg, Value payload, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, new CertChainCheck(realmCaPem, expectedOrg), DialerFor(identity),
             ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c)),
-            timeout, ct);
+            timeout, ct, OpenSessionTo(identity));
 
     /// <summary>AdvertiseDirectAsync plus embedding a service-cert chain (leaf-first PEM: leaf ++ org CA) for Slice 7c Direction B authorization. Opt-in; AdvertiseDirectAsync itself is unaffected.</summary>
     public static async Task AdvertiseDirectWithCertChainAsync(Session session, KeyPair identity, byte[] realm, string procedure, TimeSpan ttl, byte[] certChainPem, CancellationToken ct = default)
@@ -701,19 +720,22 @@ public static class DirectDial
 
     /// <summary>
     /// Resolves procedure's provider via direct-dial (through resolveVia,
-    /// which is used only to query the DHT) and calls it there, in one hop,
-    /// in a SEPARATE connection from resolveVia. The provider must have
-    /// advertised via AdvertiseDirectAsync -- a plain AdvertiseAsync
-    /// publishes no discoverable record and the call will throw
+    /// which is used only to query the DHT) and calls it on the provider's
+    /// station, in one hop. The provider must have advertised via
+    /// AdvertiseDirectAsync -- a plain AdvertiseAsync publishes no
+    /// discoverable record and the call will throw
     /// ProcedureNotAdvertisedException.
     ///
     /// timeout bounds the whole call: finding the provider, each candidate's
     /// endpoint lookup and dial, and the CALL itself. See the type doc's
     /// "Candidates" for how providers are tried in turn.
     ///
-    /// A direct call always dials its own connection, even when this process
-    /// already has a session open to the provider's station under the same
-    /// identity; the station then closes that session.
+    /// The call runs on a session this process already has open to the
+    /// provider's station under the same identity, such as resolveVia or a
+    /// StationPool link, instead of dialing a second connection the station
+    /// would answer by closing the first. A CALL that was never sent, because
+    /// that session had ended or its turn to write didn't come in time, may go
+    /// to the next provider; one whose write started is never sent again.
     ///
     /// The dial itself uses Trust.Unsafe (no TLS verification) because
     /// trust is enforced at the application layer instead -- see the type
@@ -722,7 +744,7 @@ public static class DirectDial
     public static Task<CallResponse> CallAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, Value payload, TimeSpan timeout, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, null, DialerFor(identity),
             ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, c)),
-            timeout, ct);
+            timeout, ct, OpenSessionTo(identity));
 
     /// <summary>
     /// CallAsync, presenting ucanToken to a provider gated with
@@ -736,7 +758,7 @@ public static class DirectDial
     public static Task<CallResponse> CallWithUcanAsync(Session resolveVia, KeyPair identity, byte[] realm, string procedure, Value payload, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default) =>
         ReachProcedureCoreAsync(DhtLookups.Via(resolveVia), realm, procedure, null, DialerFor(identity),
             ReleasingAfter<Session, CallResponse>((target, remaining, c) => target.CallWithUcanAsync(procedure, realm, payload, WireDeadlineMs(remaining), remaining, ucanToken, c)),
-            timeout, ct);
+            timeout, ct, OpenSessionTo(identity));
 
     /// <summary>
     /// Publishes a signed procedure_advertisement naming session's own
