@@ -17,7 +17,19 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   the first. A provider that can't be reached before the request is sent
   is skipped for the next one, and a request that has been sent is never
   sent again. `GetDirectAsync` also retries while no provider has
-  announced the content yet.
+  announced the content yet, and a DHT lookup that fails is retried within
+  the timeout instead of ending the call.
+- **Breaking: a direct-dial call that runs out of time throws what it
+  observed.** It throws the last candidate failure, else why an answered
+  DHT lookup found nothing (`ProcedureNotAdvertisedException`,
+  `NoTrustedAdvertisementException`, `NoAuthorizedAdvertisementException`
+  or `ContentNotAnnouncedException`), else a failed lookup's own exception,
+  and a `TimeoutException` only when nothing was observed at all. A call
+  whose lookups all failed or went unanswered used to throw
+  `ProcedureNotAdvertisedException` or `StationEndpointNotFoundException`.
+  A `station_endpoint` lookup follows the same rule, throwing
+  `StationEndpointNotFoundException` only when a lookup was answered, and
+  retries a lookup that fails within its budget.
 - **Breaking: the timeout bounds the whole call**, finding the provider
   included. A timeout sized for the request alone can now run out during
   resolution, and a timeout that is zero or negative, including
