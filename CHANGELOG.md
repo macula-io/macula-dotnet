@@ -27,3 +27,16 @@ called out below. Releases before 0.5.0 predate this file; see the git tags.
   `PutDirectAsync`'s timeout covers the endpoint lookup and the dial.
   When the timeout cuts off a `GetDirectAsync` transfer, the
   `TimeoutException` carries the previous failure as its inner exception.
+- **Breaking: a UCAN-gated procedure binds the token to its caller.**
+  `Policy.Check` takes the CALL's caller as well as its token, and a
+  `Policy.Required` procedure accepts a token only when its `aud` is that
+  caller's 32-byte node id as lowercase hex, with no `did:` prefix
+  (`Convert.ToHexStringLower(caller.NodeId())`). A token with another or
+  no audience, or a CALL without a caller, is refused as Unauthorized
+  (`UcanToken.WrongAudienceException`, `UcanToken.NoCallerException`).
+  Mint tokens for gated procedures with that audience.
+- **An inbound CALL must be signed by the caller it names.**
+  `Session.ServeOneCallAsync`, `ServeOneCallGatedAsync` and `StationPool`
+  drop a CALL whose signature doesn't verify against its `caller` field,
+  without a reply and before any policy or handler runs, matching the
+  Erlang station link.

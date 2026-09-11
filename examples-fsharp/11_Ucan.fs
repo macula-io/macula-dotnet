@@ -20,10 +20,12 @@ let run () =
         let callerIdentity = KeyPair.GenerateWithDefaultPuzzle()
 
         let issuer = sprintf "did:macula:%s" (Convert.ToHexStringLower(callerIdentity.NodeId()))
+        // A gated provider accepts a token only from the caller it names as
+        // audience: that caller's node id as lowercase hex, no did: prefix.
         let token =
             UcanToken.Create(
                 issuer,
-                "did:macula:examples_fsharp.ucan_gated",
+                Convert.ToHexStringLower(callerIdentity.NodeId()),
                 [| UcanToken.Capability("mri:procedure:examples_fsharp/ucan_gated", "call") |],
                 callerIdentity)
         printfn "minted token, issuer=%s" issuer

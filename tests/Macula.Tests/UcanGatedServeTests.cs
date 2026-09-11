@@ -70,7 +70,7 @@ public class UcanGatedServeTests
             await provider.ServeOneCallGatedAsync(lookup, policyLookup, TimeSpan.FromSeconds(15));
         });
 
-        var token = UcanToken.Create("did:macula:test-issuer", "did:macula:test-audience", Array.Empty<UcanToken.Capability>(), requiredIssuerId);
+        var token = UcanToken.Create("did:macula:test-issuer", Convert.ToHexStringLower(authorizedCallerId.NodeId()), Array.Empty<UcanToken.Capability>(), requiredIssuerId);
         await using (var caller = await Session.ConnectAsync(StationHost, StationPort, authorizedCallerId, Connection.Trust.UseWebPki))
         {
             var response = await caller.CallWithUcanAsync(procedure, realm, Value.Text("42"), DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 10_000, TimeSpan.FromSeconds(10), token);

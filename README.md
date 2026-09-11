@@ -105,7 +105,7 @@ it doesn't.
 | Periodic re-advertise | — | ✅ | `DirectDial.KeepAdvertisedDirectAsync` — keeps a station-side registration fresh for a long-lived provider |
 | Supervised PubSub pair | ✅ | ✅ | `SupervisedPubSub.RunPublisherAsync`/`RunSubscriberAsync` — callback-driven, auto-publishes `pubsub.publish_started_v1`/`publish_completed_v1` |
 | UCAN (mint/verify/introspect) | ✅ | ✅ | `UcanToken.Create`/`Verify`/`Decode` and friends — no library exists for the exact spec version macula uses, hand-rolled to match the reference exactly |
-| UCAN-gated serving | — | ✅ | `Session.ServeOneCallGatedAsync` + `Policy.Required`/`Open` — a caller with no/invalid token is refused before the handler ever runs |
+| UCAN-gated serving | — | ✅ | `Session.ServeOneCallGatedAsync` + `Policy.Required`/`Open` — a caller with no/invalid token is refused before the handler ever runs; the token's `aud` must be the calling node's id as lowercase hex, and a CALL not signed by its caller is dropped |
 | RPC telemetry auto-facts | ✅ | ✅ | `rpc.sent_v1`/`rpc.completed_v1` (caller), `rpc.received_v1`/`rpc.replied_v1` (provider) — always-on, fire-and-forget, matching the reference exactly |
 
 ## Structure

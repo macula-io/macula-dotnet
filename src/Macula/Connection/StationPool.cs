@@ -1267,12 +1267,9 @@ public sealed partial class StationPool : IAsyncDisposable
     /// </summary>
     private async Task HandleInboundCallAsync(PooledLink link, Value frame, CancellationToken ct)
     {
-        CallInfo callInfo;
-        try
-        {
-            callInfo = CallFrameParsing.ParseCall(frame);
-        }
-        catch (ParseFrameException)
+        // A CALL that isn't signed by the caller it names gets no reply --
+        // see CallFrameParsing.ParseSignedCall.
+        if (CallFrameParsing.ParseSignedCall(frame) is not { } callInfo)
         {
             return;
         }

@@ -61,7 +61,8 @@ public class DirectDialUcanTests
         // 2. Wrong issuer: CallWithUcanAsync exists and attaches a token,
         // but the token's issuer doesn't match what the procedure requires.
         var serve2 = Task.Run(() => provider.ServeOneCallGatedAsync(lookup, policyLookup, TimeSpan.FromSeconds(15)));
-        var wrongIssuerToken = UcanToken.Create("did:macula:wrong-issuer", "did:macula:test-caller", Array.Empty<UcanToken.Capability>(), wrongIssuerId);
+        var callerAudience = Convert.ToHexStringLower(callerId.NodeId());
+        var wrongIssuerToken = UcanToken.Create("did:macula:wrong-issuer", callerAudience, Array.Empty<UcanToken.Capability>(), wrongIssuerId);
         await using (var resolver2 = await Session.ConnectAsync(StationHost, StationPort, callerId, Connection.Trust.UseWebPki))
         {
             var response = await DirectDial.CallWithUcanAsync(resolver2, callerId, realm, procedure, Value.Text("wrong issuer"), TimeSpan.FromSeconds(12), wrongIssuerToken);
@@ -70,9 +71,10 @@ public class DirectDialUcanTests
         }
         await serve2;
 
-        // 3. Authorized: the actual fix under test.
+        // 3. Authorized: the actual fix under test. The token names this
+        // caller as its audience, as a gated provider requires.
         var serve3 = Task.Run(() => provider.ServeOneCallGatedAsync(lookup, policyLookup, TimeSpan.FromSeconds(15)));
-        var validToken = UcanToken.Create("did:macula:test-issuer", "did:macula:test-caller", Array.Empty<UcanToken.Capability>(), issuerId);
+        var validToken = UcanToken.Create("did:macula:test-issuer", callerAudience, Array.Empty<UcanToken.Capability>(), issuerId);
         await using (var resolver3 = await Session.ConnectAsync(StationHost, StationPort, callerId, Connection.Trust.UseWebPki))
         {
             var response = await DirectDial.CallWithUcanAsync(resolver3, callerId, realm, procedure, Value.Text("hello gated direct-dial"), TimeSpan.FromSeconds(12), validToken);

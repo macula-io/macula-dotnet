@@ -64,6 +64,18 @@ public static class UcanToken
         public NoTokenException() : base("ucan: no token presented for a gated procedure") { }
     }
 
+    /// <summary>A UCAN-gated procedure was called with no caller to bind the token to; a missing caller is unauthorized.</summary>
+    public sealed class NoCallerException : Exception
+    {
+        public NoCallerException() : base("ucan: no caller to check the token's audience against") { }
+    }
+
+    /// <summary>A token's aud is not the presenting caller's node id as lowercase hex, so it was minted for someone else.</summary>
+    public sealed class WrongAudienceException : Exception
+    {
+        public WrongAudienceException() : base("ucan: token audience is not the caller presenting it") { }
+    }
+
     /// <summary>One entry in a UCAN token's capability list -- mirrors macula_ucan_nif's capability() :: #{with := binary(), can := binary()}.</summary>
     public sealed record Capability(
         [property: JsonPropertyName("with")] string With,
@@ -113,9 +125,16 @@ public static class UcanToken
 
     /// <summary>
     /// Mints a new UCAN token, self-issued and signed by id. issuer and
-    /// audience are opaque DID strings (e.g. "did:macula:io.macula.acme") --
-    /// this method does not validate or resolve DID structure, matching
-    /// macula_ucan_nif:create/4,5's own scope exactly.
+    /// audience are opaque strings -- this method does not validate or
+    /// resolve DID structure, matching macula_ucan_nif:create/4,5's own
+    /// scope exactly.
+    ///
+    /// For a token a caller presents to a procedure gated with
+    /// <see cref="Policy.Required"/>, audience must be that caller's
+    /// 32-byte node id as lowercase hex, with no did: prefix:
+    /// <c>Convert.ToHexStringLower(caller.NodeId())</c>. The provider
+    /// refuses a token whose aud names anyone other than the caller whose
+    /// signature is on the CALL.
     /// </summary>
     public static byte[] Create(string issuer, string audience, IReadOnlyList<Capability> capabilities, KeyPair id, CreateOpts? opts = null)
     {
