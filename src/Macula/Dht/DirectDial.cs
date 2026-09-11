@@ -99,6 +99,16 @@ public static class DirectDial
         public StationEndpointNotFoundException() : base("directdial: resolved station published no reachable station_endpoint") { }
     }
 
+    /// <summary>
+    /// A station's station_endpoint record verified but names no dialable
+    /// address. Reported when it is the latest answer a lookup got before its
+    /// deadline, matching macula_direct_dial's malformed_station_endpoint.
+    /// </summary>
+    public sealed class StationEndpointMalformedException : Exception
+    {
+        public StationEndpointMalformedException() : base("directdial: the station_endpoint record names no dialable address") { }
+    }
+
     /// <summary>No candidate advertisement is cert-chain-authorized for the expected org -- at least one candidate's envelope signature verified, but none passed CertChainVerification.Verify.</summary>
     public sealed class NoAuthorizedAdvertisementException : Exception
     {
@@ -570,16 +580,19 @@ public static class DirectDial
     // failing or being cut off.
     private sealed record EndpointLookup(Resolved? Target, Exception? Failure, byte[]? SeenVersion, bool Answered);
 
-    // With retryWithinBudget, an absent or expired record, or a lookup that
-    // failed, is looked up again at ResolveRetryDelay until the budget runs
-    // out. When no usable record turns up, the lookup reports what it
-    // observed: not found when a lookup was answered, else the latest failed
-    // lookup's error, else a timeout.
+    // With retryWithinBudget, a lookup that found no usable record (absent,
+    // expired, or naming no dialable address) or that failed is looked up
+    // again at ResolveRetryDelay until the budget runs out; a record that
+    // doesn't verify ends the lookup. When no usable record turns up, the
+    // lookup reports what it observed, as macula_direct_dial's
+    // endpoint_recorded does: the latest answered lookup (not found, or the
+    // malformed record), else the latest failed lookup's error, else a
+    // timeout.
     private static async Task<EndpointLookup> LookupStationEndpointAsync(DhtLookups dht, byte[] station, CallDeadline budget, bool retryWithinBudget, CancellationToken ct)
     {
         var key = RecordFactory.StationEndpointKey(station);
         byte[]? seen = null;
-        var answered = false;
+        Exception? answered = null;
         Exception? failed = null;
         while (true)
         {
@@ -589,11 +602,10 @@ public static class DirectDial
                 try
                 {
                     rec = await dht.FindRecord(key, within.Token).ConfigureAwait(false);
-                    answered = true;
                 }
                 catch (DhtClient.NotFoundException)
                 {
-                    answered = true;
+                    answered = new StationEndpointNotFoundException();
                 }
                 catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
@@ -616,43 +628,41 @@ public static class DirectDial
                 // meaningful.
                 if (!rec.Key.AsSpan().SequenceEqual(station))
                 {
-                    return new EndpointLookup(null, new TrustViolationException("directdial: station_endpoint signer mismatch"), seen, answered);
+                    return new EndpointLookup(null, new TrustViolationException("directdial: station_endpoint signer mismatch"), seen, true);
                 }
                 var verr = RecordFactory.Verify(rec);
-                if (verr is null)
+                if (verr is null && ReadEndpoint(station, rec) is { } target)
                 {
-                    return ReadEndpoint(station, rec);
+                    return new EndpointLookup(target, null, seen, true);
                 }
-                if (verr != RecordFactory.VerifyError.Expired)
+                if (verr is not null && verr != RecordFactory.VerifyError.Expired)
                 {
-                    return new EndpointLookup(null, new NoTrustedAdvertisementException(), seen, answered);
+                    return new EndpointLookup(null, new NoTrustedAdvertisementException(), seen, true);
                 }
+                answered = verr is null ? new StationEndpointMalformedException() : new StationEndpointNotFoundException();
             }
             if (!retryWithinBudget || budget.Passed)
             {
-                Exception unresolved = answered
-                    ? new StationEndpointNotFoundException()
-                    : failed ?? new TimeoutException("directdial: the timeout ran out before the station_endpoint lookup was answered");
-                return new EndpointLookup(null, unresolved, seen, answered);
+                Exception unresolved = answered ?? failed ?? new TimeoutException("directdial: the timeout ran out before the station_endpoint lookup was answered");
+                return new EndpointLookup(null, unresolved, seen, answered is not null);
             }
             await Task.Delay(ResolveRetryDelay < budget.Remaining ? ResolveRetryDelay : budget.Remaining, ct).ConfigureAwait(false);
         }
     }
 
-    private static EndpointLookup ReadEndpoint(byte[] station, Record rec)
+    // The dialable address a verified station_endpoint record names, or null
+    // when it names none.
+    private static Resolved? ReadEndpoint(byte[] station, Record rec)
     {
-        StationEndpoint ep;
         try
         {
-            ep = RecordReading.ReadStationEndpoint(rec);
+            var ep = RecordReading.ReadStationEndpoint(rec);
+            return ep.HostAdvertised.Count == 0 ? null : new Resolved(station, ep.HostAdvertised[0], ep.QuicPort);
         }
-        catch (Exception e)
+        catch (Exception)
         {
-            return new EndpointLookup(null, e, rec.Version, true);
+            return null;
         }
-        return ep.HostAdvertised.Count == 0
-            ? new EndpointLookup(null, new StationEndpointNotFoundException(), rec.Version, true)
-            : new EndpointLookup(new Resolved(station, ep.HostAdvertised[0], ep.QuicPort), null, rec.Version, true);
     }
 
     /// <summary>
