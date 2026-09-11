@@ -209,6 +209,84 @@ public class DirectDialCandidatesTests
         Assert.Empty(stations.Reached);
     }
 
+    // What a station_endpoint lookup reports: not found only when a lookup
+    // answered, else a failed lookup's error, else a timeout. The names match
+    // the Rust and Go tests.
+
+    [Fact]
+    public async Task Put_direct_reports_no_station_endpoint_when_a_lookup_answered_not_found()
+    {
+        await Assert.ThrowsAsync<DirectDial.StationEndpointNotFoundException>(() => PutAsync(new FakeDht(), new FakeStations(), KeyPair.Generate(), Short));
+    }
+
+    [Fact]
+    public async Task Put_direct_retries_an_endpoint_lookup_that_fails()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.PublishEndpoint(station, StationEndpoint(station, "s.test"));
+        dht.FailFirstLookups(RecordFactory.StationEndpointKey(station.NodeId()), 1);
+
+        var stored = await PutAsync(dht, new FakeStations(), station, Roomy);
+
+        Assert.Equal("stored on s.test", stored);
+    }
+
+    [Fact]
+    public async Task Put_direct_reports_a_failed_endpoint_lookup_when_every_lookup_failed()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.FailFirstLookups(RecordFactory.StationEndpointKey(station.NodeId()), int.MaxValue);
+        var clock = Stopwatch.StartNew();
+
+        var e = await Assert.ThrowsAsync<InvalidOperationException>(() => PutAsync(dht, new FakeStations(), station, Short));
+
+        Assert.Contains("did not answer", e.Message);
+        AssertReturnedWithin(ShortBound, clock);
+        Assert.True(dht.EndpointLookupsOf(station) > 1, "a failed endpoint lookup is retried within the budget");
+    }
+
+    [Fact]
+    public async Task Put_direct_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.NeverAnswer(RecordFactory.StationEndpointKey(station.NodeId()));
+        var clock = Stopwatch.StartNew();
+
+        await Assert.ThrowsAsync<TimeoutException>(() => PutAsync(dht, new FakeStations(), station, Short));
+
+        AssertReturnedWithin(ShortBound, clock);
+    }
+
+    [Fact]
+    public async Task Put_direct_keeps_a_lookup_error_when_a_later_endpoint_lookup_is_cut_off_by_the_deadline()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.FailFirstLookups(RecordFactory.StationEndpointKey(station.NodeId()), 1);
+        dht.NeverAnswer(RecordFactory.StationEndpointKey(station.NodeId()));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => PutAsync(dht, new FakeStations(), station, Short));
+    }
+
+    [Fact]
+    public async Task Call_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        dht.NeverAnswer(RecordFactory.StationEndpointKey(a.Station.NodeId()));
+        var stations = new FakeStations();
+        var clock = Stopwatch.StartNew();
+
+        await Assert.ThrowsAsync<TimeoutException>(() => CallAsync(dht, stations, Short));
+
+        AssertReturnedWithin(ShortBound, clock);
+        Assert.Empty(stations.Reached);
+    }
+
     [Fact]
     public async Task Call_with_cert_chain_tries_the_next_advertisement_when_a_station_has_no_endpoint()
     {
@@ -460,6 +538,127 @@ public class DirectDialCandidatesTests
         Assert.Contains("refused", e.Message);
     }
 
+    // What a call reports at its deadline: the last candidate failure, else
+    // why an answered lookup found nothing, else a failed lookup's error,
+    // else a timeout. The names match the Rust and Go tests.
+
+    [Fact]
+    public async Task Call_retries_after_a_lookup_fails()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        dht.FailFirstLookups(ProcedureKey, 1);
+        dht.PublishEndpoint(a.Station, StationEndpoint(a.Station, a.Host));
+        var stations = new FakeStations();
+
+        var response = await CallAsync(dht, stations, Roomy);
+
+        Assert.Equal("reply from a.test", ReplyText(response));
+        Assert.Equal(2, dht.AskedAt(ProcedureKey).Count);
+    }
+
+    [Fact]
+    public async Task Get_direct_retries_after_a_lookup_fails()
+    {
+        var p = new Provider("p.test");
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.Answer(RecordFactory.ContentKey(mcid), [Announcement(p, mcid)]);
+        dht.FailFirstLookups(RecordFactory.ContentKey(mcid), 1);
+        var stations = new FakeStations();
+
+        var content = await GetAsync(dht, stations, mcid, Roomy);
+
+        Assert.Equal(Content, content);
+        Assert.Equal(new[] { "p.test" }, stations.Reached);
+    }
+
+    [Fact]
+    public async Task Call_reports_not_advertised_when_a_lookup_answered_before_later_ones_failed()
+    {
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, Array.Empty<DhtRecord>());
+        dht.FailLookupsAfter(ProcedureKey, 1);
+
+        await Assert.ThrowsAsync<DirectDial.ProcedureNotAdvertisedException>(() => CallAsync(dht, new FakeStations(), Short));
+    }
+
+    [Fact]
+    public async Task Call_reports_a_failed_lookup_at_its_deadline_when_no_candidate_was_tried()
+    {
+        var dht = new FakeDht();
+        dht.FailLookupsAfter(ProcedureKey, 0);
+        var clock = Stopwatch.StartNew();
+
+        var e = await Assert.ThrowsAsync<InvalidOperationException>(() => CallAsync(dht, new FakeStations(), Short));
+
+        Assert.Contains("resolver session is gone", e.Message);
+        AssertReturnedWithin(ShortBound, clock);
+        Assert.True(dht.AskedAt(ProcedureKey).Count > 1, "a failed lookup is retried until the deadline");
+    }
+
+    [Fact]
+    public async Task Call_reports_a_timeout_when_no_lookup_was_answered_in_time()
+    {
+        var dht = new FakeDht();
+        dht.NeverAnswer(ProcedureKey);
+        var clock = Stopwatch.StartNew();
+
+        await Assert.ThrowsAsync<TimeoutException>(() => CallAsync(dht, new FakeStations(), Short));
+
+        AssertReturnedWithin(ShortBound, clock);
+    }
+
+    [Fact]
+    public async Task Call_keeps_a_lookup_error_when_a_later_lookup_is_cut_off_by_the_deadline()
+    {
+        var dht = new FakeDht();
+        dht.FailFirstLookups(ProcedureKey, 1);
+        dht.NeverAnswer(ProcedureKey);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CallAsync(dht, new FakeStations(), Short));
+    }
+
+    [Fact]
+    public async Task Get_direct_reports_not_announced_when_a_lookup_answered_before_later_ones_failed()
+    {
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.Answer(RecordFactory.ContentKey(mcid), Array.Empty<DhtRecord>());
+        dht.FailLookupsAfter(RecordFactory.ContentKey(mcid), 1);
+
+        await Assert.ThrowsAsync<DirectDial.ContentNotAnnouncedException>(() => GetAsync(dht, new FakeStations(), mcid, Short));
+    }
+
+    [Fact]
+    public async Task Get_direct_reports_a_failed_lookup_at_its_deadline_when_no_provider_was_tried()
+    {
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.FailLookupsAfter(RecordFactory.ContentKey(mcid), 0);
+        var clock = Stopwatch.StartNew();
+
+        var e = await Assert.ThrowsAsync<InvalidOperationException>(() => GetAsync(dht, new FakeStations(), mcid, Short));
+
+        Assert.Contains("resolver session is gone", e.Message);
+        AssertReturnedWithin(ShortBound, clock);
+        Assert.True(dht.AskedAt(RecordFactory.ContentKey(mcid)).Count > 1, "a failed lookup is retried until the deadline");
+    }
+
+    [Fact]
+    public async Task Get_direct_reports_a_timeout_when_no_lookup_was_answered_in_time()
+    {
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.NeverAnswer(RecordFactory.ContentKey(mcid));
+        var clock = Stopwatch.StartNew();
+
+        await Assert.ThrowsAsync<TimeoutException>(() => GetAsync(dht, new FakeStations(), mcid, Short));
+
+        AssertReturnedWithin(ShortBound, clock);
+    }
+
     // Reusing a session this process already has open to a station, instead
     // of dialing a second connection under the same identity that would make
     // the station close the first. The names match the Rust and Go tests.
@@ -560,6 +759,10 @@ public class DirectDialCandidatesTests
     private static Task<byte[]> GetAsync(FakeDht dht, FakeStations stations, byte[] mcid, TimeSpan timeout, DirectDial.RequestAt<string, byte[]>? fetch = null) =>
         DirectDial.FetchContentCoreAsync(dht.Lookups, mcid, stations.Dial, fetch ?? new DirectDial.RequestAt<string, byte[]>((_, _, _) => Task.FromResult(Content)), timeout, CancellationToken.None);
 
+    private static Task<string> PutAsync(FakeDht dht, FakeStations stations, KeyPair station, TimeSpan timeout) =>
+        DirectDial.ReachStationCoreAsync(dht.Lookups, station.NodeId(), stations.Dial,
+            new DirectDial.RequestAt<string, string>((host, _, _) => Task.FromResult($"stored on {host}")), timeout, CancellationToken.None);
+
     private static Task<CallResponse> Reply(string host, TimeSpan remaining, CancellationToken ct) =>
         Task.FromResult<CallResponse>(new CallResponse.Result(Value.Text($"reply from {host}"), new byte[32]));
 
@@ -653,6 +856,9 @@ public class DirectDialCandidatesTests
         private readonly Dictionary<string, List<IReadOnlyList<DhtRecord>>> _replies = new();
         private readonly Dictionary<string, List<long>> _asked = new();
         private readonly Dictionary<string, int> _failAfter = new();
+        private readonly Dictionary<string, int> _failFirst = new();
+        private readonly HashSet<string> _neverAnswered = new();
+        private readonly Dictionary<string, int> _endpointAsked = new();
         private readonly Dictionary<string, DhtRecord> _endpoints = new();
 
         public DirectDial.DhtLookups Lookups => new(FindRecordsAsync, FindRecordAsync);
@@ -691,6 +897,33 @@ public class DirectDialCandidatesTests
             }
         }
 
+        /// <summary>The first failedLookups lookups of key fail, the way a query the station doesn't answer in time does; later ones are answered.</summary>
+        public void FailFirstLookups(byte[] key, int failedLookups)
+        {
+            lock (_gate)
+            {
+                _failFirst[Convert.ToHexString(key)] = failedLookups;
+            }
+        }
+
+        /// <summary>Lookups of key never get an answer once any FailFirstLookups have failed; only the caller's deadline ends them.</summary>
+        public void NeverAnswer(byte[] key)
+        {
+            lock (_gate)
+            {
+                _neverAnswered.Add(Convert.ToHexString(key));
+            }
+        }
+
+        /// <summary>How many times FindRecord was asked for station's station_endpoint.</summary>
+        public int EndpointLookupsOf(KeyPair station)
+        {
+            lock (_gate)
+            {
+                return _endpointAsked.GetValueOrDefault(Convert.ToHexString(RecordFactory.StationEndpointKey(station.NodeId())));
+            }
+        }
+
         private Task<IReadOnlyList<DhtRecord>> FindRecordsAsync(byte[] key, CancellationToken ct)
         {
             lock (_gate)
@@ -701,6 +934,14 @@ public class DirectDialCandidatesTests
                     times = _asked[hex] = [];
                 }
                 times.Add(_clock.ElapsedMilliseconds);
+                if (_failFirst.TryGetValue(hex, out var failed) && times.Count <= failed)
+                {
+                    return Task.FromException<IReadOnlyList<DhtRecord>>(new InvalidOperationException("dht: the station did not answer the lookup"));
+                }
+                if (_neverAnswered.Contains(hex))
+                {
+                    return NeverAnsweredAsync<IReadOnlyList<DhtRecord>>(ct);
+                }
                 if (_failAfter.TryGetValue(hex, out var answered) && times.Count > answered)
                 {
                     return Task.FromException<IReadOnlyList<DhtRecord>>(new InvalidOperationException("dht: the resolver session is gone"));
@@ -712,11 +953,28 @@ public class DirectDialCandidatesTests
             }
         }
 
+        private static async Task<T> NeverAnsweredAsync<T>(CancellationToken ct)
+        {
+            await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
+            throw new UnreachableException();
+        }
+
+        // FailFirstLookups and NeverAnswer apply to station_endpoint keys too.
         private Task<DhtRecord> FindRecordAsync(byte[] key, CancellationToken ct)
         {
             lock (_gate)
             {
-                return _endpoints.TryGetValue(Convert.ToHexString(key), out var rec)
+                var hex = Convert.ToHexString(key);
+                var asked = _endpointAsked[hex] = _endpointAsked.GetValueOrDefault(hex) + 1;
+                if (_failFirst.TryGetValue(hex, out var failed) && asked <= failed)
+                {
+                    return Task.FromException<DhtRecord>(new InvalidOperationException("dht: the station did not answer the lookup"));
+                }
+                if (_neverAnswered.Contains(hex))
+                {
+                    return NeverAnsweredAsync<DhtRecord>(ct);
+                }
+                return _endpoints.TryGetValue(hex, out var rec)
                     ? Task.FromResult(rec)
                     : Task.FromException<DhtRecord>(new DhtClient.NotFoundException());
             }

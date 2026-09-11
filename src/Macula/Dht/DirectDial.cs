@@ -33,16 +33,19 @@ namespace Macula.Dht;
 /// whose endpoint record doesn't resolve, whose dial fails, or whose dialed
 /// identity doesn't match is skipped for the next one, because nothing has
 /// reached the provider yet. Once a CALL or STREAM_OPEN has gone out, its
-/// result is the call's result and it is never sent again. When no
-/// candidate qualifies, or every one failed before sending, the DHT is
-/// queried again with a backoff of 100 ms doubling to 1 s; within one call
+/// result is the call's result and it is never sent again. When a query
+/// fails, no candidate qualifies, or every one failed before sending, the
+/// DHT is queried again with a backoff of 100 ms doubling to 1 s; within one
+/// call
 /// a station that already failed is dialed again only once its
 /// advertisement or endpoint record has changed. The call's timeout bounds
 /// all of it, and each candidate gets a share of what remains for its
 /// endpoint lookup and dial. At the deadline, the most recent candidate
 /// failure is thrown as it was raised; a later query that finds nothing, or
-/// fails, never replaces it. When no candidate was ever tried, the reason
-/// none qualified is thrown instead.
+/// fails, never replaces it. When no candidate was ever tried, the call
+/// throws why the latest answered query found none, else the latest failed
+/// query's error, else a TimeoutException: an absence nobody observed is
+/// never reported.
 ///
 /// Reuse: a station keeps one connection per identity and closes the older
 /// one when a newer one arrives. So when this process already has a session
@@ -242,9 +245,14 @@ public static class DirectDial
     private static bool ClosesSession<TSession>(StationTarget<TSession> target) where TSession : class =>
         target.Owned;
 
-    // One DHT query's candidates, in DHT order, and the error to report if
-    // none of them qualifies.
-    private sealed record Pass<TCandidate>(IReadOnlyList<TCandidate> Candidates, Exception Unresolved);
+    // What one DHT query came to. A query cut off by the deadline learned
+    // nothing.
+    private enum Lookup { Answered, Failed, CutOff }
+
+    // One DHT query's candidates, in DHT order, how the query went, and what
+    // to report if none of them qualifies: why an answered query found none,
+    // or a failed query's own error.
+    private sealed record Pass<TCandidate>(IReadOnlyList<TCandidate> Candidates, Exception? Unresolved, Lookup Outcome = Lookup.Answered);
 
     // A qualified advertisement: its record (whose signer and version
     // identify the candidate) and the station serving it.
@@ -269,10 +277,11 @@ public static class DirectDial
 
     // The loop every resolving shape shares: query, try the candidates in
     // DHT order until one answers, and query again after a capped backoff
-    // until the deadline. Once a candidate has failed before sending, the
-    // most recent candidate failure is what the call throws, as it was
-    // raised: a later query that finds nothing, or fails, never replaces
-    // it. Until then, the latest query's reason for finding no candidate is.
+    // until the deadline. At the deadline the call throws what it observed,
+    // the first of: the most recent candidate failure, as it was raised; why
+    // the latest answered query found no candidate; the latest failed
+    // query's error; and a TimeoutException when nothing was observed, since
+    // an absence nobody saw is never reported.
     private static async Task<T> FirstAnswerAsync<TCandidate, T>(
         Func<CallDeadline, CancellationToken, Task<Pass<TCandidate>>> query,
         Func<TCandidate, CallDeadline, Exception?, CancellationToken, Task<Attempt<T>>> attempt,
@@ -280,20 +289,27 @@ public static class DirectDial
         CancellationToken ct)
     {
         Exception? candidateFailure = null;
-        Exception? unresolved = null;
+        Exception? noneQualified = null;
+        Exception? lookupFailure = null;
         var pause = ResolveRetryDelay;
         while (true)
         {
             var pass = await query(deadline, ct).ConfigureAwait(false);
-            // A query the deadline cut short learned nothing, so it doesn't
-            // replace a reason already seen.
-            if (pass.Candidates.Count == 0 && !(deadline.Passed && unresolved is not null))
+            if (pass.Candidates.Count == 0)
             {
-                unresolved = pass.Unresolved;
+                switch (pass.Outcome)
+                {
+                    case Lookup.Answered:
+                        noneQualified = pass.Unresolved;
+                        break;
+                    case Lookup.Failed:
+                        lookupFailure = pass.Unresolved;
+                        break;
+                }
             }
             for (var i = 0; i < pass.Candidates.Count && !deadline.Passed; i++)
             {
-                var outcome = await attempt(pass.Candidates[i], deadline.ShareFor(pass.Candidates.Count - i), candidateFailure ?? unresolved, ct).ConfigureAwait(false);
+                var outcome = await attempt(pass.Candidates[i], deadline.ShareFor(pass.Candidates.Count - i), candidateFailure ?? noneQualified ?? lookupFailure, ct).ConfigureAwait(false);
                 if (outcome.Failure is null)
                 {
                     return outcome.Answer!;
@@ -311,7 +327,7 @@ public static class DirectDial
                 break;
             }
         }
-        ExceptionDispatchInfo.Throw(candidateFailure ?? unresolved ?? new TimeoutException("directdial: the timeout ran out before any candidate could be tried"));
+        ExceptionDispatchInfo.Throw(candidateFailure ?? noneQualified ?? lookupFailure ?? new TimeoutException("directdial: the timeout ran out before a provider was resolved"));
         throw new UnreachableException();
     }
 
@@ -327,10 +343,13 @@ public static class DirectDial
                 {
                     recs = await dht.FindRecords(key, within.Token).ConfigureAwait(false);
                 }
-                catch (Exception) when (!ct.IsCancellationRequested)
+                catch (OperationCanceledException) when (!ct.IsCancellationRequested)
                 {
-                    // a failed or cut-off query counts as no records yet
-                    recs = Array.Empty<Record>();
+                    return new Pass<ProcedureCandidate>(Array.Empty<ProcedureCandidate>(), null, Lookup.CutOff);
+                }
+                catch (Exception e) when (!ct.IsCancellationRequested)
+                {
+                    return new Pass<ProcedureCandidate>(Array.Empty<ProcedureCandidate>(), e, Lookup.Failed);
                 }
             }
             if (recs.Count == 0)
@@ -508,13 +527,17 @@ public static class DirectDial
     // failing or being cut off.
     private sealed record EndpointLookup(Resolved? Target, Exception? Failure, byte[]? SeenVersion, bool Answered);
 
-    // With retryWithinBudget, an absent or expired record is looked up again
-    // at ResolveRetryDelay until the budget runs out.
+    // With retryWithinBudget, an absent or expired record, or a lookup that
+    // failed, is looked up again at ResolveRetryDelay until the budget runs
+    // out. When no usable record turns up, the lookup reports what it
+    // observed: not found when a lookup was answered, else the latest failed
+    // lookup's error, else a timeout.
     private static async Task<EndpointLookup> LookupStationEndpointAsync(DhtLookups dht, byte[] station, CallDeadline budget, bool retryWithinBudget, CancellationToken ct)
     {
         var key = RecordFactory.StationEndpointKey(station);
         byte[]? seen = null;
         var answered = false;
+        Exception? failed = null;
         while (true)
         {
             Record? rec = null;
@@ -535,7 +558,8 @@ public static class DirectDial
                 }
                 catch (Exception e) when (!ct.IsCancellationRequested)
                 {
-                    return new EndpointLookup(null, e, seen, answered);
+                    // a failed lookup teaches nothing: looked up again like an absent record
+                    failed = e;
                 }
             }
 
@@ -563,7 +587,10 @@ public static class DirectDial
             }
             if (!retryWithinBudget || budget.Passed)
             {
-                return new EndpointLookup(null, new StationEndpointNotFoundException(), seen, answered);
+                Exception unresolved = answered
+                    ? new StationEndpointNotFoundException()
+                    : failed ?? new TimeoutException("directdial: the timeout ran out before the station_endpoint lookup was answered");
+                return new EndpointLookup(null, unresolved, seen, answered);
             }
             await Task.Delay(ResolveRetryDelay < budget.Remaining ? ResolveRetryDelay : budget.Remaining, ct).ConfigureAwait(false);
         }
@@ -934,12 +961,11 @@ public static class DirectDial
             }
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
-                recs = Array.Empty<Record>();
+                return new Pass<ContentCandidate>(Array.Empty<ContentCandidate>(), null, Lookup.CutOff);
             }
             catch (Exception e) when (!ct.IsCancellationRequested)
             {
-                // the lookup's own error is the one to report if nothing better turns up
-                return new Pass<ContentCandidate>(Array.Empty<ContentCandidate>(), e);
+                return new Pass<ContentCandidate>(Array.Empty<ContentCandidate>(), e, Lookup.Failed);
             }
             return TrustedContentProviders(recs);
         };
