@@ -210,9 +210,10 @@ public class DirectDialCandidatesTests
         Assert.Empty(stations.Reached);
     }
 
-    // What a station_endpoint lookup reports: not found only when a lookup
-    // answered, else a failed lookup's error, else a timeout. The names match
-    // the Rust and Go tests.
+    // What a station_endpoint lookup reports: the latest answered lookup (not
+    // found, or a record naming no dialable address, which is asked again),
+    // else a failed lookup's error, else a timeout. The names match the Rust
+    // and Go tests.
 
     [Fact]
     public async Task Put_direct_reports_no_station_endpoint_when_a_lookup_answered_not_found()
@@ -270,6 +271,32 @@ public class DirectDialCandidatesTests
         dht.NeverAnswer(RecordFactory.StationEndpointKey(station.NodeId()));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => PutAsync(dht, new FakeStations(), station, Short));
+    }
+
+    [Fact]
+    public async Task Put_direct_asks_again_past_a_malformed_endpoint_record()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.PublishEndpointsInTurn(station, MalformedStationEndpoint(station), StationEndpoint(station, "s.test"));
+
+        var stored = await PutAsync(dht, new FakeStations(), station, Roomy);
+
+        Assert.Equal("stored on s.test", stored);
+    }
+
+    [Fact]
+    public async Task Put_direct_reports_a_malformed_endpoint_record_at_its_deadline()
+    {
+        var station = KeyPair.Generate();
+        var dht = new FakeDht();
+        dht.PublishEndpoint(station, MalformedStationEndpoint(station));
+        var clock = Stopwatch.StartNew();
+
+        await Assert.ThrowsAsync<DirectDial.StationEndpointMalformedException>(() => PutAsync(dht, new FakeStations(), station, Short));
+
+        AssertReturnedWithin(ShortBound, clock);
+        Assert.True(dht.EndpointLookupsOf(station) > 1, "a malformed endpoint record is asked again within the budget");
     }
 
     [Fact]
@@ -995,6 +1022,25 @@ public class DirectDialCandidatesTests
         }, signer);
     }
 
+    /// <summary>A station_endpoint signed by signer that advertises no host, so it names no dialable address.</summary>
+    private static DhtRecord MalformedStationEndpoint(KeyPair signer)
+    {
+        var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        return RecordFactory.Sign(new DhtRecord
+        {
+            Type = RecordTypes.StationEndpoint,
+            Key = signer.NodeId(),
+            Version = Envelope.FreshFrameId(),
+            CreatedAt = now,
+            ExpiresAt = now + 600_000,
+            Payload = Value.Map(new List<KeyValuePair<Value, Value>>
+            {
+                new(Value.Text("quic_port"), Value.UInt(4433)),
+                new(Value.Text("host_advertised"), Value.List(Array.Empty<Value>())),
+            }),
+        }, signer);
+    }
+
     private static DhtRecord Announcement(Provider p, byte[] mcid) =>
         RecordFactory.Sign(RecordFactory.NewContentAnnouncement(p.Station.NodeId(), mcid, $"https://{p.Host}:4433", TimeSpan.FromMinutes(2)), p.Station);
 
@@ -1022,6 +1068,7 @@ public class DirectDialCandidatesTests
         private readonly HashSet<string> _neverAnswered = new();
         private readonly Dictionary<string, int> _endpointAsked = new();
         private readonly Dictionary<string, DhtRecord> _endpoints = new();
+        private readonly Dictionary<string, DhtRecord[]> _endpointsInTurn = new();
 
         public DirectDial.DhtLookups Lookups => new(FindRecordsAsync, FindRecordAsync);
 
@@ -1038,6 +1085,15 @@ public class DirectDialCandidatesTests
             lock (_gate)
             {
                 _endpoints[Convert.ToHexString(RecordFactory.StationEndpointKey(station.NodeId()))] = endpoint;
+            }
+        }
+
+        /// <summary>FindRecord for station's station_endpoint answers with these records in turn, repeating the last.</summary>
+        public void PublishEndpointsInTurn(KeyPair station, params DhtRecord[] endpoints)
+        {
+            lock (_gate)
+            {
+                _endpointsInTurn[Convert.ToHexString(RecordFactory.StationEndpointKey(station.NodeId()))] = endpoints;
             }
         }
 
@@ -1135,6 +1191,10 @@ public class DirectDialCandidatesTests
                 if (_neverAnswered.Contains(hex))
                 {
                     return NeverAnsweredAsync<DhtRecord>(ct);
+                }
+                if (_endpointsInTurn.TryGetValue(hex, out var inTurn))
+                {
+                    return Task.FromResult(inTurn[Math.Min(asked - 1, inTurn.Length - 1)]);
                 }
                 return _endpoints.TryGetValue(hex, out var rec)
                     ? Task.FromResult(rec)

@@ -30,7 +30,9 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   `ProcedureNotAdvertisedException` or `StationEndpointNotFoundException`.
   A `station_endpoint` lookup follows the same rule, throwing
   `StationEndpointNotFoundException` only when a lookup was answered, and
-  retries a lookup that fails within its budget.
+  retries a lookup that fails within its budget. A record that names no
+  dialable address is looked up again too, and when it is the latest answer
+  the call throws the new `StationEndpointMalformedException`.
 - **Breaking: the timeout bounds the whole call**, finding the provider
   included. A timeout sized for the request alone can now run out during
   resolution, and a timeout that is zero or negative, including
