@@ -996,7 +996,7 @@ public sealed partial class StationPool : IAsyncDisposable
         {
             return;
         }
-        link.AddConsumer(ConsumeSubscriptionAsync(subscription, () => target.SubscribeAsync(spec), HandleEventAsync));
+        link.AddConsumer(ConsumeSubscriptionAsync(subscription, () => target.SubscribeAsync(spec), evt => DeliverEventAsync(_subs, _dedup, spec, evt)));
     }
 
     /// <summary>
@@ -1149,14 +1149,22 @@ public sealed partial class StationPool : IAsyncDisposable
     // Events and inbound calls on a link's Session
     //====================================================================
 
-    private async Task HandleEventAsync(EventInfo evt)
+    /// <summary>
+    /// Hands an event that a link's subscription to pattern received to that
+    /// pattern's handlers, once however many links deliver it. The session
+    /// reader already matched the event to the pattern by the station's rule,
+    /// so the pattern is looked up exactly, wildcard or not, and an event
+    /// matching both "orders/*" and "orders/placed" reaches each set of
+    /// handlers once.
+    /// </summary>
+    internal static async Task DeliverEventAsync(IReadOnlyDictionary<(string RealmHex, string Topic), ConcurrentDictionary<Guid, PoolEventHandler>> subs, EventDedup dedup, SubscribeSpec pattern, EventInfo evt)
     {
-        if (!_dedup.CheckNew(evt.Realm, evt.Publisher, evt.Seq, evt.Topic))
+        if (!dedup.CheckNew(evt.Realm, evt.Publisher, evt.Seq, evt.Topic, pattern.Topic))
         {
-            return; // another link already delivered this fact.
+            return; // another link already delivered this fact for this pattern.
         }
 
-        if (!_subs.TryGetValue((ToHex(evt.Realm), evt.Topic), out var byId))
+        if (!subs.TryGetValue((ToHex(pattern.Realm), pattern.Topic), out var byId))
         {
             return;
         }

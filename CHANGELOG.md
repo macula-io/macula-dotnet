@@ -107,6 +107,15 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   without a reply and before any policy or handler runs, matching the
   Erlang station link.
 
+### Fixed
+
+- **A `StationPool` subscription to a wildcard topic receives its events.**
+  The pool looked up handlers by an event's own topic, so a subscription to
+  `orders/*` never saw an event published to `orders/placed`. Each link
+  subscription now hands its events to the handlers of its own pattern, and
+  events are deduplicated per pattern, so overlapping subscriptions such as
+  `orders/*` and `orders/placed` each receive an event once.
+
 ## [0.4.1] - Unreleased
 
 ### Fixed
