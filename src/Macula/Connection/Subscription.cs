@@ -64,8 +64,8 @@ public sealed class Subscription : IAsyncDisposable
     /// <summary>
     /// Waits up to timeout for the next event. Throws TimeoutException when
     /// none arrives in time, <see cref="ConsumerOverflowException"/> once this
-    /// subscription fell behind and its queued events are read, the session's
-    /// own end reason (an IOException) once the session ended, and
+    /// subscription fell behind and its queued events are read,
+    /// <see cref="SessionEndedException"/> once the session ended, and
     /// ObjectDisposedException after the subscription is disposed.
     /// </summary>
     public async Task<EventInfo> RecvEventAsync(TimeSpan timeout, CancellationToken ct = default)

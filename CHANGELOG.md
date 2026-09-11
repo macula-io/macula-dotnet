@@ -64,9 +64,10 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   ends with `ConsumerOverflowException` after the events already queued, and
   the session stays up; an inbound CALL that doesn't fit gets
   `temporary_relay_failure`, and serving carries on. GOODBYE, or HELLO or CONNECT after the
-  handshake (`ProtocolViolationException`), ends the session and fails
-  waiting calls with the reason, and direct dial no longer reuses a session
-  that has ended. Other frames nothing waits for are counted in
+  handshake (`ProtocolViolationException`), or a frame that can't be
+  decoded, ends the session: waiting calls and every later operation on it
+  throw `SessionEndedException`, whose `InnerException` is the reason, the
+  session closes its connection, and direct dial no longer reuses it. Other frames nothing waits for are counted in
   `Session.UnroutedFrameCounts` and reported through
   `System.Diagnostics.Trace` at most once a minute per frame type.
   `StationPool` runs on all of this, without a pump or send gate of its
@@ -77,13 +78,21 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   caller gets a `TimeoutException`, the frame was not sent, and the session
   carries on. A write that stalls for more than 30 seconds ends the session
   with `SendTimeoutException`, and a `StationPool` link dials again. A call
-  that runs out of time throws `CallTimeoutException`, whose `WriteStarted`
-  says whether its CALL may have reached the station; a reply that arrives
-  after that is counted as unrouted. The replies a session makes on its own,
+  that runs out of time throws `CallTimeoutException`, and a call whose
+  session ends first throws `SessionEndedException`; the `WriteStarted` of
+  either says whether its CALL may have reached the station, and a reply that
+  arrives after that is counted as unrouted. The replies a session makes on its own,
   such as `temporary_relay_failure`, and its RPC telemetry facts go to a
   writer of their own: they never hold up its reader or cost a call time,
   `rpc.sent_v1` goes once the CALL is written, and when 64 frames already
   wait there the next one is dropped.
+- **Breaking: `StationPool.CallAsync` tries another link only when the CALL
+  was not sent.** It moves to the next connected link only when the call's
+  `SessionEndedException` or `CallTimeoutException` says its CALL was never
+  written there. A reply, RESULT or ERROR, is returned from the link that
+  gave it, and a call that timed out after its write started throws, so a
+  provider never runs one call twice. Pool calls no longer publish RPC
+  telemetry facts, as macula's pool doesn't.
 - **Breaking: a UCAN-gated procedure binds the token to its caller.**
   `Policy.Check` takes the CALL's caller as well as its token, and a
   `Policy.Required` procedure accepts a token only when its `aud` is that

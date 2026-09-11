@@ -56,12 +56,30 @@ public sealed class CallTimeoutException : TimeoutException
 }
 
 /// <summary>
+/// The session has ended, so the operation can't go on; InnerException says
+/// why it ended. For a call, <see cref="WriteStarted"/> says how far its CALL
+/// got: false when the session ended before its write started, so it was never
+/// sent and may be tried elsewhere; true when the write had started, so the
+/// station may have it and it must not be sent again.
+/// </summary>
+public sealed class SessionEndedException : IOException
+{
+    public SessionEndedException(Exception reason, bool writeStarted)
+        : base($"the session has ended: {reason.Message}", reason)
+    {
+        WriteStarted = writeStarted;
+    }
+
+    public bool WriteStarted { get; }
+}
+
+/// <summary>
 /// Reads a session's control stream and routes every frame to whatever waits
 /// for it: a RESULT or ERROR to its call, an EVENT to each subscription whose
 /// realm and topic match, and a CALL signed by its caller to the inbound call
-/// queue. GOODBYE, or HELLO or CONNECT after the handshake, ends the channel.
-/// Any other frame is dropped and counted by type, with at most one trace line
-/// per type per minute.
+/// queue. GOODBYE, HELLO or CONNECT after the handshake, or a frame that can't
+/// be decoded, ends the channel. Any other frame is dropped and counted by
+/// type, with at most one trace line per type per minute.
 ///
 /// Writers take turns. Waiting for a turn is bounded by the caller's deadline:
 /// a call's own timeout, and the send timeout for every other frame. A write
@@ -71,8 +89,9 @@ public sealed class CallTimeoutException : TimeoutException
 /// session announces, are handed to a writer of their own, and one is dropped
 /// when 64 already wait there.
 ///
-/// When the channel ends, every waiting call fails with the reason, every
-/// subscription and the call queue end with it, and onEnded runs once.
+/// When the channel ends, every waiting call, every subscription, the call
+/// queue and every later operation fail with <see cref="SessionEndedException"/>
+/// carrying the reason, and onEnded runs once.
 /// </summary>
 internal sealed class ControlChannel
 {
@@ -122,6 +141,10 @@ internal sealed class ControlChannel
 
     /// <summary>How many frames of each type arrived with nothing to route them to.</summary>
     internal IReadOnlyDictionary<string, long> UnroutedFrames => new Dictionary<string, long>(_unrouted);
+
+    /// <summary>Whether e says a CALL was never sent, so trying it elsewhere can't run it twice.</summary>
+    internal static bool NotSent(Exception e) =>
+        e is CallTimeoutException { WriteStarted: false } or SessionEndedException { WriteStarted: false };
 
     /// <summary>
     /// Starts reading the control stream, and writing the frames handed off.
@@ -174,8 +197,9 @@ internal sealed class ControlChannel
     /// Sends the CALL and waits for the RESULT or ERROR with its call_id, all
     /// within timeout, its turn to write included. Other calls, events and
     /// inbound calls on the same session carry on meanwhile. When timeout runs
-    /// out this throws <see cref="CallTimeoutException"/>, saying whether the
-    /// CALL's write had started; a write that started finishes on its own,
+    /// out this throws <see cref="CallTimeoutException"/>, and when the session
+    /// ends first, <see cref="SessionEndedException"/>; both say whether the
+    /// CALL's write had started. A write that started finishes on its own,
     /// within the send timeout. Once the CALL is written, afterWritten, when
     /// given, is handed off.
     /// </summary>
@@ -184,7 +208,7 @@ internal sealed class ControlChannel
         var key = Convert.ToHexStringLower(spec.CallId);
         var reply = new TaskCompletionSource<CallResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
         _calls[key] = reply;
-        var writeStarted = false;
+        Task? write = null;
         try
         {
             // A channel that ended before this call registered never saw it.
@@ -195,8 +219,7 @@ internal sealed class ControlChannel
             try
             {
                 await TakeWriteTurnAsync(within.Token).ConfigureAwait(false);
-                writeStarted = true;
-                var write = Observed(WriteTakenTurnAsync(signed));
+                write = Observed(WriteTakenTurnAsync(signed));
                 if (afterWritten is not null)
                 {
                     _ = write.ContinueWith(_ => HandOff(afterWritten), CancellationToken.None,
@@ -208,11 +231,18 @@ internal sealed class ControlChannel
             catch (OperationCanceledException) when (!ct.IsCancellationRequested)
             {
                 throw new CallTimeoutException(
-                    writeStarted
+                    write is not null
                         ? $"no response for call_id {key} within {timeout}"
                         : $"no turn to write call_id {key} within {timeout}, so it was not sent",
-                    writeStarted);
+                    write is not null);
             }
+        }
+        catch (Exception e) when (write is not null && _ended.Task.IsCompleted && e is not (OperationCanceledException or CallTimeoutException) && !FailedWith(write, e))
+        {
+            // The session ended after this CALL's write started, so the station
+            // may have it. A write that failed on its own, as a stalled one
+            // does, reports that failure instead.
+            throw new SessionEndedException(_ended.Task.Result, writeStarted: true);
         }
         finally
         {
@@ -302,16 +332,16 @@ internal sealed class ControlChannel
         }
     }
 
-    /// <summary>The next inbound CALL signed by its caller. Once the channel ended, throws its reason.</summary>
+    /// <summary>The next inbound CALL signed by its caller. Once the channel ended, throws <see cref="SessionEndedException"/>.</summary>
     internal async Task<CallInfo> NextInboundCallAsync(CancellationToken ct)
     {
         try
         {
             return await _inboundCalls.Reader.ReadAsync(ct).ConfigureAwait(false);
         }
-        catch (ChannelClosedException e) when (e.InnerException is { } reason)
+        catch (ChannelClosedException e) when (e.InnerException is { } ended)
         {
-            ExceptionDispatchInfo.Throw(reason);
+            ExceptionDispatchInfo.Throw(ended);
             throw;
         }
     }
@@ -336,6 +366,8 @@ internal sealed class ControlChannel
         }
         catch (Exception e)
         {
+            // Includes a frame that can't be decoded: nothing after it can be
+            // read in step.
             End(e as IOException ?? new IOException($"the control stream failed: {e.Message}", e));
         }
     }
@@ -459,7 +491,8 @@ internal sealed class ControlChannel
         }
     }
 
-    // Waits for the turn to write. Once the channel ended, throws its reason.
+    // Waits for the turn to write. Once the channel ended, throws
+    // SessionEndedException, promptly for a writer already waiting.
     private async Task TakeWriteTurnAsync(CancellationToken ct)
     {
         ThrowIfEnded();
@@ -514,11 +547,15 @@ internal sealed class ControlChannel
         return write;
     }
 
+    // Whether write itself failed with e.
+    private static bool FailedWith(Task write, Exception e) =>
+        write.IsFaulted && ReferenceEquals(write.Exception!.InnerException, e);
+
     private void ThrowIfEnded()
     {
         if (_ended.Task.IsCompleted)
         {
-            ExceptionDispatchInfo.Throw(_ended.Task.Result);
+            throw new SessionEndedException(_ended.Task.Result, writeStarted: false);
         }
     }
 
@@ -561,14 +598,15 @@ internal sealed class ControlChannel
                 reply.TrySetException(reason);
             }
         }
+        var ended = new SessionEndedException(reason, writeStarted: false);
         lock (_gate)
         {
             foreach (var subscription in _subscriptions)
             {
-                subscription.End(reason);
+                subscription.End(ended);
             }
         }
-        _inboundCalls.Writer.TryComplete(reason);
+        _inboundCalls.Writer.TryComplete(ended);
         _handOff.Writer.TryComplete();
         _onEnded(reason);
     }

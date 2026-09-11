@@ -108,8 +108,8 @@ public static class SupervisedPubSub
     ///
     /// Blocks the calling Task until ct is cancelled, handler throws
     /// (propagated here unchanged), the subscription falls behind
-    /// (<see cref="ConsumerOverflowException"/>), or the session ends (its
-    /// reason, an IOException). Other frames on the session never reach this
+    /// (<see cref="ConsumerOverflowException"/>), or the session ends
+    /// (<see cref="SessionEndedException"/>). Other frames on the session never reach this
     /// loop: the session's reader routes each one to whatever waits for it.
     /// </summary>
     public static async Task RunSubscriberAsync(Session session, SubscribeSpec spec, KeyPair identity, EventHandler handler, CancellationToken ct = default)
