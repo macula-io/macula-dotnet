@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text;
 using Macula.Bolt4;
@@ -387,6 +389,31 @@ public class SessionReaderTests
     }
 
     [Fact]
+    public async Task A_session_end_is_logged_once_with_its_reason()
+    {
+        var reason = $"maintenance {Guid.NewGuid():N}";
+        var listener = new CapturingListener();
+        Trace.Listeners.Add(listener);
+        try
+        {
+            var (channel, station, ended) = Connect();
+
+            await station.SendAsync(GoodbyeFrame.Build(reason));
+            await ended.Task.WaitAsync(Wait);
+            channel.Stop(new IOException("closed after the goodbye"));
+
+            var logged = listener.Lines.Where(line => line.Contains(reason)).ToList();
+            Assert.Single(logged);
+            Assert.Contains("ended", logged[0]);
+            Assert.Contains(Convert.ToHexStringLower(FakeStation.NodeId), logged[0]);
+        }
+        finally
+        {
+            Trace.Listeners.Remove(listener);
+        }
+    }
+
+    [Fact]
     public async Task An_unrouted_frame_is_counted_by_type()
     {
         var (channel, station, _) = Connect();
@@ -443,6 +470,24 @@ public class SessionReaderTests
 
         Assert.Equal("app/genuine", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
         Assert.Equal(1, channel.UnroutedFrames["call"]);
+    }
+
+    /// <summary>Keeps every trace line written while it is listening.</summary>
+    private sealed class CapturingListener : TraceListener
+    {
+        private readonly ConcurrentQueue<string> _lines = new();
+
+        public IReadOnlyList<string> Lines => _lines.ToArray();
+
+        public override void Write(string? message)
+        {
+            if (message is not null)
+            {
+                _lines.Enqueue(message);
+            }
+        }
+
+        public override void WriteLine(string? message) => Write(message);
     }
 
     private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec

@@ -69,7 +69,9 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   handshake (`ProtocolViolationException`), or a frame that can't be
   decoded, ends the session: waiting calls and every later operation on it
   throw `SessionEndedException`, whose `InnerException` is the reason, the
-  session closes its connection, and direct dial no longer reuses it. Other frames nothing waits for are counted in
+  session closes its connection, and direct dial no longer reuses it. Every
+  session end is reported once through `System.Diagnostics.Trace` with its
+  reason, the session's node id and the station's. Other frames nothing waits for are counted in
   `Session.UnroutedFrameCounts` and reported through
   `System.Diagnostics.Trace` at most once a minute per frame type.
   `StationPool` runs on all of this, without a pump or send gate of its
