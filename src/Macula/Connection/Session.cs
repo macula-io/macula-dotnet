@@ -62,7 +62,7 @@ public sealed class HelloSignatureInvalidException : Exception
 public sealed class Session : IAsyncDisposable, IFrameSink
 {
     private readonly QuicConnection _connection;
-    private readonly FrameStream _control;
+    private readonly ControlChannel _channel;
     private bool _closed;
 
     public KeyPair Identity { get; }
@@ -75,12 +75,24 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// </summary>
     internal DialedSession<Session>? DialedBy { get; private set; }
 
+    /// <summary>
+    /// How many frames of each type the station sent that nothing on this
+    /// session was waiting for, such as the station's own advertise
+    /// broadcasts. They are dropped, and at most one trace line per type per
+    /// minute reports them.
+    /// </summary>
+    public IReadOnlyDictionary<string, long> UnroutedFrameCounts => _channel.UnroutedFrames;
+
+    /// <summary>Completes with the reason once this session's control stream has ended.</summary>
+    internal Task<Exception> Ended => _channel.Ended;
+
     private Session(QuicConnection connection, FrameStream control, KeyPair identity, HelloInfo remoteInfo)
     {
         _connection = connection;
-        _control = control;
         Identity = identity;
         RemoteInfo = remoteInfo;
+        // A session whose control stream ends is no longer offered for reuse.
+        _channel = new ControlChannel(control, identity, remoteInfo.NodeId, _ => OpenSessions.Live.Unregister(identity.NodeId(), remoteInfo.NodeId, this));
     }
 
     /// <summary>
@@ -187,6 +199,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
                 session.DialedBy = new DialedSession<Session>(session, s => s.CloseAsync());
             }
             OpenSessions.Live.Register(identity.NodeId(), helloInfo.NodeId, session);
+            session._channel.Start();
             return session;
         }
         catch
@@ -200,23 +213,16 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
     }
 
-    /// <summary>Sends a frame on the control stream, auto-signing it first.</summary>
+    /// <summary>Sends a frame on the control stream, auto-signing it first. Safe to call from several tasks at once.</summary>
     public Task SendAsync(Value.MapValue frame, CancellationToken ct = default) =>
-        _control.SendFrameAsync(Envelope.Sign(frame, Identity), ct);
-
-    /// <summary>Receives the next frame off the control stream.</summary>
-    public Task<Value> RecvAsync(CancellationToken ct = default) => _control.RecvFrameAsync(ct);
+        _channel.SendAsync(frame, ct);
 
     /// <summary>
     /// Send a signed CALL on the control stream and wait for the matching
-    /// RESULT or ERROR, correlated by call_id.
-    ///
-    /// Known v1 limitation (control stream only, matching the sibling
-    /// Go/Rust SDKs): any frame that arrives before the match (e.g. an
-    /// EVENT from an active SUBSCRIBE) is discarded, not queued or
-    /// dispatched elsewhere -- correct for a client doing one thing at a
-    /// time on the control stream, not yet correct for CALL and
-    /// PUBLISH/SUBSCRIBE used concurrently on it.
+    /// RESULT or ERROR, correlated by call_id. Calls, subscriptions and
+    /// serving run concurrently on one session: its reader hands each reply
+    /// to its own call and every other frame to whatever waits for it. If the
+    /// session ends first, the call throws the reason.
     /// </summary>
     public async Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default)
     {
@@ -226,7 +232,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         Exception? err = null;
         try
         {
-            resp = await _control.CallAsync(procedure, realm, payload, deadlineMs, Identity, timeout, ct).ConfigureAwait(false);
+            resp = await _channel.CallAsync(NewCall(procedure, realm, payload, deadlineMs, Array.Empty<byte>()), timeout, ct).ConfigureAwait(false);
             return resp;
         }
         catch (Exception e)
@@ -249,7 +255,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         Exception? err = null;
         try
         {
-            resp = await _control.CallAsync(procedure, realm, payload, deadlineMs, Identity, timeout, ucanToken, ct).ConfigureAwait(false);
+            resp = await _channel.CallAsync(NewCall(procedure, realm, payload, deadlineMs, ucanToken), timeout, ct).ConfigureAwait(false);
             return resp;
         }
         catch (Exception e)
@@ -263,6 +269,26 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
     }
 
+    /// <summary>A CALL on this session without the RPC telemetry facts, for a pool that announces them itself.</summary>
+    internal Task<CallResponse> CallUnannouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) =>
+        _channel.CallAsync(spec, timeout, ct);
+
+    private CallSpec NewCall(string procedure, byte[] realm, Value payload, long deadlineMs, byte[] ucanToken)
+    {
+        var callId = new byte[16];
+        Random.Shared.NextBytes(callId);
+        return new CallSpec
+        {
+            CallId = callId,
+            Procedure = procedure,
+            Realm = realm,
+            Payload = payload,
+            DeadlineMs = deadlineMs,
+            Caller = Identity.NodeId(),
+            UcanToken = ucanToken,
+        };
+    }
+
     /// <summary>
     /// Send a signed PUBLISH, carrying the end-to-end `publisher_sig`
     /// (over topic/realm/publisher/seq/payload, independent of frame
@@ -274,16 +300,22 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// true since macula 4.6.0). Fire-and-forget -- no reply is expected
     /// on the wire; a subscriber (this session included, if subscribed
     /// to the same topic/realm) receives an EVENT asynchronously, read
-    /// via <see cref="RecvAsync"/> / <see cref="RecvEventAsync"/>.
+    /// through its <see cref="Subscription"/>.
     /// </summary>
     public Task PublishAsync(PublishSpec spec, CancellationToken ct = default) =>
         SendAsync(Envelope.SignPublisher(PublishFrame.Build(spec), Identity), ct);
 
-    public Task SubscribeAsync(SubscribeSpec spec, CancellationToken ct = default) =>
-        SendAsync(SubscribeFrame.Build(spec), ct);
-
-    public Task UnsubscribeAsync(UnsubscribeSpec spec, CancellationToken ct = default) =>
-        SendAsync(UnsubscribeFrame.Build(spec), ct);
+    /// <summary>
+    /// Starts a subscription with its own queue of 256 events. It receives
+    /// every EVENT whose realm equals spec's realm and whose topic matches
+    /// spec's topic by the station's rule: both split on "/", with equal
+    /// segment counts, and each segment equal or "*", which matches exactly
+    /// one whole segment. SUBSCRIBE goes to the station unless another
+    /// subscription on this session already holds that realm and topic, and
+    /// disposing the last one sends UNSUBSCRIBE.
+    /// </summary>
+    public Task<Subscription> SubscribeAsync(SubscribeSpec spec, CancellationToken ct = default) =>
+        _channel.SubscribeAsync(spec, ct);
 
     /// <summary>
     /// Registers this connection as the handler for `spec`'s
@@ -299,42 +331,18 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         SendAsync(UnadvertiseFrame.Build(spec), ct);
 
     /// <summary>
-    /// Read the next frame and parse it as an EVENT, bounded by
-    /// <paramref name="timeout"/>. Any non-EVENT frame received first is an
-    /// error, not silently skipped -- unlike <see cref="CallAsync"/>'s
-    /// response wait, a caller waiting specifically for a pubsub delivery
-    /// has no reason to expect anything else to legitimately arrive first.
-    /// </summary>
-    public async Task<EventInfo> RecvEventAsync(TimeSpan timeout, CancellationToken ct = default)
-    {
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(timeout);
-        Value value;
-        try
-        {
-            value = await RecvAsync(timeoutCts.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new TimeoutException($"no event within {timeout}");
-        }
-        return EventFrameParsing.Parse(value);
-    }
-
-    /// <summary>
     /// The provider role's counterpart to <see cref="CallAsync"/>: block for
     /// the next inbound CALL frame on the control stream, bounded by
     /// <paramref name="timeout"/>, look it up via <paramref name="lookup"/>,
     /// invoke the matching handler, and send the resulting RESULT or ERROR
     /// back over this same connection.
     ///
-    /// Any non-CALL frame that arrives first (e.g. a stray EVENT from an
-    /// active <see cref="SubscribeAsync"/>, or a RESULT/ERROR for some other
-    /// in-flight <see cref="CallAsync"/>) is discarded, not queued -- the
-    /// same "control stream, one thing at a time" limitation
-    /// <see cref="CallAsync"/>'s own doc already carries. A session that
-    /// needs to serve CALLs and also act as a caller/subscriber concurrently
-    /// should use a second <see cref="Session"/>.
+    /// Inbound CALLs wait in this session's queue of 64 until served, while
+    /// calls and subscriptions on the same session carry on. A CALL that
+    /// doesn't fit gets temporary_relay_failure at once; the calls already
+    /// queued are served first, then this throws
+    /// <see cref="ConsumerOverflowException"/> once, and serving resumes on a
+    /// fresh queue.
     /// </summary>
     public Task ServeOneCallAsync(CallLookup lookup, TimeSpan timeout, CancellationToken ct = default) =>
         ServeOneCallGatedAsync(lookup, OpenPolicy, timeout, ct);
@@ -372,32 +380,17 @@ public sealed class Session : IAsyncDisposable, IFrameSink
 
     private static Policy OpenPolicy(byte[] realm, string procedure) => Policy.Open;
 
+    // The reader queues only CALLs signed by the caller they name; see
+    // CallFrameParsing.ParseSignedCall.
     private async Task ServeOneCallInnerAsync(CallLookup lookup, PolicyLookup policy, CancellationToken ct)
     {
-        while (true)
-        {
-            var value = await RecvAsync(ct).ConfigureAwait(false);
-            var reply = await ReplyToFrameAsync(this, value, lookup, policy, Identity, ct).ConfigureAwait(false);
-            if (reply is null)
-            {
-                continue; // not a CALL signed by its caller -- see this method's doc on the limitation
-            }
-            await SendAsync(reply, ct).ConfigureAwait(false);
-            return;
-        }
+        var call = await _channel.NextInboundCallAsync(ct).ConfigureAwait(false);
+        var reply = await BuildCallReplyAsync(this, call, lookup, policy, Identity, ct).ConfigureAwait(false);
+        await SendAsync(reply, ct).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// The reply to one inbound frame, or null when there is nothing to
-    /// answer: the frame isn't a CALL, or its signature doesn't verify
-    /// against the caller it names (see
-    /// <see cref="CallFrameParsing.ParseSignedCall"/>). Otherwise
-    /// <see cref="BuildCallReplyAsync"/>.
-    /// </summary>
-    internal static async Task<Value.MapValue?> ReplyToFrameAsync(IFrameSink? session, Value frame, CallLookup lookup, PolicyLookup policy, KeyPair identity, CancellationToken ct = default) =>
-        CallFrameParsing.ParseSignedCall(frame) is { } callInfo
-            ? await BuildCallReplyAsync(session, callInfo, lookup, policy, identity, ct).ConfigureAwait(false)
-            : null;
+    /// <summary>The next inbound CALL signed by its caller, for a pool that dispatches calls itself.</summary>
+    internal Task<CallInfo> NextInboundCallAsync(CancellationToken ct) => _channel.NextInboundCallAsync(ct);
 
     /// <summary>
     /// Mirrors `macula_station_link.erl`'s `handle_inbound_call/2` +
@@ -523,6 +516,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             // we're closing because of a transport-level failure.
         }
 
+        // Waiting calls and consumers end with this before the connection goes.
+        _channel.Stop(new IOException("the session was closed"));
         await _connection.CloseAsync(0).ConfigureAwait(false);
         await _connection.DisposeAsync().ConfigureAwait(false);
     }

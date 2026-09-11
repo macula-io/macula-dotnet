@@ -99,63 +99,37 @@ public static class SupervisedPubSub
     }
 
     /// <summary>
-    /// The supervised counterpart to the bare Subscribe/RecvEvent
-    /// primitives: subscribes once, then dispatches every inbound EVENT to
-    /// handler for as long as this runs, instead of requiring the caller
-    /// to hand-roll a poll loop. Unsubscribes on return, including on
-    /// cancellation.
+    /// The supervised counterpart to a bare <see cref="Subscription"/>:
+    /// subscribes once, then hands every matching EVENT to handler for as
+    /// long as this runs, instead of requiring the caller to hand-roll a
+    /// receive loop. Ends the subscription on return, including on
+    /// cancellation, which sends UNSUBSCRIBE when no other subscription on
+    /// the session holds that realm and topic.
     ///
     /// Blocks the calling Task until ct is cancelled, handler throws
-    /// (propagated here unchanged), or the control stream fails with
-    /// something other than a timeout (also propagated, wrapped).
-    ///
-    /// Mirrors ServeOneCallAsync's own frame loop, not RecvEventAsync: a
-    /// shared control stream can carry other frame types between one EVENT
-    /// and the next, so a wrong-frame-type parse failure is skipped and
-    /// polling continues, exactly like ServeOneCallAsync skips a
-    /// non-"call" frame -- it is NOT treated as fatal the way
-    /// RecvEventAsync's own contract treats any parse failure. Without
-    /// this, a single non-EVENT frame arriving on the control stream would
-    /// abort the whole subscriber loop (the exact bug macula-go's own
-    /// first draft of RunSubscriber hit and had to fix -- avoided here
-    /// from the start).
+    /// (propagated here unchanged), the subscription falls behind
+    /// (<see cref="ConsumerOverflowException"/>), or the session ends (its
+    /// reason, an IOException). Other frames on the session never reach this
+    /// loop: the session's reader routes each one to whatever waits for it.
     /// </summary>
     public static async Task RunSubscriberAsync(Session session, SubscribeSpec spec, KeyPair identity, EventHandler handler, CancellationToken ct = default)
     {
-        await session.SubscribeAsync(spec, ct).ConfigureAwait(false);
-        try
+        await using var subscription = await session.SubscribeAsync(spec, ct).ConfigureAwait(false);
+        while (true)
         {
-            while (true)
-            {
-                ct.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
-                EventInfo evt;
-                try
-                {
-                    evt = await session.RecvEventAsync(SubscriberPollInterval, ct).ConfigureAwait(false);
-                }
-                catch (TimeoutException)
-                {
-                    continue;
-                }
-                catch (ParseFrameException)
-                {
-                    continue; // a non-EVENT or malformed frame -- ignore and keep listening
-                }
-
-                await handler(evt).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
+            EventInfo evt;
             try
             {
-                await session.UnsubscribeAsync(new UnsubscribeSpec { Topic = spec.Topic, Realm = spec.Realm, Subscriber = spec.Subscriber }).ConfigureAwait(false);
+                evt = await subscription.RecvEventAsync(SubscriberPollInterval, ct).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (TimeoutException)
             {
-                // best-effort -- the connection may already be unusable
+                continue;
             }
+
+            await handler(evt).ConfigureAwait(false);
         }
     }
 

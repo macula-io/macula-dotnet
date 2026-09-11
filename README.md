@@ -93,8 +93,8 @@ it doesn't.
 |---|---|---|---|
 | Handshake (CONNECT/HELLO) | ✅ | — | Ed25519 identity, S/Kademlia puzzle-hardened; HELLO signature verified; live-verified |
 | Deterministic CBOR codec | ✅ | — | Hand-rolled — see [Codec](#the-cbor-codec-is-hand-rolled-on-purpose) |
-| Unary RPC (CALL/RESULT/ERROR) | ✅ | ✅ | `Session.ServeOneCallAsync`, BOLT#4 error mapping, live-verified |
-| PubSub (PUBLISH/SUBSCRIBE/EVENT) | ✅ | ✅ | A subscriber gets its own publish, verified live |
+| Unary RPC (CALL/RESULT/ERROR) | ✅ | ✅ | `Session.ServeOneCallAsync`, BOLT#4 error mapping, calls and serving share one session at the same time, live-verified |
+| PubSub (PUBLISH/SUBSCRIBE/EVENT) | ✅ | ✅ | `Session.SubscribeAsync` returns a `Subscription` with its own queue, a subscriber gets its own publish, verified live |
 | Content transfer (single-block + chunked) | ✅ | — | Content-addressed, BLAKE3/SHA-256, Merkle-verified |
 | Streaming RPC (STREAM_OPEN/DATA/END/REPLY) | ✅ | ✅ | Both roles live-verified against the real fleet |
 | RPC advertise/unadvertise | ✅ | — | |
@@ -287,13 +287,11 @@ neither obvious from the wire-protocol spec alone:
 - **The station periodically sends unprompted `advertise` frames for its
   own built-in `_content.*` procedures over every connected client's
   control stream** — observed directly while testing the PubSub example,
-  not documented anywhere in the wire-protocol spec. `Session.RecvEventAsync`
-  errors on the first non-EVENT frame rather than silently skipping it
-  (matching the Go/Rust/PHP SDKs — a caller waiting specifically for a
-  pubsub delivery has no reason to expect anything else), so a real
-  caller sharing a control stream between PubSub and anything else should
-  loop past frames it doesn't recognize rather than call it exactly once.
-  See `examples/03_PublishSubscribe.cs`'s own `RecvEventSkippingOtherTrafficAsync`.
+  not documented anywhere in the wire-protocol spec. A session's reader
+  drops frames that nothing on the session is waiting for, counts them per
+  frame type in `Session.UnroutedFrameCounts` and reports them through
+  `System.Diagnostics.Trace` at most once a minute, so a `Subscription`
+  only ever sees the events that match it.
 
 ## Status
 

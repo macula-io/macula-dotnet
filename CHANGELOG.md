@@ -51,6 +51,26 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   `DirectDial.OpenedStream` (`Stream`, `Session`) instead of a
   `(Session, StreamHandle)` tuple: dispose it once the stream is done.
   `CallAsync` and its variants still dial their own connection.
+- **Breaking: one reader per session, so calls, subscriptions and serving
+  run at the same time.** Each `Session` reads its own control stream and
+  routes every frame: a reply to its call, an event to each matching
+  subscription, an inbound CALL to a queue of 64. `Session.SubscribeAsync`
+  returns a `Subscription` with its own queue of 256 events and its own
+  `RecvEventAsync`; disposing it sends UNSUBSCRIBE once no other
+  subscription on the session holds that realm and topic. Topics match by
+  the station's rule: split on "/", equal segment counts, and "*" matches
+  exactly one segment. `Session.RecvAsync`, `Session.RecvEventAsync` and
+  `Session.UnsubscribeAsync` are removed. A consumer that falls behind ends
+  with `ConsumerOverflowException` after the items already queued, and the
+  session stays up; an inbound CALL that doesn't fit gets
+  `temporary_relay_failure`. GOODBYE, or HELLO or CONNECT after the
+  handshake (`ProtocolViolationException`), ends the session and fails
+  waiting calls with the reason, and direct dial no longer reuses a session
+  that has ended. Other frames nothing waits for are counted in
+  `Session.UnroutedFrameCounts` and reported through
+  `System.Diagnostics.Trace` at most once a minute per frame type.
+  `StationPool` runs on all of this, without a pump or send gate of its
+  own.
 - **Breaking: a UCAN-gated procedure binds the token to its caller.**
   `Policy.Check` takes the CALL's caller as well as its token, and a
   `Policy.Required` procedure accepts a token only when its `aud` is that
