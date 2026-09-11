@@ -39,8 +39,10 @@ namespace Macula.Dht;
 /// a station that already failed is dialed again only once its
 /// advertisement or endpoint record has changed. The call's timeout bounds
 /// all of it, and each candidate gets a share of what remains for its
-/// endpoint lookup and dial. At the deadline, the last failure is thrown as
-/// it was raised.
+/// endpoint lookup and dial. At the deadline, the most recent candidate
+/// failure is thrown as it was raised; a later query that finds nothing, or
+/// fails, never replaces it. When no candidate was ever tried, the reason
+/// none qualified is thrown instead.
 /// </summary>
 [SupportedOSPlatform("linux")]
 [SupportedOSPlatform("macos")]
@@ -228,32 +230,36 @@ public static class DirectDial
 
     // The loop every resolving shape shares: query, try the candidates in
     // DHT order until one answers, and query again after a capped backoff
-    // until the deadline, where the last failure is thrown as it was raised.
+    // until the deadline. Once a candidate has failed before sending, the
+    // most recent candidate failure is what the call throws, as it was
+    // raised: a later query that finds nothing, or fails, never replaces
+    // it. Until then, the latest query's reason for finding no candidate is.
     private static async Task<T> FirstAnswerAsync<TCandidate, T>(
         Func<CallDeadline, CancellationToken, Task<Pass<TCandidate>>> query,
         Func<TCandidate, CallDeadline, Exception?, CancellationToken, Task<Attempt<T>>> attempt,
         CallDeadline deadline,
         CancellationToken ct)
     {
-        Exception? last = null;
+        Exception? candidateFailure = null;
+        Exception? unresolved = null;
         var pause = ResolveRetryDelay;
         while (true)
         {
             var pass = await query(deadline, ct).ConfigureAwait(false);
             // A query the deadline cut short learned nothing, so it doesn't
-            // replace a failure already seen.
-            if (pass.Candidates.Count == 0 && !(deadline.Passed && last is not null))
+            // replace a reason already seen.
+            if (pass.Candidates.Count == 0 && !(deadline.Passed && unresolved is not null))
             {
-                last = pass.Unresolved;
+                unresolved = pass.Unresolved;
             }
             for (var i = 0; i < pass.Candidates.Count && !deadline.Passed; i++)
             {
-                var outcome = await attempt(pass.Candidates[i], deadline.ShareFor(pass.Candidates.Count - i), last, ct).ConfigureAwait(false);
+                var outcome = await attempt(pass.Candidates[i], deadline.ShareFor(pass.Candidates.Count - i), candidateFailure ?? unresolved, ct).ConfigureAwait(false);
                 if (outcome.Failure is null)
                 {
                     return outcome.Answer!;
                 }
-                last = outcome.Failure;
+                candidateFailure = outcome.Failure;
             }
             if (deadline.Passed)
             {
@@ -266,7 +272,7 @@ public static class DirectDial
                 break;
             }
         }
-        ExceptionDispatchInfo.Throw(last ?? new TimeoutException("directdial: the timeout ran out before any candidate could be tried"));
+        ExceptionDispatchInfo.Throw(candidateFailure ?? unresolved ?? new TimeoutException("directdial: the timeout ran out before any candidate could be tried"));
         throw new UnreachableException();
     }
 

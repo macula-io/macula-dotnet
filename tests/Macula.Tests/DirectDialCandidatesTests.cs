@@ -412,6 +412,54 @@ public class DirectDialCandidatesTests
         Assert.IsType<ContentTransfer.ContentTransferException>(e.InnerException);
     }
 
+    [Fact]
+    public async Task Call_reports_the_last_candidate_failure_when_a_later_pass_finds_none()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        // Array.Empty, not [], so the empty second reply isn't taken as the params array itself.
+        dht.Answer(ProcedureKey, [Advertisement(a)], Array.Empty<DhtRecord>());
+        dht.PublishEndpoint(a.Station, StationEndpoint(a.Station, a.Host));
+        var stations = new FakeStations();
+        stations.Refuse(a.Host);
+
+        var e = await Assert.ThrowsAsync<IOException>(() => CallAsync(dht, stations, TimeSpan.FromSeconds(1)));
+
+        Assert.Contains("refused", e.Message);
+    }
+
+    [Fact]
+    public async Task Call_reports_the_last_candidate_failure_when_a_later_lookup_fails()
+    {
+        var a = new Provider("a.test");
+        var dht = new FakeDht();
+        dht.Answer(ProcedureKey, [Advertisement(a)]);
+        dht.FailLookupsAfter(ProcedureKey, 1);
+        dht.PublishEndpoint(a.Station, StationEndpoint(a.Station, a.Host));
+        var stations = new FakeStations();
+        stations.Refuse(a.Host);
+
+        var e = await Assert.ThrowsAsync<IOException>(() => CallAsync(dht, stations, TimeSpan.FromSeconds(1)));
+
+        Assert.Contains("refused", e.Message);
+    }
+
+    [Fact]
+    public async Task Get_direct_reports_the_last_candidate_failure_when_a_later_lookup_fails()
+    {
+        var p = new Provider("p.test");
+        var mcid = NewMcid();
+        var dht = new FakeDht();
+        dht.Answer(RecordFactory.ContentKey(mcid), [Announcement(p, mcid)]);
+        dht.FailLookupsAfter(RecordFactory.ContentKey(mcid), 1);
+        var stations = new FakeStations();
+        stations.Refuse(p.Host);
+
+        var e = await Assert.ThrowsAsync<IOException>(() => GetAsync(dht, stations, mcid, TimeSpan.FromSeconds(1)));
+
+        Assert.Contains("refused", e.Message);
+    }
+
     private static Task<CallResponse> CallAsync(FakeDht dht, FakeStations stations, TimeSpan timeout, DirectDial.RequestAt<string, CallResponse>? request = null) =>
         DirectDial.ReachProcedureCoreAsync(dht.Lookups, Realm, Procedure, null, stations.Dial, request ?? new DirectDial.RequestAt<string, CallResponse>(Reply), timeout, CancellationToken.None);
 
@@ -516,6 +564,7 @@ public class DirectDialCandidatesTests
         private readonly Stopwatch _clock = Stopwatch.StartNew();
         private readonly Dictionary<string, List<IReadOnlyList<DhtRecord>>> _replies = new();
         private readonly Dictionary<string, List<long>> _asked = new();
+        private readonly Dictionary<string, int> _failAfter = new();
         private readonly Dictionary<string, DhtRecord> _endpoints = new();
 
         public DirectDial.DhtLookups Lookups => new(FindRecordsAsync, FindRecordAsync);
@@ -545,6 +594,15 @@ public class DirectDialCandidatesTests
             }
         }
 
+        /// <summary>After answeredLookups lookups, FindRecords on key fails, the way a query over a resolver session that has dropped does.</summary>
+        public void FailLookupsAfter(byte[] key, int answeredLookups)
+        {
+            lock (_gate)
+            {
+                _failAfter[Convert.ToHexString(key)] = answeredLookups;
+            }
+        }
+
         private Task<IReadOnlyList<DhtRecord>> FindRecordsAsync(byte[] key, CancellationToken ct)
         {
             lock (_gate)
@@ -555,6 +613,10 @@ public class DirectDialCandidatesTests
                     times = _asked[hex] = [];
                 }
                 times.Add(_clock.ElapsedMilliseconds);
+                if (_failAfter.TryGetValue(hex, out var answered) && times.Count > answered)
+                {
+                    return Task.FromException<IReadOnlyList<DhtRecord>>(new InvalidOperationException("dht: the resolver session is gone"));
+                }
                 IReadOnlyList<DhtRecord> reply = _replies.TryGetValue(hex, out var replies)
                     ? replies[Math.Min(times.Count - 1, replies.Count - 1)]
                     : Array.Empty<DhtRecord>();
