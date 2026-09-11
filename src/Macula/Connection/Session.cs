@@ -322,10 +322,15 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// policy (the default, <see cref="Policy.Open"/>) behaves identically
     /// to plain <see cref="ServeOneCallAsync"/>; a <see cref="Policy.Required"/>
     /// policy demands a CALL's UcanToken verify against the required
-    /// issuer, and refuses with BOLT#4 Unauthorized WITHOUT ever invoking
-    /// lookup or a handler if it doesn't -- a CallHandler never sees the
-    /// raw token either way, matching the reference's own handler contract
-    /// (payload only).
+    /// issuer and name the CALL's caller as its audience, and refuses with
+    /// BOLT#4 Unauthorized WITHOUT ever invoking lookup or a handler if it
+    /// doesn't -- a CallHandler never sees the raw token either way,
+    /// matching the reference's own handler contract (payload only).
+    ///
+    /// Before any policy runs, the CALL's signature must verify against the
+    /// caller it names; one that doesn't is dropped with no reply, as
+    /// `macula_station_link.erl`'s `on_inbound_call/3` does, and this keeps
+    /// waiting for the next CALL.
     /// </summary>
     public async Task ServeOneCallGatedAsync(CallLookup lookup, PolicyLookup policy, TimeSpan timeout, CancellationToken ct = default)
     {
@@ -348,21 +353,27 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         while (true)
         {
             var value = await RecvAsync(ct).ConfigureAwait(false);
-            CallInfo callInfo;
-            try
+            var reply = await ReplyToFrameAsync(this, value, lookup, policy, Identity, ct).ConfigureAwait(false);
+            if (reply is null)
             {
-                callInfo = CallFrameParsing.ParseCall(value);
+                continue; // not a CALL signed by its caller -- see this method's doc on the limitation
             }
-            catch (ParseFrameException)
-            {
-                continue; // not ours -- see this method's doc on the limitation
-            }
-
-            var reply = await BuildCallReplyAsync(this, callInfo, lookup, policy, Identity, ct).ConfigureAwait(false);
             await SendAsync(reply, ct).ConfigureAwait(false);
             return;
         }
     }
+
+    /// <summary>
+    /// The reply to one inbound frame, or null when there is nothing to
+    /// answer: the frame isn't a CALL, or its signature doesn't verify
+    /// against the caller it names (see
+    /// <see cref="CallFrameParsing.ParseSignedCall"/>). Otherwise
+    /// <see cref="BuildCallReplyAsync"/>.
+    /// </summary>
+    internal static async Task<Value.MapValue?> ReplyToFrameAsync(IFrameSink? session, Value frame, CallLookup lookup, PolicyLookup policy, KeyPair identity, CancellationToken ct = default) =>
+        CallFrameParsing.ParseSignedCall(frame) is { } callInfo
+            ? await BuildCallReplyAsync(session, callInfo, lookup, policy, identity, ct).ConfigureAwait(false)
+            : null;
 
     /// <summary>
     /// Mirrors `macula_station_link.erl`'s `handle_inbound_call/2` +
@@ -393,7 +404,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         var selfPub = identity.NodeId();
         try
         {
-            policy(callInfo.Realm, callInfo.Procedure).Check(callInfo.UcanToken);
+            policy(callInfo.Realm, callInfo.Procedure).Check(callInfo.UcanToken, callInfo.Caller);
         }
         catch (Exception)
         {

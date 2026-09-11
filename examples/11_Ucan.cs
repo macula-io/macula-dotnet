@@ -23,9 +23,11 @@ public static class UcanExample
         var callerIdentity = KeyPair.GenerateWithDefaultPuzzle();
 
         var issuer = $"did:macula:{Convert.ToHexStringLower(callerIdentity.NodeId())}";
+        // A gated provider accepts a token only from the caller it names as
+        // audience: that caller's node id as lowercase hex, no did: prefix.
         var token = UcanToken.Create(
             issuer,
-            "did:macula:examples.ucan_gated",
+            Convert.ToHexStringLower(callerIdentity.NodeId()),
             new[] { new UcanToken.Capability("mri:procedure:examples/ucan_gated", "call") },
             callerIdentity);
         Console.WriteLine($"minted token, issuer={issuer}");

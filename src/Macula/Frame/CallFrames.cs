@@ -189,6 +189,27 @@ public static class CallFrameParsing
         return new CallInfo(callId, procedure, realm, payload, deadlineMs, caller, ucanToken);
     }
 
+    /// <summary>
+    /// Parses frame as a CALL and returns it only when its signature
+    /// verifies against its own caller field; null for anything else.
+    /// Mirrors macula_station_link.erl's on_inbound_call/3: a CALL that
+    /// isn't signed by the caller it names never reaches policy or a
+    /// handler, and gets no reply.
+    /// </summary>
+    internal static CallInfo? ParseSignedCall(Value frame)
+    {
+        CallInfo call;
+        try
+        {
+            call = ParseCall(frame);
+        }
+        catch (ParseFrameException)
+        {
+            return null;
+        }
+        return Envelope.Verify((Value.MapValue)frame, call.Caller) is null ? call : null;
+    }
+
     /// <summary>Extract this frame's call_id, regardless of frame type -- 16 bytes, never 32.</summary>
     public static byte[]? FrameCallId(Value frame) =>
         frame is Value.MapValue map && map.Get("call_id") is Value.BytesValue { Value.Length: 16 } b ? b.Value : null;

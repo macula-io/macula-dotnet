@@ -123,25 +123,27 @@ public class UcanTests
     [Fact]
     public void Policy_open_always_passes()
     {
-        Policy.Open.Check(Array.Empty<byte>());
+        Policy.Open.Check(Array.Empty<byte>(), Array.Empty<byte>());
     }
 
     [Fact]
     public void Policy_gated_rejects_no_token()
     {
         var id = KeyPair.GenerateWithDefaultPuzzle();
+        var caller = KeyPair.GenerateWithDefaultPuzzle();
         var policy = Policy.Required(id.PublicBytes());
-        Assert.Throws<UcanToken.NoTokenException>(() => policy.Check(Array.Empty<byte>()));
+        Assert.Throws<UcanToken.NoTokenException>(() => policy.Check(Array.Empty<byte>(), caller.NodeId()));
     }
 
     [Fact]
     public void Policy_gated_accepts_a_valid_token_from_the_required_issuer()
     {
         var id = KeyPair.GenerateWithDefaultPuzzle();
+        var caller = KeyPair.GenerateWithDefaultPuzzle();
         var policy = Policy.Required(id.PublicBytes());
-        var token = UcanToken.Create("did:macula:issuer", "did:macula:audience", Array.Empty<UcanToken.Capability>(), id);
+        var token = UcanToken.Create("did:macula:issuer", Convert.ToHexStringLower(caller.NodeId()), Array.Empty<UcanToken.Capability>(), id);
 
-        policy.Check(token); // does not throw
+        policy.Check(token, caller.NodeId()); // does not throw
     }
 
     [Fact]
@@ -149,9 +151,38 @@ public class UcanTests
     {
         var requiredId = KeyPair.GenerateWithDefaultPuzzle();
         var otherId = KeyPair.GenerateWithDefaultPuzzle();
+        var caller = KeyPair.GenerateWithDefaultPuzzle();
         var policy = Policy.Required(requiredId.PublicBytes());
-        var token = UcanToken.Create("did:macula:issuer", "did:macula:audience", Array.Empty<UcanToken.Capability>(), otherId);
+        var token = UcanToken.Create("did:macula:issuer", Convert.ToHexStringLower(caller.NodeId()), Array.Empty<UcanToken.Capability>(), otherId);
 
-        Assert.Throws<UcanToken.InvalidSignatureException>(() => policy.Check(token));
+        Assert.Throws<UcanToken.InvalidSignatureException>(() => policy.Check(token, caller.NodeId()));
+    }
+
+    [Fact]
+    public void Policy_required_refuses_a_token_for_another_audience()
+    {
+        var issuer = KeyPair.Generate();
+        var audience = KeyPair.Generate();
+        var presenter = KeyPair.Generate();
+        var policy = Policy.Required(issuer.PublicBytes());
+        var token = UcanToken.Create("did:macula:issuer", Convert.ToHexStringLower(audience.NodeId()), Array.Empty<UcanToken.Capability>(), issuer);
+
+        Assert.Throws<UcanToken.WrongAudienceException>(() => policy.Check(token, presenter.NodeId()));
+        policy.Check(token, audience.NodeId()); // the same token from its audience passes
+    }
+
+    [Fact]
+    public void Policy_required_refuses_a_missing_or_malformed_audience_or_caller()
+    {
+        var issuer = KeyPair.Generate();
+        var caller = KeyPair.Generate();
+        var policy = Policy.Required(issuer.PublicBytes());
+        var callerHex = Convert.ToHexStringLower(caller.NodeId());
+        byte[] TokenFor(string audience) => UcanToken.Create("did:macula:issuer", audience, Array.Empty<UcanToken.Capability>(), issuer);
+
+        Assert.Throws<UcanToken.WrongAudienceException>(() => policy.Check(TokenFor(""), caller.NodeId()));
+        Assert.Throws<UcanToken.WrongAudienceException>(() => policy.Check(TokenFor(callerHex.ToUpperInvariant()), caller.NodeId()));
+        Assert.Throws<UcanToken.WrongAudienceException>(() => policy.Check(TokenFor($"did:macula:{callerHex}"), caller.NodeId()));
+        Assert.Throws<UcanToken.NoCallerException>(() => policy.Check(TokenFor(callerHex), Array.Empty<byte>()));
     }
 }
