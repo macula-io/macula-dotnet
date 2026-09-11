@@ -60,10 +60,10 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   subscription on the session holds that realm and topic. Topics match by
   the station's rule: split on "/", equal segment counts, and "*" matches
   exactly one segment. `Session.RecvAsync`, `Session.RecvEventAsync` and
-  `Session.UnsubscribeAsync` are removed. A consumer that falls behind ends
-  with `ConsumerOverflowException` after the items already queued, and the
-  session stays up; an inbound CALL that doesn't fit gets
-  `temporary_relay_failure`. GOODBYE, or HELLO or CONNECT after the
+  `Session.UnsubscribeAsync` are removed. A subscription that falls behind
+  ends with `ConsumerOverflowException` after the events already queued, and
+  the session stays up; an inbound CALL that doesn't fit gets
+  `temporary_relay_failure`, and serving carries on. GOODBYE, or HELLO or CONNECT after the
   handshake (`ProtocolViolationException`), ends the session and fails
   waiting calls with the reason, and direct dial no longer reuses a session
   that has ended. Other frames nothing waits for are counted in
@@ -71,6 +71,19 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   `System.Diagnostics.Trace` at most once a minute per frame type.
   `StationPool` runs on all of this, without a pump or send gate of its
   own.
+- **Sends on a session are bounded.** Writes on a session's control stream
+  take turns. A call waits for its turn within its own timeout, and every
+  other send within a 30 second send timeout; when that runs out, only that
+  caller gets a `TimeoutException`, the frame was not sent, and the session
+  carries on. A write that stalls for more than 30 seconds ends the session
+  with `SendTimeoutException`, and a `StationPool` link dials again. A call
+  that runs out of time throws `CallTimeoutException`, whose `WriteStarted`
+  says whether its CALL may have reached the station; a reply that arrives
+  after that is counted as unrouted. The replies a session makes on its own,
+  such as `temporary_relay_failure`, and its RPC telemetry facts go to a
+  writer of their own: they never hold up its reader or cost a call time,
+  `rpc.sent_v1` goes once the CALL is written, and when 64 frames already
+  wait there the next one is dropped.
 - **Breaking: a UCAN-gated procedure binds the token to its caller.**
   `Policy.Check` takes the CALL's caller as well as its token, and a
   `Policy.Required` procedure accepts a token only when its `aud` is that

@@ -14,7 +14,9 @@ namespace Macula.Connection;
 /// A subscription that falls more than 256 events behind ends: its reader
 /// first gets every event still queued, in order, then a
 /// <see cref="ConsumerOverflowException"/>. The session and its other
-/// subscriptions carry on. Dispose it to stop receiving; the session sends
+/// subscriptions carry on, and the station stays subscribed until the
+/// overflowed subscription is disposed, so a replacement subscribed first
+/// takes over without a gap. Dispose it to stop receiving; the session sends
 /// UNSUBSCRIBE once no other subscription on it wants that realm and topic.
 /// </summary>
 public sealed class Subscription : IAsyncDisposable

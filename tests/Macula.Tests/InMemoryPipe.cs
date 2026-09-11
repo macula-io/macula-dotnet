@@ -5,7 +5,8 @@ namespace Macula.Tests;
 /// <summary>
 /// One end of an in-memory duplex byte stream: what one end writes, the other
 /// end reads, in order. <see cref="Hangup"/> ends what the other end reads, the
-/// way a closed QUIC stream does.
+/// way a closed QUIC stream does, and <see cref="StallWrites"/> holds this
+/// end's writes, the way a peer withholding flow-control credit does.
 /// </summary>
 internal sealed class InMemoryPipe : Stream
 {
@@ -13,6 +14,7 @@ internal sealed class InMemoryPipe : Stream
     private readonly Channel<byte[]> _outgoing;
     private byte[]? _pending;
     private int _offset;
+    private TaskCompletionSource? _stalled;
 
     private InMemoryPipe(Channel<byte[]> incoming, Channel<byte[]> outgoing)
     {
@@ -28,6 +30,12 @@ internal sealed class InMemoryPipe : Stream
     }
 
     internal void Hangup() => _outgoing.Writer.TryComplete();
+
+    /// <summary>Holds every write on this end until <see cref="ResumeWrites"/>. A held write still honours its cancellation token.</summary>
+    internal void StallWrites() =>
+        Interlocked.CompareExchange(ref _stalled, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), null);
+
+    internal void ResumeWrites() => Interlocked.Exchange(ref _stalled, null)?.TrySetResult();
 
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
@@ -48,10 +56,14 @@ internal sealed class InMemoryPipe : Stream
         return count;
     }
 
-    public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+    public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        _outgoing.Writer.TryWrite(buffer.ToArray());
-        return ValueTask.CompletedTask;
+        var chunk = buffer.ToArray();
+        if (Volatile.Read(ref _stalled) is { } stalled)
+        {
+            await stalled.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        _outgoing.Writer.TryWrite(chunk);
     }
 
     public override bool CanRead => true;

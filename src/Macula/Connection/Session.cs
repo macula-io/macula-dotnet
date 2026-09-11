@@ -213,7 +213,14 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
     }
 
-    /// <summary>Sends a frame on the control stream, auto-signing it first. Safe to call from several tasks at once.</summary>
+    /// <summary>
+    /// Sends a frame on the control stream, auto-signing it first. Safe to call
+    /// from several tasks at once: their writes take turns. Waiting for a turn
+    /// is bounded by a 30 second send timeout, after which this throws
+    /// TimeoutException, the frame was not sent, and the session carries on. A
+    /// write that stalls for more than 30 seconds ends the session with
+    /// <see cref="SendTimeoutException"/>.
+    /// </summary>
     public Task SendAsync(Value.MapValue frame, CancellationToken ct = default) =>
         _channel.SendAsync(frame, ct);
 
@@ -222,40 +229,32 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// RESULT or ERROR, correlated by call_id. Calls, subscriptions and
     /// serving run concurrently on one session: its reader hands each reply
     /// to its own call and every other frame to whatever waits for it. If the
-    /// session ends first, the call throws the reason.
+    /// session ends first, the call throws the reason. The timeout covers the
+    /// whole call, its turn to write included; when it runs out the call
+    /// throws <see cref="CallTimeoutException"/>, whose WriteStarted says
+    /// whether the CALL may have reached the station.
     /// </summary>
-    public async Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default)
-    {
-        var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceSentAsync(this, realm, Identity, requestId, ct).ConfigureAwait(false);
-        CallResponse? resp = null;
-        Exception? err = null;
-        try
-        {
-            resp = await _channel.CallAsync(NewCall(procedure, realm, payload, deadlineMs, Array.Empty<byte>()), timeout, ct).ConfigureAwait(false);
-            return resp;
-        }
-        catch (Exception e)
-        {
-            err = e;
-            throw;
-        }
-        finally
-        {
-            await RpcFacts.AnnounceCompletedAsync(this, realm, Identity, requestId, resp, err, ct).ConfigureAwait(false);
-        }
-    }
+    public Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default) =>
+        CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, Array.Empty<byte>()), timeout, ct);
 
     /// <summary>As <see cref="CallAsync"/>, attaching ucanToken -- for a procedure gated by <see cref="Policy.Required"/> on the provider side.</summary>
-    public async Task<CallResponse> CallWithUcanAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default)
+    public Task<CallResponse> CallWithUcanAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default) =>
+        CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, ucanToken), timeout, ct);
+
+    /// <summary>
+    /// A CALL on this session with its RPC telemetry facts: rpc.sent_v1 once
+    /// the CALL is written, and rpc.completed_v1 when the call returns. Both go
+    /// to this session's own writer, so they never cost the call time. A pool
+    /// calls on its links through this too.
+    /// </summary>
+    internal async Task<CallResponse> CallAnnouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct)
     {
         var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceSentAsync(this, realm, Identity, requestId, ct).ConfigureAwait(false);
         CallResponse? resp = null;
         Exception? err = null;
         try
         {
-            resp = await _channel.CallAsync(NewCall(procedure, realm, payload, deadlineMs, ucanToken), timeout, ct).ConfigureAwait(false);
+            resp = await _channel.CallAsync(spec, timeout, ct, PublisherSigned(RpcFacts.Sent(spec.Realm, Identity, requestId))).ConfigureAwait(false);
             return resp;
         }
         catch (Exception e)
@@ -265,13 +264,9 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
         finally
         {
-            await RpcFacts.AnnounceCompletedAsync(this, realm, Identity, requestId, resp, err, ct).ConfigureAwait(false);
+            Announce(RpcFacts.Completed(spec.Realm, Identity, requestId, resp, err));
         }
     }
-
-    /// <summary>A CALL on this session without the RPC telemetry facts, for a pool that announces them itself.</summary>
-    internal Task<CallResponse> CallUnannouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) =>
-        _channel.CallAsync(spec, timeout, ct);
 
     private CallSpec NewCall(string procedure, byte[] realm, Value payload, long deadlineMs, byte[] ucanToken)
     {
@@ -303,7 +298,16 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// through its <see cref="Subscription"/>.
     /// </summary>
     public Task PublishAsync(PublishSpec spec, CancellationToken ct = default) =>
-        SendAsync(Envelope.SignPublisher(PublishFrame.Build(spec), Identity), ct);
+        SendAsync(PublisherSigned(spec), ct);
+
+    /// <summary>
+    /// Hands a PUBLISH this session makes on its own account, such as an RPC
+    /// telemetry fact, to its own writer. Never waits and never fails: when 64
+    /// frames already wait there, this one is dropped.
+    /// </summary>
+    internal void Announce(PublishSpec spec) => _channel.HandOff(PublisherSigned(spec));
+
+    private Value.MapValue PublisherSigned(PublishSpec spec) => Envelope.SignPublisher(PublishFrame.Build(spec), Identity);
 
     /// <summary>
     /// Starts a subscription with its own queue of 256 events. It receives
@@ -339,10 +343,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     ///
     /// Inbound CALLs wait in this session's queue of 64 until served, while
     /// calls and subscriptions on the same session carry on. A CALL that
-    /// doesn't fit gets temporary_relay_failure at once; the calls already
-    /// queued are served first, then this throws
-    /// <see cref="ConsumerOverflowException"/> once, and serving resumes on a
-    /// fresh queue.
+    /// doesn't fit gets temporary_relay_failure at once, and serving carries
+    /// on with the calls already queued.
     /// </summary>
     public Task ServeOneCallAsync(CallLookup lookup, TimeSpan timeout, CancellationToken ct = default) =>
         ServeOneCallGatedAsync(lookup, OpenPolicy, timeout, ct);
@@ -385,7 +387,7 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     private async Task ServeOneCallInnerAsync(CallLookup lookup, PolicyLookup policy, CancellationToken ct)
     {
         var call = await _channel.NextInboundCallAsync(ct).ConfigureAwait(false);
-        var reply = await BuildCallReplyAsync(this, call, lookup, policy, Identity, ct).ConfigureAwait(false);
+        var reply = await BuildCallReplyAsync(this, call, lookup, policy, Identity).ConfigureAwait(false);
         await SendAsync(reply, ct).ConfigureAwait(false);
     }
 
@@ -407,16 +409,14 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// for a handler crash -- the reference's own crash-before-publish
     /// omission, matched not "improved."
     ///
-    /// `internal`, not `private`, and takes <see cref="IFrameSink"/> rather
-    /// than a concrete <see cref="Session"/>: <see cref="StationPool"/>
+    /// `internal`, not `private`, and static: <see cref="StationPool"/>
     /// reuses this exact dispatch logic for an inbound CALL arriving on a
     /// pooled link, rather than forking a second copy of the policy/lookup/
-    /// crash-handling semantics that could drift from this one. The method
-    /// is static and closure-free (only reads its parameters), so widening
-    /// its visibility changes nothing about how it behaves when called
-    /// from here.
+    /// crash-handling semantics that could drift from this one. The facts go
+    /// to session's own writer (<see cref="Announce"/>); a null session, as in
+    /// network-free tests, announces nothing.
     /// </summary>
-    internal static async Task<Value.MapValue> BuildCallReplyAsync(IFrameSink? session, CallInfo callInfo, CallLookup lookup, PolicyLookup policy, KeyPair identity, CancellationToken ct = default)
+    internal static async Task<Value.MapValue> BuildCallReplyAsync(Session? session, CallInfo callInfo, CallLookup lookup, PolicyLookup policy, KeyPair identity)
     {
         var selfPub = identity.NodeId();
         try
@@ -435,17 +435,17 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
 
         var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceReceivedAsync(session, callInfo.Realm, identity, requestId, ct).ConfigureAwait(false);
+        session?.Announce(RpcFacts.Received(callInfo.Realm, identity, requestId));
 
         try
         {
             var value = await handler(callInfo.Payload).ConfigureAwait(false);
-            await RpcFacts.AnnounceRepliedAsync(session, callInfo.Realm, identity, requestId, null, ct).ConfigureAwait(false);
+            session?.Announce(RpcFacts.Replied(callInfo.Realm, identity, requestId, null));
             return ResultFrame.Build(new ResultSpec { CallId = callInfo.CallId, Payload = value, RespondedBy = selfPub });
         }
         catch (CallHandlerException e)
         {
-            await RpcFacts.AnnounceRepliedAsync(session, callInfo.Realm, identity, requestId, e.Message, ct).ConfigureAwait(false);
+            session?.Announce(RpcFacts.Replied(callInfo.Realm, identity, requestId, e.Message));
             return CallErrorFrame.Build(new CallErrorSpec { CallId = callInfo.CallId, Code = Bolt4Code.UnknownError, ReportedBy = selfPub, Detail = e.Message });
         }
         catch (Exception)
