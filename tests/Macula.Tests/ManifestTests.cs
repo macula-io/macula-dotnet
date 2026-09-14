@@ -114,4 +114,203 @@ public class ManifestTests
         Assert.Empty(chunks);
         Assert.Equal(0, manifest.ChunkCount);
     }
+
+    /// <summary>A manifest of <paramref name="length"/> bytes cut into chunks of 4.</summary>
+    private static Manifest Created(int length) =>
+        ManifestBuilder.CreateWithCreated(Enumerable.Repeat((byte)7, length).ToArray(), new CreateOptions { Name = "file", ChunkSize = 4 }, 0).Item1;
+
+    /// <summary><paramref name="manifest"/>'s wire map with one field replaced, or left out when <paramref name="value"/> is null.</summary>
+    private static Value WireWith(Manifest manifest, string field, Value? value)
+    {
+        var without = ((Value.MapValue)ManifestBuilder.ToWire(manifest)).Without(field);
+        return value is null ? without : without.WithField(field, value);
+    }
+
+    /// <summary><paramref name="manifest"/>'s wire chunk list with one field of its first chunk set to <paramref name="value"/>.</summary>
+    private static Value FirstChunkWith(Manifest manifest, string field, ulong value)
+    {
+        var chunks = ((Value.ListValue)((Value.MapValue)ManifestBuilder.ToWire(manifest)).Get("chunks")!).Items;
+        return Value.List([((Value.MapValue)chunks[0]).WithField(field, Value.UInt(value)), .. chunks.Skip(1)]);
+    }
+
+    private static Value? AlgorithmOnTheWire(string form, string name) => form switch
+    {
+        "missing" => null,
+        "text" => Value.Text(name),
+        "bytes" => Value.Bytes(System.Text.Encoding.UTF8.GetBytes(name)),
+        _ => Value.UInt(1),
+    };
+
+    /// <summary>
+    /// hash_algorithm is read as macula reads it: a missing one is blake3,
+    /// blake3 is accepted as text or as bytes, and anything else is refused,
+    /// sha256 included.
+    /// </summary>
+    [Theory]
+    [InlineData("missing", "", true)]
+    [InlineData("text", "blake3", true)]
+    [InlineData("bytes", "blake3", true)]
+    [InlineData("bytes", "sha256", false)]
+    [InlineData("text", "md5", false)]
+    [InlineData("a number", "", false)]
+    public void From_wire_reads_the_hash_algorithm_as_macula_does(string form, string name, bool accepted)
+    {
+        var wire = WireWith(Created(13), "hash_algorithm", AlgorithmOnTheWire(form, name));
+
+        var thrown = Record.Exception(() => Assert.Equal(Algorithm.Blake3, ManifestBuilder.FromWire(wire).HashAlgorithm));
+
+        Assert.True(accepted == (thrown is null), $"{form} {name}: {thrown?.Message ?? "accepted"}");
+        Assert.True(accepted || thrown is ManifestParseException { Field: "hash_algorithm" }, $"{form} {name}: {thrown?.GetType().Name} {thrown?.Message}");
+    }
+
+    [Fact]
+    public void A_sha256_manifest_is_refused()
+    {
+        var wire = WireWith(Created(13), "hash_algorithm", Value.Text("sha256"));
+
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(wire));
+
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+        Assert.Equal("hash_algorithm", ex.Field);
+    }
+
+    /// <summary>A number is checked against its field's range before it is converted, never wrapped into range.</summary>
+    [Theory]
+    [InlineData("version", 1UL << 32)]
+    [InlineData("chunk_size", 1UL << 31)]
+    [InlineData("chunk_count", 1UL << 31)]
+    public void From_wire_refuses_a_number_too_large_for_its_field(string field, ulong value)
+    {
+        var wire = WireWith(Created(13), field, Value.UInt(value));
+
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(wire));
+
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+        Assert.Equal(field, ex.Field);
+    }
+
+    [Theory]
+    [InlineData("index")]
+    [InlineData("offset")]
+    [InlineData("size")]
+    public void From_wire_refuses_a_chunk_number_too_large_for_its_field(string field)
+    {
+        var wire = WireWith(Created(13), "chunks", FirstChunkWith(Created(13), field, 1UL << 31));
+
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(wire));
+
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+        Assert.Equal(field, ex.Field);
+    }
+
+    [Fact]
+    public void From_wire_refuses_a_name_that_is_not_utf8()
+    {
+        var wire = WireWith(Created(13), "name", Value.Bytes([0xFF, 0xFE]));
+
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(wire));
+
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+        Assert.Equal("name", ex.Field);
+    }
+
+    /// <summary>
+    /// A whole manifest's chunks are cut the way Create cuts content:
+    /// ceil(size / chunk_size) of them, chunk i at offset i x chunk_size and
+    /// chunk_size bytes long, the last holding what is left, from 1 to
+    /// chunk_size bytes. FromWire refuses any other chunk list, before a caller
+    /// sizes or counts anything by it.
+    /// </summary>
+    [Theory]
+    [InlineData("a chunk cut short before the last, with the count still right")]
+    [InlineData("a chunk counted that isn't listed")]
+    [InlineData("chunks out of index order")]
+    [InlineData("a gap between chunks")]
+    [InlineData("a chunk larger than the chunk size")]
+    [InlineData("a size the chunks don't add up to")]
+    [InlineData("a chunk size of zero")]
+    public void Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(string edit)
+    {
+        var wire = ManifestBuilder.ToWire(NotWhole(Created(13), edit));
+
+        var thrown = Record.Exception(() => ManifestBuilder.FromWire(wire));
+
+        Assert.True(thrown is ManifestParseException { Kind: FromWireError.InvalidValue }, $"{edit}: {thrown?.GetType().Name ?? "accepted"} {thrown?.Message}");
+    }
+
+    private static Manifest NotWhole(Manifest m, string edit) => edit switch
+    {
+        "a chunk cut short before the last, with the count still right" =>
+            m with { Chunks = [m.Chunks[0] with { Size = 3 }, m.Chunks[1] with { Offset = 3 }, m.Chunks[2] with { Offset = 7 }, m.Chunks[3] with { Offset = 11, Size = 2 }] },
+        "a chunk counted that isn't listed" => m with { ChunkCount = m.ChunkCount + 1 },
+        "chunks out of index order" => m with { Chunks = [m.Chunks[0] with { Index = 1 }, m.Chunks[1] with { Index = 0 }, m.Chunks[2], m.Chunks[3]] },
+        "a gap between chunks" => m with { Chunks = [m.Chunks[0], m.Chunks[1] with { Offset = 5 }, m.Chunks[2], m.Chunks[3]] },
+        "a chunk larger than the chunk size" => m with { Chunks = [m.Chunks[0], m.Chunks[1], m.Chunks[2], m.Chunks[3] with { Size = m.ChunkSize + 1 }] },
+        "a size the chunks don't add up to" => m with { Size = m.Size + 1 },
+        "a chunk size of zero" => m with { ChunkSize = 0 },
+        _ => throw new ArgumentOutOfRangeException(nameof(edit)),
+    };
+
+    /// <summary>
+    /// Empty content has one whole form, the one Create makes: size 0, no
+    /// chunks and a chunk count of 0. The same content as one empty chunk is
+    /// refused.
+    /// </summary>
+    [Fact]
+    public void Empty_content_has_one_whole_form()
+    {
+        var empty = ManifestBuilder.CreateWithCreated([], new CreateOptions { Name = "empty" }, 0).Item1;
+        var oneEmptyChunk = empty with { ChunkCount = 1, Chunks = [new ChunkInfo(0, 0, 0, Algorithm.Blake3.Hash([]))] };
+
+        Assert.Equal(empty, ManifestBuilder.FromWire(ManifestBuilder.ToWire(empty)));
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(ManifestBuilder.ToWire(oneEmptyChunk)));
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+    }
+
+    [Fact]
+    public void An_empty_chunk_is_not_whole()
+    {
+        var created = Created(13);
+        var withEmptyChunk = created with
+        {
+            ChunkCount = created.ChunkCount + 1,
+            Chunks = [.. created.Chunks, new ChunkInfo(created.ChunkCount, 13, 0, Algorithm.Blake3.Hash([]))],
+        };
+
+        var ex = Assert.Throws<ManifestParseException>(() => ManifestBuilder.FromWire(ManifestBuilder.ToWire(withEmptyChunk)));
+
+        Assert.Equal(FromWireError.InvalidValue, ex.Kind);
+    }
+
+    /// <summary>Verify refuses a manifest whose chunk size isn't positive instead of cutting the data by it.</summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Verify_refuses_a_chunk_size_that_is_not_positive(int chunkSize)
+    {
+        var manifest = Created(1) with { ChunkSize = chunkSize };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => ManifestBuilder.Verify(manifest, [7]));
+
+        Assert.Equal(VerifyError.InvalidManifest.ToString(), ex.Message);
+    }
+
+    /// <summary>Content is hashed with blake3 only, the one algorithm every macula stack fetches.</summary>
+    [Fact]
+    public void Create_offers_no_hash_algorithm_but_blake3()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => ManifestBuilder.Create([1, 2, 3], new CreateOptions { HashAlgorithm = Algorithm.Sha256 }));
+
+        Assert.Equal("opts", ex.ParamName);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Create_refuses_a_chunk_size_that_is_not_positive(int chunkSize)
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => ManifestBuilder.Create([1, 2, 3], new CreateOptions { ChunkSize = chunkSize }));
+
+        Assert.Equal("opts", ex.ParamName);
+    }
 }
