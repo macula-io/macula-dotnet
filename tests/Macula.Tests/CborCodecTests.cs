@@ -244,4 +244,47 @@ public class CborCodecTests
         var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
         Assert.Contains("nesting", ex.Message);
     }
+
+    /// <summary>
+    /// A length or count arrives before what it describes, so a few bytes can
+    /// claim far more than follows them. Every such claim, whether it fits an
+    /// int or not, is refused as a decode error.
+    /// </summary>
+    [Theory]
+    [InlineData("a map claiming 2^64-1 entries", "BBFFFFFFFFFFFFFFFF")]
+    [InlineData("a list claiming 2^64-1 items", "9BFFFFFFFFFFFFFFFF")]
+    [InlineData("a map claiming 2^31 entries", "BA80000000")]
+    [InlineData("a list claiming 2^31 items", "9A80000000")]
+    [InlineData("a list claiming 2^31-1 items", "9A7FFFFFFF")]
+    [InlineData("bytes claiming 2^64-1 bytes", "5BFFFFFFFFFFFFFFFF")]
+    [InlineData("text claiming 2^32 bytes", "7B0000000100000000")]
+    public void Decode_rejects_huge_claimed_count_without_panicking(string claim, string hex)
+    {
+        var payload = Convert.FromHexString(hex);
+
+        var thrown = Record.Exception(() => CborCodec.Decode(payload));
+
+        Assert.True(thrown is CborDecodeException, $"{claim}: threw {thrown?.GetType().Name ?? "nothing"}, want CborDecodeException");
+    }
+
+    /// <summary>
+    /// 128 nested lists, each claiming 2^18 items, around 2^18 uint 0s: every
+    /// claim fits in the bytes after it, but only the innermost list holds
+    /// its items. Decoding makes room for items as they decode, not as they
+    /// are claimed, so it allocates in proportion to the input rather than to
+    /// the claims times the depth.
+    /// </summary>
+    [Fact]
+    public void Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims()
+    {
+        const int claimed = 1 << 18;
+        var head = new byte[] { 0x9A, 0x00, 0x04, 0x00, 0x00 };
+        byte[] payload = [.. Enumerable.Repeat(head, CborCodec.MaxNestingDepth).SelectMany(level => level), .. new byte[claimed]];
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(allocated <= 96L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 96 times the input");
+    }
 }

@@ -191,26 +191,24 @@ public static class CborCodec
             }
             case 2:
             {
-                int len = checked((int)ReadArgument(data, ref pos, ai));
-                RequireRemaining(data, pos, len);
+                int len = ReadLength(data, ref pos, ai, 1);
                 var bytes = data.Slice(pos, len).ToArray();
                 return (Value.Bytes(bytes), pos + len);
             }
             case 3:
             {
-                int len = checked((int)ReadArgument(data, ref pos, ai));
-                RequireRemaining(data, pos, len);
+                int len = ReadLength(data, ref pos, ai, 1);
                 var bytes = data.Slice(pos, len).ToArray();
                 return (Value.TextBytes(bytes), pos + len);
             }
             case 4:
             {
-                int count = checked((int)ReadArgument(data, ref pos, ai));
-                var items = new Value[count];
+                int count = ReadLength(data, ref pos, ai, 1);
+                var items = new List<Value>(Math.Min(count, MaxPreallocatedItems));
                 for (int i = 0; i < count; i++)
                 {
                     var (item, consumed) = DecodeOne(data.Slice(pos), depth + 1);
-                    items[i] = item;
+                    items.Add(item);
                     pos += consumed;
                 }
                 return (Value.List(items), pos);
@@ -227,6 +225,33 @@ public static class CborCodec
     }
 
     /// <summary>
+    /// The most room made up front for the items of one list or map. A count
+    /// is only a claim until its items decode, and every enclosing list keeps
+    /// its room while the items inside it decode, so room made from claims
+    /// alone would grow with the claims times the depth instead of with the
+    /// input. The same bound macula-go and macula's CBOR NIF use.
+    /// </summary>
+    private const int MaxPreallocatedItems = 1024;
+
+    /// <summary>
+    /// Reads the length or count at <paramref name="pos"/> and checks it
+    /// against the bytes left after it, where each item it counts takes at
+    /// least <paramref name="bytesPerItem"/> bytes. A claim the rest of the
+    /// input can't hold is refused before anything is sized by it, which also
+    /// keeps every length returned within the range of an int.
+    /// </summary>
+    private static int ReadLength(ReadOnlySpan<byte> data, ref int pos, byte ai, int bytesPerItem)
+    {
+        ulong claimed = ReadArgument(data, ref pos, ai);
+        ulong left = (ulong)(data.Length - pos);
+        if (claimed > left / (ulong)bytesPerItem)
+        {
+            throw new CborDecodeException($"a length of {claimed} is more than the {left} bytes left can hold");
+        }
+        return (int)claimed;
+    }
+
+    /// <summary>
     /// Duplicate keys on decode are last-write-wins, not an error. Dedup is
     /// keyed by each key's own raw encoded bytes as they appeared on the
     /// wire -- not by Value equality, which would require a deep-equality
@@ -236,8 +261,8 @@ public static class CborCodec
     /// </summary>
     private static (Value, int) DecodeMap(ReadOnlySpan<byte> data, byte ai, int pos, int depth)
     {
-        int count = checked((int)ReadArgument(data, ref pos, ai));
-        var entries = new List<KeyValuePair<Value, Value>>();
+        int count = ReadLength(data, ref pos, ai, 2);
+        var entries = new List<KeyValuePair<Value, Value>>(Math.Min(count, MaxPreallocatedItems));
         var indexOfKeyBytes = new Dictionary<string, int>();
 
         for (int i = 0; i < count; i++)
