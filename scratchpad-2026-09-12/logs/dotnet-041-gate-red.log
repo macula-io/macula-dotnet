@@ -1,0 +1,13 @@
+Test run for /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.23]     Macula.Tests.FrameStreamTests.Concurrent_sends_all_complete_as_whole_frames [FAIL]
+  Failed Macula.Tests.FrameStreamTests.Concurrent_sends_all_complete_as_whole_frames [12 ms]
+  Error Message:
+   System.InvalidOperationException : a write is already in progress on this stream
+  Stack Trace:
+     at Macula.Tests.FrameStreamTests.OverlapRejectingStream.WriteAsync(ReadOnlyMemory`1 buffer, CancellationToken cancellationToken) in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/FrameStreamTests.cs:line 57
+   at Macula.Connection.FrameStream.SendFrameAsync(Value frame, CancellationToken ct) in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/src/Macula/Connection/FrameStream.cs:line 27
+   at Macula.Tests.FrameStreamTests.Concurrent_sends_all_complete_as_whole_frames() in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/FrameStreamTests.cs:line 21
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 25 ms - Macula.Tests.dll (net10.0)

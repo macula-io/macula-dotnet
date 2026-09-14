@@ -1,0 +1,26 @@
+Refuse a STREAM_OPEN not signed by its caller, drop a CALL with a wrongly typed field, and bound drop warnings
+
+StreamHandle.AcceptAsync checks the first frame of every inbound stream
+before anything else looks at it. A STREAM_OPEN whose signature doesn't
+verify against the caller it names (invalid_signature), one without a
+64-byte signature or a 32-byte caller (unsigned), a frame of another type
+(not_a_stream_open) or bytes that don't decode (malformed) get the stream
+aborted in both directions with code 2, with nothing written, and
+AcceptAsync waits for the next stream within its timeout. Stream handlers
+previously received the caller field unverified. A verified STREAM_OPEN
+carries its caller in map args, as a CALL handler's payload does.
+StreamHandle.RefuseAsync writes a STREAM_ERROR, finishes the send side and
+stops reading with code 2.
+
+An inbound CALL whose ucan_token is neither bytes, text nor null is dropped
+as malformed and serving goes on; it used to end the session.
+
+A session traces a dropped CALL, a reply for no pending call and a refused
+stream with one bounded warning per kind: a line at once, and one closing
+line with the rest counted when the interval ends
+(Session.DropWarningInterval, 60 seconds by default). Control characters in
+a procedure are escaped so a warning stays on one line. A frame that
+doesn't decode ends a session with MalformedFrameException.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5

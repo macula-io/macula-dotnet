@@ -1,0 +1,25 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.27]     Macula.Tests.ServeCallerTests.An_inbound_call_threads_its_caller_into_the_payload [FAIL]
+[xUnit.net 00:00:00.31]     Macula.Tests.ServeCallerTests.A_caller_the_sender_put_in_the_payload_is_replaced_by_the_verified_caller [FAIL]
+  Failed Macula.Tests.ServeCallerTests.An_inbound_call_threads_its_caller_into_the_payload [39 ms]
+  Error Message:
+   Assert.IsType() Failure: Value is null
+Expected: typeof(Macula.Value+BytesValue)
+Actual:   null
+  Stack Trace:
+     at Macula.Tests.ServeCallerTests.An_inbound_call_threads_its_caller_into_the_payload() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/ServeCallerTests.cs:line 93
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ServeCallerTests.A_caller_the_sender_put_in_the_payload_is_replaced_by_the_verified_caller [5 ms]
+  Error Message:
+   Assert.Single() Failure: The collection contained 2 items
+Collection: [[TextValue { IsNull = False, Utf8 = System.Byte[] }] = BytesValue { IsNull = False, Value = System.Byte[] }, [BytesValue { IsNull = False, Value = System.Byte[] }] = BytesValue { IsNull = False, Value = System.Byte[] }]
+  Stack Trace:
+     at Macula.Tests.ServeCallerTests.A_caller_the_sender_put_in_the_payload_is_replaced_by_the_verified_caller() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/ServeCallerTests.cs:line 109
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     2, Passed:     5, Skipped:     0, Total:     7, Duration: 100 ms - Macula.Tests.dll (net10.0)

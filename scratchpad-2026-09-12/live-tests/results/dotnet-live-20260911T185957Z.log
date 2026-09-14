@@ -1,0 +1,13 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.09]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.17]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.20]   Starting:    Macula.Tests
+[xUnit.net 00:00:01.75]   Finished:    Macula.Tests
+  Passed Macula.Tests.RpcFactsTests.Rpc_telemetry_facts_land_with_correct_request_ids [1 s]
+
+Test Run Successful.
+Total tests: 1
+     Passed: 1
+ Total time: 2.1557 Seconds

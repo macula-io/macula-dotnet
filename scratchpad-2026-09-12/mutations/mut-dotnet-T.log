@@ -1,0 +1,19 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.34]     Macula.Tests.StreamAcceptTests.A_stream_open_threads_its_caller_into_the_args [FAIL]
+  Failed Macula.Tests.StreamAcceptTests.A_stream_open_threads_its_caller_into_the_args [79 ms]
+  Error Message:
+   Assert.Equal() Failure: Collections differ
+           ↓ (pos 0)
+Expected: [63, 238, 221, 156, 33, ···]
+Actual:   [240, 125, 224, 181, 34, ···]
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.StreamAcceptTests.A_stream_open_threads_its_caller_into_the_args() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StreamAcceptTests.cs:line 66
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 94 ms - Macula.Tests.dll (net10.0)

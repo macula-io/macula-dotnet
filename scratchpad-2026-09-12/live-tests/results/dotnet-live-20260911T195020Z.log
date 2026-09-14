@@ -1,0 +1,29 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.17]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.27]       Macula.Connection.CallTimeoutException : no turn to write the CALL in time
+[xUnit.net 00:00:00.27]       Stack Trace:
+[xUnit.net 00:00:00.27]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(514,0): at Macula.Dht.DirectDial.RequestAsync[TTarget,T](RequestAt`2 request, TTarget target, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:00.27]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(501,0): at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext()
+[xUnit.net 00:00:00.27]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.27]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(338,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:00.27]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs(782,0): at Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_was_not_sent_is_tried_again_on_the_next_pass()
+[xUnit.net 00:00:00.27]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.28]   Finished:    Macula.Tests
+  Failed Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_was_not_sent_is_tried_again_on_the_next_pass [60 ms]
+  Error Message:
+   Macula.Connection.CallTimeoutException : no turn to write the CALL in time
+  Stack Trace:
+     at Macula.Dht.DirectDial.RequestAsync[TTarget,T](RequestAt`2 request, TTarget target, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 514
+   at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext() in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 501
+--- End of stack trace from previous location ---
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 338
+   at Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_was_not_sent_is_tried_again_on_the_next_pass() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 782
+--- End of stack trace from previous location ---
+
+Total tests: 1
+     Failed: 1
+ Total time: 0.6544 Seconds

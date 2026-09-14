@@ -1,0 +1,10 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.54

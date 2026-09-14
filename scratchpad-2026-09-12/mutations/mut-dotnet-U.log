@@ -1,0 +1,25 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.33]     Macula.Tests.SessionReaderTests.An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served [FAIL]
+  Failed Macula.Tests.SessionReaderTests.An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served [80 ms]
+  Error Message:
+   Macula.Connection.SessionEndedException : the session has ended: the control stream failed: ucan_token
+---- System.IO.IOException : the control stream failed: ucan_token
+-------- System.InvalidOperationException : ucan_token
+  Stack Trace:
+     at Macula.Connection.ControlChannel.NextInboundCallAsync(CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 358
+   at Macula.Tests.SessionReaderTests.An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 491
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+
+----- Inner Stack Trace -----
+   at Macula.Frame.CallFrameParsing.ParseCall(Value frame) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Frame/CallFrames.cs:line 192
+   at Macula.Connection.ControlChannel.QueueInboundCall(Value frame) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 495
+   at Macula.Connection.ControlChannel.Route(Value frame) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 406
+   at Macula.Connection.ControlChannel.ReadAsync(CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 370
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 98 ms - Macula.Tests.dll (net10.0)

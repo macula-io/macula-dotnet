@@ -1,0 +1,110 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.30]     Macula.Tests.SessionReaderTests.An_overflowing_call_queue_answers_the_extra_call_with_an_error [FAIL]
+  Failed Macula.Tests.SessionReaderTests.An_overflowing_call_queue_answers_the_extra_call_with_an_error [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.FakeStation.NextAsync(String frameType) in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 283
+   at Macula.Tests.SessionReaderTests.An_overflowing_call_queue_answers_the_extra_call_with_an_error() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 157
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:04.31]     Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events [FAIL]
+  Failed Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events [2 s]
+  Error Message:
+   System.TimeoutException : no event on app/orders within 00:00:02
+  Stack Trace:
+     at Macula.Connection.Subscription.RecvEventAsync(TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Subscription.cs:line 79
+   at Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 81
+   at Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 84
+   at Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 84
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:06.32]     Macula.Tests.SessionReaderTests.Concurrent_calls_on_one_session_each_get_their_own_reply [FAIL]
+  Failed Macula.Tests.SessionReaderTests.Concurrent_calls_on_one_session_each_get_their_own_reply [2 s]
+  Error Message:
+   System.TimeoutException : no response for call_id 63580c183ae10a656e0eea9414aed075 within 00:00:02
+  Stack Trace:
+     at Macula.Connection.ControlChannel.CallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 118
+   at Macula.Tests.SessionReaderTests.Concurrent_calls_on_one_session_each_get_their_own_reply() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 37
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:08.33]     Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies [FAIL]
+  Failed Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies [2 s]
+  Error Message:
+   System.TimeoutException : no response for call_id 759e2830268edddae6cf6f5ec3adbe97 within 00:00:02
+  Stack Trace:
+     at Macula.Connection.ControlChannel.CallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 118
+   at Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 115
+   at Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 115
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:10.34]     Macula.Tests.SessionReaderTests.A_hello_after_the_handshake_ends_the_session [FAIL]
+  Failed Macula.Tests.SessionReaderTests.A_hello_after_the_handshake_ends_the_session [2 s]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Connection.ProtocolViolationException)
+Actual:   typeof(System.TimeoutException)
+---- System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_hello_after_the_handshake_ends_the_session() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 194
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+
+[xUnit.net 00:00:12.34]     Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type [FAIL]
+  Failed Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 209
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:14.34]     Macula.Tests.SessionReaderTests.A_session_whose_connection_ends_is_no_longer_found_for_reuse [FAIL]
+  Failed Macula.Tests.SessionReaderTests.A_session_whose_connection_ends_is_no_longer_found_for_reuse [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_session_whose_connection_ends_is_no_longer_found_for_reuse() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 225
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:16.35]     Macula.Tests.SessionReaderTests.A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session [FAIL]
+  Failed Macula.Tests.SessionReaderTests.A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session [2 s]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.IO.IOException)
+Actual:   typeof(System.TimeoutException)
+---- System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 180
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+
+[xUnit.net 00:00:18.35]     Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment [FAIL]
+  Failed Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment [2 s]
+  Error Message:
+   System.TimeoutException : no event on app/*/placed within 00:00:02
+  Stack Trace:
+     at Macula.Connection.Subscription.RecvEventAsync(TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Subscription.cs:line 79
+   at Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 97
+   at Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 98
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:20.36]     Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up [FAIL]
+  Failed Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up [2 s]
+  Error Message:
+   System.TimeoutException : no response for call_id 2b824ba03084aadb8ed60070ccdfa776 within 00:00:02
+  Stack Trace:
+     at Macula.Connection.ControlChannel.CallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/ControlChannel.cs:line 118
+   at Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 133
+   at Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 143
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:22.36]     Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber [FAIL]
+  Failed Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 52
+   at Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 53
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:24.36]     Macula.Tests.SessionReaderTests.Serving_a_call_while_calling_on_the_same_session [FAIL]
+  Failed Macula.Tests.SessionReaderTests.Serving_a_call_while_calling_on_the_same_session [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.Serving_a_call_while_calling_on_the_same_session() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SessionReaderTests.cs:line 67
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:    12, Passed:     0, Skipped:     0, Total:    12, Duration: 24 s - Macula.Tests.dll (net10.0)

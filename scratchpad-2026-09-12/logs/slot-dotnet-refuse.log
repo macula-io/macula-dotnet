@@ -1,0 +1,19 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.10]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.18]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.21]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.33]   Finished:    Macula.Tests
+  Passed Macula.Tests.StreamAcceptTests.A_stream_open_threads_its_caller_into_the_args [71 ms]
+  Passed Macula.Tests.StreamAcceptTests.A_stream_open_not_signed_by_its_caller_is_refused [11 ms]
+  Passed Macula.Tests.StreamAcceptTests.A_refused_stream_writes_its_error_then_finishes_and_stops_reading [6 ms]
+
+Test Run Successful.
+Total tests: 3
+     Passed: 3
+ Total time: 0.7290 Seconds

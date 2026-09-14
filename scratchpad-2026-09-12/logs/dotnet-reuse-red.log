@@ -1,0 +1,38 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:01.33]     Macula.Tests.DirectDialCandidatesTests.Put_direct_reuses_an_open_session_to_the_station [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Put_direct_reuses_an_open_session_to_the_station [306 ms]
+  Error Message:
+   Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Dht.DirectDial.ReachStationCoreAsync[TTarget,T](DhtLookups dht, Byte[] station, DialVerified`1 dial, RequestAt`2 request, TimeSpan timeout, CancellationToken ct, Func`2 alreadyOpen) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 870
+   at Macula.Tests.DirectDialCandidatesTests.Put_direct_reuses_an_open_session_to_the_station() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 513
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:13.84]     Macula.Tests.DirectDialCandidatesTests.Get_direct_reuses_an_open_session_to_the_provider_station [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Get_direct_reuses_an_open_session_to_the_provider_station [1 s]
+  Error Message:
+   System.IO.IOException : p.test refused the connection
+  Stack Trace:
+     at Macula.Dht.DirectDial.<>c__DisplayClass63_0`2.<<FromProvider>b__0>d.MoveNext() in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 1007
+--- End of stack trace from previous location ---
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+   at Macula.Tests.DirectDialCandidatesTests.Get_direct_reuses_an_open_session_to_the_provider_station() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 495
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:15.36]     Macula.Tests.DirectDialCandidatesTests.A_reused_session_is_never_closed_by_the_request [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.A_reused_session_is_never_closed_by_the_request [6 ms]
+  Error Message:
+   Assert.Empty() Failure: Collection was not empty
+Collection: ["the caller's session"]
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.A_reused_session_is_never_closed_by_the_request() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 533
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:17.49]     Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_reuses_an_open_session_to_the_provider_station [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_reuses_an_open_session_to_the_provider_station [1 s]
+  Error Message:
+   Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+   at Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_reuses_an_open_session_to_the_provider_station() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 476
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:    33, Skipped:     0, Total:    37, Duration: 20 s - Macula.Tests.dll (net10.0)

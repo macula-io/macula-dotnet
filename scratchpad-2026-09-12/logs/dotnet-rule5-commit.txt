@@ -1,0 +1,14 @@
+Report the last candidate failure when a later pass finds none
+
+Once a direct-dial candidate has failed before sending, the call now
+throws the most recent candidate failure. A later pass whose query finds
+no candidate, or fails, no longer replaces it with ProcedureNotAdvertised,
+NoTrustedAdvertisement or a content lookup error. Until a candidate has
+been tried, the reason none qualified is still what the call throws.
+
+Found live: a get_direct whose dial reused the resolver session's identity
+got that session replaced by the station, so the next lookup failed and
+hid the trust violation that the dial itself had reported.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5

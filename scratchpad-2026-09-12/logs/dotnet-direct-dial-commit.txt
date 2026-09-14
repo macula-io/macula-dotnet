@@ -1,0 +1,25 @@
+Try each direct-dial provider in turn within the call's timeout
+
+DirectDial now treats every advertisement (or content announcement) that
+verifies as a candidate, in DHT order, and moves to the next one when a
+candidate's endpoint lookup, dial or identity check fails before anything
+is sent. A request that has gone out is never sent again. When nothing
+qualifies, the DHT is queried again with a backoff of 100 ms doubling to
+1 s, and within one call a station that already failed is dialed again
+only once its advertisement or endpoint record has changed.
+
+The call's timeout now bounds resolution, every endpoint lookup, every
+dial and the request, with each candidate getting a share of what remains.
+Resolve and ResolveStationEndpoint get a 10 s budget. GetDirect retries
+while nothing is announced and moves on after a failed or unverified
+fetch.
+
+The resolution logic sits behind internal delegates over the DHT lookups,
+the dial and the request, so DirectDialCandidatesTests exercises it with
+real signed records and no network. The cert-chain test certificates move
+to CertChainFixtures so both test classes share them.
+
+Bumps the package to 0.5.0 and starts CHANGELOG.md.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5

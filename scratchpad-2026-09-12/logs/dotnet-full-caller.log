@@ -1,0 +1,188 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.38]     Macula.Tests.CloseDataLossTests.Publish_immediately_followed_by_close_survives_reliably [FAIL]
+[xUnit.net 00:00:00.40]     Macula.Tests.DirectDialTests.Keep_advertised_direct_republishes_and_stops_on_cancellation [FAIL]
+  Failed Macula.Tests.CloseDataLossTests.Publish_immediately_followed_by_close_survives_reliably [81 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.CloseDataLossTests.Publish_immediately_followed_by_close_survives_reliably() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/CloseDataLossTests.cs:line 36
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialTests.Keep_advertised_direct_republishes_and_stops_on_cancellation [81 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.DirectDialTests.Keep_advertised_direct_republishes_and_stops_on_cancellation() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 141
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.46]     Macula.Tests.RpcFactsTests.Rpc_telemetry_facts_land_with_correct_request_ids [FAIL]
+[xUnit.net 00:00:00.50]     Macula.Tests.UcanGatedServeTests.Gated_serve_refuses_unauthorized_and_answers_authorized [FAIL]
+  Failed Macula.Tests.RpcFactsTests.Rpc_telemetry_facts_land_with_correct_request_ids [178 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.RpcFactsTests.Rpc_telemetry_facts_land_with_correct_request_ids() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/RpcFactsTests.cs:line 38
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.UcanGatedServeTests.Gated_serve_refuses_unauthorized_and_answers_authorized [219 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.UcanGatedServeTests.Gated_serve_refuses_unauthorized_and_answers_authorized() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/UcanGatedServeTests.cs:line 35
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.57]     Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call [FAIL]
+[xUnit.net 00:00:00.59]     Macula.Tests.SupervisedPubSubTests.Run_subscriber_and_run_publisher_against_the_real_fleet [FAIL]
+  Failed Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call [200 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 95
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.SupervisedPubSubTests.Run_subscriber_and_run_publisher_against_the_real_fleet [312 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.SupervisedPubSubTests.Run_subscriber_and_run_publisher_against_the_real_fleet() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/SupervisedPubSubTests.cs:line 35
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.62]     Macula.Tests.LiveStationTests.Unary_call_provider_round_trip_against_the_live_fleet [FAIL]
+[xUnit.net 00:00:00.64]     Macula.Tests.LiveStationTests.Connect_completes_a_real_handshake_against_the_live_fleet [FAIL]
+  Failed Macula.Tests.LiveStationTests.Unary_call_provider_round_trip_against_the_live_fleet [342 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Unary_call_provider_round_trip_against_the_live_fleet() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 255
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.LiveStationTests.Connect_completes_a_real_handshake_against_the_live_fleet [23 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Connect_completes_a_real_handshake_against_the_live_fleet() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 37
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.77]     Macula.Tests.LiveStationTests.Content_put_get_round_trips_a_single_block [FAIL]
+  Failed Macula.Tests.LiveStationTests.Content_put_get_round_trips_a_single_block [126 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Content_put_get_round_trips_a_single_block() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 97
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.87]     Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized [FAIL]
+[xUnit.net 00:00:00.89]     Macula.Tests.LiveStationTests.Unary_call_round_trip_against_a_nonexistent_procedure_reports_unknown_next_peer [FAIL]
+  Failed Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized [590 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs:line 42
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.LiveStationTests.Unary_call_round_trip_against_a_nonexistent_procedure_reports_unknown_next_peer [121 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Unary_call_round_trip_against_a_nonexistent_procedure_reports_unknown_next_peer() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 52
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.90]     Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result [FAIL]
+[xUnit.net 00:00:00.98]     Macula.Tests.DirectDialTests.Resolve_reports_not_advertised_for_an_unadvertised_procedure [FAIL]
+  Failed Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result [326 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 53
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialTests.Resolve_reports_not_advertised_for_an_unadvertised_procedure [76 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.DirectDialTests.Resolve_reports_not_advertised_for_an_unadvertised_procedure() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 119
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.13]     Macula.Tests.LiveStationTests.Content_put_get_round_trips_chunked_content [FAIL]
+  Failed Macula.Tests.LiveStationTests.Content_put_get_round_trips_chunked_content [240 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Content_put_get_round_trips_chunked_content() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 111
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.27]     Macula.Tests.LiveStationTests.Streaming_provider_round_trip_against_the_live_fleet [FAIL]
+[xUnit.net 00:00:01.32]     Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly [FAIL]
+[xUnit.net 00:00:01.32]     Macula.Tests.LiveStationTests.Content_get_reports_not_found_for_a_made_up_mcid [FAIL]
+  Failed Macula.Tests.LiveStationTests.Streaming_provider_round_trip_against_the_live_fleet [136 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Streaming_provider_round_trip_against_the_live_fleet() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 147
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly [46 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 70
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.LiveStationTests.Content_get_reports_not_found_for_a_made_up_mcid [3 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Content_get_reports_not_found_for_a_made_up_mcid() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 128
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:01.37]     Macula.Tests.LiveStationTests.Client_stream_half_close_still_gets_its_reply_against_the_live_fleet [FAIL]
+  Failed Macula.Tests.LiveStationTests.Client_stream_half_close_still_gets_its_reply_against_the_live_fleet [49 ms]
+  Error Message:
+   System.PlatformNotSupportedException : System.Net.Quic is not supported on this platform: Unable to load MsQuic library version '2'. For more information see: https://learn.microsoft.com/dotnet/fundamentals/networking/quic/quic-overview#platform-dependencies
+  Stack Trace:
+     at System.Net.Quic.QuicConnection.ConnectAsync(QuicClientConnectionOptions options, CancellationToken cancellationToken)
+   at Macula.Connection.Session.ConnectCoreAsync(String host, Int32 port, KeyPair identity, Trust trust, Nullable`1 handshakeTimeout, Boolean dialedByDirectDial, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Session.cs:line 155
+   at Macula.Tests.LiveStationTests.Client_stream_half_close_still_gets_its_reply_against_the_live_fleet() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 202
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:15.37]     Macula.Tests.StationDiscoveryLiveTests.Station_discovery_finds_and_connects_to_real_fleet_stations [FAIL]
+[xUnit.net 00:00:15.37]     Macula.Tests.StationPoolLiveTests.Pool_reconnects_and_replays_subscriptions_after_a_station_initiated_disconnect [FAIL]
+  Failed Macula.Tests.StationDiscoveryLiveTests.Station_discovery_finds_and_connects_to_real_fleet_stations [15 s]
+  Error Message:
+   pool never completed its initial bootstrap handshake
+  Stack Trace:
+     at Macula.Tests.StationDiscoveryLiveTests.WaitUntilAsync(Func`1 condition, TimeSpan timeout, String message) in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationDiscoveryLiveTests.cs:line 85
+   at Macula.Tests.StationDiscoveryLiveTests.Station_discovery_finds_and_connects_to_real_fleet_stations() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationDiscoveryLiveTests.cs:line 50
+   at Macula.Tests.StationDiscoveryLiveTests.Station_discovery_finds_and_connects_to_real_fleet_stations() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationDiscoveryLiveTests.cs:line 71
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.StationPoolLiveTests.Pool_reconnects_and_replays_subscriptions_after_a_station_initiated_disconnect [15 s]
+  Error Message:
+   pool never completed its initial handshake
+  Stack Trace:
+     at Macula.Tests.StationPoolLiveTests.WaitUntilAsync(Func`1 condition, TimeSpan timeout, String message) in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolLiveTests.cs:line 114
+   at Macula.Tests.StationPoolLiveTests.Pool_reconnects_and_replays_subscriptions_after_a_station_initiated_disconnect() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolLiveTests.cs:line 56
+   at Macula.Tests.StationPoolLiveTests.Pool_reconnects_and_replays_subscriptions_after_a_station_initiated_disconnect() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolLiveTests.cs:line 84
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:    20, Passed:   228, Skipped:     0, Total:   248, Duration: 22 s - Macula.Tests.dll (net10.0)

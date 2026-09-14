@@ -1,0 +1,104 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.10]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.18]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.21]   Starting:    Macula.Tests
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_timeout_bounds_resolution [307 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_a_failed_lookup_at_its_deadline_when_no_provider_was_tried [305 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_with_cert_chain_reports_the_authorization_failure_at_its_deadline [386 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_reuses_an_open_session_to_the_station [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolve_station_endpoint_timeout_bounds_the_lookup [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_retries_an_endpoint_lookup_that_fails [106 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [305 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_keeps_a_lookup_error_when_a_later_lookup_is_cut_off_by_the_deadline [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_dials_a_refusing_station_once_per_endpoint_version [3 s]
+[xUnit.net 00:00:06.60]       Macula.Connection.SessionEndedException : the session has ended: the station went away
+[xUnit.net 00:00:06.60]       ---- System.IO.IOException : the station went away
+[xUnit.net 00:00:06.60]       Stack Trace:
+[xUnit.net 00:00:06.61]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(474,0): at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext()
+[xUnit.net 00:00:06.61]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:06.61]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(336,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:06.61]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs(752,0): at Macula.Tests.DirectDialCandidatesTests.A_direct_call_whose_reused_session_has_ended_dials_the_station_fresh()
+[xUnit.net 00:00:06.61]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:06.61]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:06.61]         
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_never_sends_the_request_twice [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_not_announced_when_a_lookup_answered_before_later_ones_failed [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_picks_up_an_endpoint_record_that_changes_mid_deadline [705 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_a_timeout_when_no_lookup_was_answered_in_time [303 ms]
+  Failed Macula.Tests.DirectDialCandidatesTests.A_direct_call_whose_reused_session_has_ended_dials_the_station_fresh [2 ms]
+  Error Message:
+   Macula.Connection.SessionEndedException : the session has ended: the station went away
+---- System.IO.IOException : the station went away
+  Stack Trace:
+     at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext() in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 474
+--- End of stack trace from previous location ---
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 336
+   at Macula.Tests.DirectDialCandidatesTests.A_direct_call_whose_reused_session_has_ended_dials_the_station_fresh() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 752
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_no_station_endpoint_when_a_lookup_answered_not_found [305 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_fetches_from_a_failing_provider_once_per_announcement [2 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_lookup_was_answered_in_time [300 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_timeout_bounds_resolution [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_retries_after_a_lookup_fails [102 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_never_opens_the_stream_twice [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_timeout_that_is_not_positive_is_rejected [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_timeout_bounds_the_endpoint_lookup [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolve_timeout_bounds_resolution [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_failed_lookup_at_its_deadline_when_no_candidate_was_tried [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_an_advertisement_that_appears_on_a_later_pass [103 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Two_concurrent_transfers_to_one_station_share_the_dialed_session_until_both_finish [3 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_shared_by_a_stream_and_a_call_closes_only_when_both_release [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_timeout_bounds_the_endpoint_lookup [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_candidate_share_splits_what_remains_evenly_with_a_one_second_floor [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolution_backs_off_between_passes [3 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_the_last_candidate_failure_when_a_later_lookup_fails [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_is_closed_after_the_request_even_when_it_fails [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_retries_when_no_advertisement_qualifies [102 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reuses_an_open_session_to_the_provider_station [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_keeps_a_lookup_error_when_a_later_endpoint_lookup_is_cut_off_by_the_deadline [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_the_next_advertisement_when_a_station_has_no_endpoint [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_skips_a_station_whose_endpoint_is_signed_by_another_key [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_failed_endpoint_lookup_when_every_lookup_failed [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_reused_session_is_never_closed_by_the_request [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_the_last_candidate_failure_when_a_later_pass_finds_none [1 s]
+[xUnit.net 00:00:18.57]       Macula.Connection.CallTimeoutException : no turn to write the CALL in time
+[xUnit.net 00:00:18.57]       Stack Trace:
+[xUnit.net 00:00:18.57]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(499,0): at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext()
+[xUnit.net 00:00:18.57]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:18.57]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(336,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:18.57]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs(778,0): at Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_timed_out_waiting_for_the_write_lock_may_try_the_next_candidate()
+[xUnit.net 00:00:18.57]         --- End of stack trace from previous location ---
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_not_advertised_when_a_lookup_answered_before_later_ones_failed [300 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_the_next_station_when_a_dial_fails [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_retries_after_a_lookup_fails [102 ms]
+  Failed Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_timed_out_waiting_for_the_write_lock_may_try_the_next_candidate [1 ms]
+  Error Message:
+   Macula.Connection.CallTimeoutException : no turn to write the CALL in time
+  Stack Trace:
+     at Macula.Dht.DirectDial.<>c__DisplayClass35_0`2.<<ThroughStationEndpoint>b__0>d.MoveNext() in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 499
+--- End of stack trace from previous location ---
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 336
+   at Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_timed_out_waiting_for_the_write_lock_may_try_the_next_candidate() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 778
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_retries_when_no_provider_qualifies [102 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_direct_call_that_timed_out_after_its_write_started_is_not_tried_on_another_candidate [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_stays_open_until_its_last_lease_is_released [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [300 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_session_that_is_closing_is_not_reused [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_tries_the_next_provider_after_a_failed_fetch [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_reuses_an_open_session_to_the_provider_station [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_the_last_candidate_failure_when_a_later_lookup_fails [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_direct_reuses_an_open_session_to_the_provider_station [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_tries_the_next_station_when_a_dial_fails [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_with_cert_chain_tries_the_next_advertisement_when_a_station_has_no_endpoint [1 s]
+[xUnit.net 00:00:22.50]   Finished:    Macula.Tests
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_timeout_during_a_transfer_carries_the_last_failure [1 s]
+
+Total tests: 56
+     Passed: 54
+     Failed: 2
+ Total time: 22.8723 Seconds

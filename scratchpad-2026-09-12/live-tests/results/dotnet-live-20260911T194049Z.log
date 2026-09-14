@@ -1,0 +1,23 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.09]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.17]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.20]   Starting:    Macula.Tests
+[xUnit.net 00:00:02.32]       System.TimeoutException : The operation has timed out.
+[xUnit.net 00:00:02.32]       Stack Trace:
+[xUnit.net 00:00:02.32]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolReaderTests.cs(168,0): at Macula.Tests.StationPoolReaderTests.TakeAsync(ChannelReader`1 reader, Int32 count)
+[xUnit.net 00:00:02.32]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolReaderTests.cs(140,0): at Macula.Tests.StationPoolReaderTests.A_wildcard_subscription_through_the_pool_receives_matching_events()
+[xUnit.net 00:00:02.32]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:02.34]   Finished:    Macula.Tests
+  Failed Macula.Tests.StationPoolReaderTests.A_wildcard_subscription_through_the_pool_receives_matching_events [2 s]
+  Error Message:
+   System.TimeoutException : The operation has timed out.
+  Stack Trace:
+     at Macula.Tests.StationPoolReaderTests.TakeAsync(ChannelReader`1 reader, Int32 count) in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolReaderTests.cs:line 168
+   at Macula.Tests.StationPoolReaderTests.A_wildcard_subscription_through_the_pool_receives_matching_events() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/StationPoolReaderTests.cs:line 140
+--- End of stack trace from previous location ---
+
+Total tests: 1
+     Failed: 1
+ Total time: 2.7105 Seconds

@@ -1,0 +1,54 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:04.84]     Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_not_announced_when_a_lookup_answered_before_later_ones_failed [FAIL]
+[xUnit.net 00:00:05.85]     Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_a_timeout_when_no_lookup_was_answered_in_time [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_not_announced_when_a_lookup_answered_before_later_ones_failed [302 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Dht.DirectDial+ContentNotAnnouncedException)
+Actual:   typeof(System.InvalidOperationException)
+---- System.InvalidOperationException : dht: the resolver session is gone
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_not_announced_when_a_lookup_answered_before_later_ones_failed() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 543
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.<>c__DisplayClass61_0.<<ContentProviders>b__0>d.MoveNext() in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 933
+--- End of stack trace from previous location ---
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+  Failed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_a_timeout_when_no_lookup_was_answered_in_time [301 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.TimeoutException)
+Actual:   typeof(Macula.Dht.DirectDial+ContentNotAnnouncedException)
+---- Macula.Dht.DirectDial+ContentNotAnnouncedException : directdial: content has no verifiable announcement in the DHT
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_a_timeout_when_no_lookup_was_answered_in_time() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 569
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+[xUnit.net 00:00:08.15]     Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_lookup_was_answered_in_time [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_lookup_was_answered_in_time [301 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.TimeoutException)
+Actual:   typeof(Macula.Dht.DirectDial+ProcedureNotAdvertisedException)
+---- Macula.Dht.DirectDial+ProcedureNotAdvertisedException : directdial: procedure has no direct-dial advertisement in the DHT
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_lookup_was_answered_in_time() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 530
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+[xUnit.net 00:00:09.47]     Macula.Tests.DirectDialCandidatesTests.Call_reports_a_failed_lookup_at_its_deadline_when_no_candidate_was_tried [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_failed_lookup_at_its_deadline_when_no_candidate_was_tried [301 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.InvalidOperationException)
+Actual:   typeof(Macula.Dht.DirectDial+ProcedureNotAdvertisedException)
+---- Macula.Dht.DirectDial+ProcedureNotAdvertisedException : directdial: procedure has no direct-dial advertisement in the DHT
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Call_reports_a_failed_lookup_at_its_deadline_when_no_candidate_was_tried() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 516
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 314
+
+Failed!  - Failed:     4, Passed:    37, Skipped:     0, Total:    41, Duration: 20 s - Macula.Tests.dll (net10.0)

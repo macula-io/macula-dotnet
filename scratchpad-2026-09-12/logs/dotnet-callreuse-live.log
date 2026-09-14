@@ -1,0 +1,76 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.15
+replaced libmsquic.so in 1 place(s)
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.09]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.17]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.20]   Starting:    Macula.Tests
+  Passed Macula.Tests.UcanGatedServeTests.Gated_serve_refuses_unauthorized_and_answers_authorized [920 ms]
+  Passed Macula.Tests.LiveStationTests.Unary_call_provider_round_trip_against_the_live_fleet [949 ms]
+  Passed Macula.Tests.SupervisedPubSubTests.Run_subscriber_and_run_publisher_against_the_real_fleet [1 s]
+  Passed Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized [1 s]
+  Passed Macula.Tests.LiveStationTests.Connect_completes_a_real_handshake_against_the_live_fleet [124 ms]
+  Passed Macula.Tests.StationDiscoveryLiveTests.Station_discovery_finds_and_connects_to_real_fleet_stations [1 s]
+  Passed Macula.Tests.LiveStationTests.Content_put_get_round_trips_a_single_block [248 ms]
+  Passed Macula.Tests.LiveStationTests.Unary_call_round_trip_against_a_nonexistent_procedure_reports_unknown_next_peer [81 ms]
+  Passed Macula.Tests.RpcFactsTests.Rpc_telemetry_facts_land_with_correct_request_ids [1 s]
+  Passed Macula.Tests.LiveStationTests.Content_put_get_round_trips_chunked_content [459 ms]
+  Passed Macula.Tests.StationPoolLiveTests.Pool_reconnects_and_replays_subscriptions_after_a_station_initiated_disconnect [2 s]
+  Passed Macula.Tests.LiveStationTests.Streaming_provider_round_trip_against_the_live_fleet [712 ms]
+  Passed Macula.Tests.DirectDialTests.Keep_advertised_direct_republishes_and_stops_on_cancellation [4 s]
+  Passed Macula.Tests.CloseDataLossTests.Publish_immediately_followed_by_close_survives_reliably [4 s]
+[xUnit.net 00:00:12.88]     Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly [FAIL]
+[xUnit.net 00:00:12.88]       System.TimeoutException : no event on macula_csharp_sdk.test.74d389bf4183407089d64da71a09781a within 00:00:10
+[xUnit.net 00:00:12.88]       Stack Trace:
+[xUnit.net 00:00:12.88]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Subscription.cs(81,0): at Macula.Connection.Subscription.RecvEventAsync(TimeSpan timeout, CancellationToken ct)
+[xUnit.net 00:00:12.88]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs(87,0): at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly()
+[xUnit.net 00:00:12.88]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs(90,0): at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly()
+[xUnit.net 00:00:12.88]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs(90,0): at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly()
+[xUnit.net 00:00:12.88]         --- End of stack trace from previous location ---
+  Failed Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly [10 s]
+  Error Message:
+   System.TimeoutException : no event on macula_csharp_sdk.test.74d389bf4183407089d64da71a09781a within 00:00:10
+  Stack Trace:
+     at Macula.Connection.Subscription.RecvEventAsync(TimeSpan timeout, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/Subscription.cs:line 81
+   at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 87
+   at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 90
+   at Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/LiveStationTests.cs:line 90
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.LiveStationTests.Content_get_reports_not_found_for_a_made_up_mcid [166 ms]
+  Passed Macula.Tests.LiveStationTests.Client_stream_half_close_still_gets_its_reply_against_the_live_fleet [742 ms]
+[xUnit.net 00:00:15.45]     Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call [FAIL]
+[xUnit.net 00:00:15.45]       Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+[xUnit.net 00:00:15.45]       Stack Trace:
+[xUnit.net 00:00:15.45]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(356,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:15.45]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(109,0): at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call()
+[xUnit.net 00:00:15.45]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(109,0): at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call()
+[xUnit.net 00:00:15.45]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(109,0): at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call()
+[xUnit.net 00:00:15.45]         --- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call [11 s]
+  Error Message:
+   Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 356
+   at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 109
+   at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 109
+   at Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 109
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result [205 ms]
+[xUnit.net 00:00:25.73]   Finished:    Macula.Tests
+  Passed Macula.Tests.DirectDialTests.Resolve_reports_not_advertised_for_an_unadvertised_procedure [10 s]
+
+Test Run Failed.
+Total tests: 20
+     Passed: 18
+     Failed: 2
+ Total time: 26.1439 Seconds

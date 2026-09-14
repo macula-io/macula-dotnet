@@ -1,0 +1,17 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.55]     Macula.Tests.DropWarningsTests.A_drop_burst_logs_one_immediate_line_and_one_closing_line_with_the_rest [FAIL]
+  Failed Macula.Tests.DropWarningsTests.A_drop_burst_logs_one_immediate_line_and_one_closing_line_with_the_rest [319 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1
+  Stack Trace:
+     at Macula.Tests.DropWarningsTests.A_drop_burst_logs_one_immediate_line_and_one_closing_line_with_the_rest() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DropWarningsTests.cs:line 35
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     1, Passed:     0, Skipped:     0, Total:     1, Duration: 333 ms - Macula.Tests.dll (net10.0)

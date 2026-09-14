@@ -1,0 +1,37 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:10.62]     Macula.Tests.DirectDialCandidatesTests.Two_concurrent_transfers_to_one_station_share_the_dialed_session_until_both_finish [FAIL]
+[xUnit.net 00:00:10.62]     Macula.Tests.DirectDialCandidatesTests.A_dialed_session_shared_by_a_stream_and_a_call_closes_only_when_both_release [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Two_concurrent_transfers_to_one_station_share_the_dialed_session_until_both_finish [6 ms]
+  Error Message:
+   Assert.Empty() Failure: Collection was not empty
+Collection: ["a dialed session"]
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Two_concurrent_transfers_to_one_station_share_the_dialed_session_until_both_finish() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 790
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_shared_by_a_stream_and_a_call_closes_only_when_both_release [< 1 ms]
+  Error Message:
+   Assert.Empty() Failure: Collection was not empty
+Collection: ["a dialed session"]
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.A_dialed_session_shared_by_a_stream_and_a_call_closes_only_when_both_release() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 806
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:18.65]     Macula.Tests.DirectDialCandidatesTests.A_dialed_session_stays_open_until_its_last_lease_is_released [FAIL]
+[xUnit.net 00:00:18.96]     Macula.Tests.DirectDialCandidatesTests.A_session_that_is_closing_is_not_reused [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_stays_open_until_its_last_lease_is_released [< 1 ms]
+  Error Message:
+   Assert.Empty() Failure: Collection was not empty
+Collection: ["a dialed session"]
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.A_dialed_session_stays_open_until_its_last_lease_is_released() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 759
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialCandidatesTests.A_session_that_is_closing_is_not_reused [1 ms]
+  Error Message:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   StationTarget { Session = a dialed session, Lease = Macula.Connection.DialedSession`1[System.String] }
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.A_session_that_is_closing_is_not_reused() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 773
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     4, Passed:    48, Skipped:     0, Total:    52, Duration: 22 s - Macula.Tests.dll (net10.0)

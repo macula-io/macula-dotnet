@@ -1,0 +1,26 @@
+Test run for /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.27]     Macula.Tests.SupervisedPublisherTests.The_started_fact_is_sent_before_the_publish_and_never_alongside_it [FAIL]
+[xUnit.net 00:00:00.28]     Macula.Tests.SupervisedPublisherTests.A_started_fact_that_fails_to_send_does_not_stop_the_publish [FAIL]
+  Failed Macula.Tests.SupervisedPublisherTests.The_started_fact_is_sent_before_the_publish_and_never_alongside_it [48 ms]
+  Error Message:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   System.InvalidOperationException: a send is already in progress on this session
+   at Macula.Tests.SupervisedPublisherTests.OneSendAtATimeSink.PublishAsync(PublishSpec spec, CancellationToken ct) in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/SupervisedPublisherTests.cs:line 87
+   at Macula.Connection.SupervisedPubSub.<>c__DisplayClass5_0.<<RunPublisherOn>b__0>d.MoveNext() in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/src/Macula/Connection/SupervisedPubSub.cs:line 85
+  Stack Trace:
+     at Macula.Tests.SupervisedPublisherTests.The_started_fact_is_sent_before_the_publish_and_never_alongside_it() in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/SupervisedPublisherTests.cs:line 28
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.SupervisedPublisherTests.A_started_fact_that_fails_to_send_does_not_stop_the_publish [4 ms]
+  Error Message:
+   Assert.Null() Failure: Value is not null
+Expected: null
+Actual:   System.InvalidOperationException: a send is already in progress on this session
+   at Macula.Tests.SupervisedPublisherTests.OneSendAtATimeSink.PublishAsync(PublishSpec spec, CancellationToken ct) in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/SupervisedPublisherTests.cs:line 87
+   at Macula.Connection.SupervisedPubSub.<>c__DisplayClass5_0.<<RunPublisherOn>b__0>d.MoveNext() in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/src/Macula/Connection/SupervisedPubSub.cs:line 85
+  Stack Trace:
+     at Macula.Tests.SupervisedPublisherTests.A_started_fact_that_fails_to_send_does_not_stop_the_publish() in /tmp/claude-1000/-home-rl-work-github-com/6400ff64-212b-4343-8b3d-30bdddd30d87/scratchpad/macula-dotnet-0.4.1/tests/Macula.Tests/SupervisedPublisherTests.cs:line 42
+--- End of stack trace from previous location ---
+
+Failed!  - Failed:     2, Passed:     0, Skipped:     0, Total:     2, Duration: 77 ms - Macula.Tests.dll (net10.0)

@@ -1,0 +1,25 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Macula -> /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/bin/Debug/net10.0/Macula.dll
+  Macula.Tests -> /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.14
+replaced libmsquic.so in 1 place(s)
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.19]   Starting:    Macula.Tests
+  Passed Macula.Tests.LiveStationTests.Publish_subscribe_round_trip_delivers_our_own_publish_directly [294 ms]
+[xUnit.net 00:00:01.67]   Finished:    Macula.Tests
+  Passed Macula.Tests.DirectDialTests.Resolver_session_still_connected_after_a_direct_call [1 s]
+
+Test Run Successful.
+Total tests: 2
+     Passed: 2
+ Total time: 2.0374 Seconds

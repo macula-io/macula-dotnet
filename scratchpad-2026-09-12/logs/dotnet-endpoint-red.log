@@ -1,0 +1,44 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:01.53]     Macula.Tests.DirectDialCandidatesTests.Put_direct_retries_an_endpoint_lookup_that_fails [FAIL]
+[xUnit.net 00:00:01.84]     Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Put_direct_retries_an_endpoint_lookup_that_fails [1 ms]
+  Error Message:
+   System.InvalidOperationException : dht: the station did not answer the lookup
+  Stack Trace:
+     at Macula.Dht.DirectDial.LookupStationEndpointAsync(DhtLookups dht, Byte[] station, CallDeadline budget, Boolean retryWithinBudget, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 544
+   at Macula.Dht.DirectDial.ReachStationCoreAsync[TTarget,T](DhtLookups dht, Byte[] station, DialVerified`1 dial, RequestAt`2 request, TimeSpan timeout, CancellationToken ct, Func`2 alreadyOpen) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 889
+   at Macula.Tests.DirectDialCandidatesTests.Put_direct_retries_an_endpoint_lookup_that_fails() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 230
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [308 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.TimeoutException)
+Actual:   typeof(Macula.Dht.DirectDial+StationEndpointNotFoundException)
+---- Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Call_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 273
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 330
+[xUnit.net 00:00:16.11]     Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_failed_endpoint_lookup_when_every_lookup_failed [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_failed_endpoint_lookup_when_every_lookup_failed [< 1 ms]
+  Error Message:
+   a failed endpoint lookup is retried within the budget
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_failed_endpoint_lookup_when_every_lookup_failed() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 247
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:17.92]     Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [FAIL]
+  Failed Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time [301 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.TimeoutException)
+Actual:   typeof(Macula.Dht.DirectDial+StationEndpointNotFoundException)
+---- Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Tests.DirectDialCandidatesTests.Put_direct_reports_a_timeout_when_no_endpoint_lookup_was_answered_in_time() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialCandidatesTests.cs:line 258
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Dht.DirectDial.ReachStationCoreAsync[TTarget,T](DhtLookups dht, Byte[] station, DialVerified`1 dial, RequestAt`2 request, TimeSpan timeout, CancellationToken ct, Func`2 alreadyOpen) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 889
+
+Failed!  - Failed:     4, Passed:    42, Skipped:     0, Total:    46, Duration: 21 s - Macula.Tests.dll (net10.0)

@@ -1,0 +1,19 @@
+Bind UCAN-gated calls to the caller that signed them
+
+A provider now answers an inbound CALL only when the CALL's signature
+verifies against the caller it names. One that doesn't is dropped with no
+reply, before policy or a handler runs, in both Session's serve loop and
+StationPool's inbound path, matching macula_station_link.erl's
+on_inbound_call/3.
+
+Policy.Check takes the caller as well as the token. A Policy.Required
+procedure accepts a token only when its aud is that caller's node id as
+lowercase hex, the comparison macula_station_link.erl uses; a missing
+caller or a different audience is unauthorized. UcanToken.Create's doc,
+the UCAN examples and the live UCAN tests mint tokens with that audience.
+
+ServeCallerTests and the new UcanTests cases carry the same names as
+macula-go's.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5

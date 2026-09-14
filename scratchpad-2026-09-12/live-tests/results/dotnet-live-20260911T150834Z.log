@@ -1,0 +1,43 @@
+Test run for /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/bin/Debug/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.09]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.17]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.20]   Starting:    Macula.Tests
+[xUnit.net 00:00:12.72]       Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+[xUnit.net 00:00:12.72]       Stack Trace:
+[xUnit.net 00:00:12.72]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(269,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:12.72]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs(55,0): at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized()
+[xUnit.net 00:00:12.72]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs(58,0): at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized()
+[xUnit.net 00:00:12.72]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs(84,0): at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized()
+[xUnit.net 00:00:12.72]         --- End of stack trace from previous location ---
+  Failed Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized [12 s]
+  Error Message:
+   Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 269
+   at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs:line 55
+   at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs:line 58
+   at Macula.Tests.DirectDialUcanTests.Direct_dial_ucan_gated_refuses_unauthorized_and_answers_authorized() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialUcanTests.cs:line 84
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:15.61]       Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+[xUnit.net 00:00:15.61]       Stack Trace:
+[xUnit.net 00:00:15.61]         /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs(269,0): at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct)
+[xUnit.net 00:00:15.61]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(71,0): at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result()
+[xUnit.net 00:00:15.61]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(77,0): at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result()
+[xUnit.net 00:00:15.61]         /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs(77,0): at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result()
+[xUnit.net 00:00:15.61]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:15.62]   Finished:    Macula.Tests
+  Failed Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result [15 s]
+  Error Message:
+   Macula.Dht.DirectDial+StationEndpointNotFoundException : directdial: resolved station published no reachable station_endpoint
+  Stack Trace:
+     at Macula.Dht.DirectDial.FirstAnswerAsync[TCandidate,T](Func`3 query, Func`5 attempt, CallDeadline deadline, CancellationToken ct) in /home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Dht/DirectDial.cs:line 269
+   at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 71
+   at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 77
+   at Macula.Tests.DirectDialTests.Direct_dial_serve_round_trip_gets_a_real_result() in /home/rl/work/github.com/macula-io/macula-dotnet/tests/Macula.Tests/DirectDialTests.cs:line 77
+--- End of stack trace from previous location ---
+
+Total tests: 2
+     Failed: 2
+ Total time: 16.0075 Seconds

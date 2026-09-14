@@ -1,0 +1,3 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+/home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Connection/DropWarnings.cs(61,28): error CS0117: 'Interlocked' does not contain a definition for 'Write' [/home/rl/work/github.com/macula-io/macula-dotnet/src/Macula/Macula.csproj]
