@@ -321,7 +321,7 @@ public class SessionReaderTests
         // A one-byte frame whose CBOR initial byte uses a reserved value.
         await station.SendRawAsync(new byte[] { 0, 0, 0, 1, 0x1C });
 
-        Assert.IsAssignableFrom<IOException>(await ended.Task.WaitAsync(Wait));
+        Assert.IsType<MalformedFrameException>(await ended.Task.WaitAsync(Wait));
         var failure = await Assert.ThrowsAsync<SessionEndedException>(() => call.WaitAsync(Wait));
         Assert.True(failure.WriteStarted);
     }
@@ -491,30 +491,6 @@ public class SessionReaderTests
         Assert.Equal("app/genuine", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
         Assert.False(ended.Task.IsCompleted, "the session carries on");
         Assert.Equal(1, channel.UnroutedFrames["call"]);
-    }
-
-    /// <summary>Keeps every trace event, with its level, written while it is listening.</summary>
-    private sealed class CapturingListener : TraceListener
-    {
-        private readonly ConcurrentQueue<(TraceEventType Level, string Message)> _events = new();
-
-        public IReadOnlyList<(TraceEventType Level, string Message)> Events => _events.ToArray();
-
-        public override void TraceEvent(TraceEventCache? eventCache, string source, TraceEventType eventType, int id, string? message)
-        {
-            if (message is not null)
-            {
-                _events.Enqueue((eventType, message));
-            }
-        }
-
-        public override void Write(string? message)
-        {
-        }
-
-        public override void WriteLine(string? message)
-        {
-        }
     }
 
     private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec

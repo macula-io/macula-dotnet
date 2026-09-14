@@ -28,6 +28,15 @@ public sealed class ProtocolViolationException : IOException
 }
 
 /// <summary>
+/// The station sent a frame that couldn't be decoded, so nothing after it can
+/// be read in step: the session ends with this reason.
+/// </summary>
+public sealed class MalformedFrameException : IOException
+{
+    public MalformedFrameException(string message, Exception inner) : base(message, inner) { }
+}
+
+/// <summary>
 /// A write on a session's control stream stalled for longer than the send
 /// timeout of 30 seconds. The frame may be half written, so the station can't
 /// read anything after it in step: the session ends with this reason, and a
@@ -135,7 +144,11 @@ internal sealed class ControlChannel
         _stationId = stationId;
         _onEnded = onEnded;
         _sendTimeout = sendTimeout ?? DefaultSendTimeout;
+        DropWarnings = new DropWarnings(stationId);
     }
+
+    /// <summary>The bounded warnings for dropped CALLs and replies and refused streams.</summary>
+    internal DropWarnings DropWarnings { get; }
 
     /// <summary>Completes with the reason once the channel has ended.</summary>
     internal Task<Exception> Ended => _ended.Task;
@@ -365,10 +378,13 @@ internal sealed class ControlChannel
         {
             End(new IOException("the session was closed"), closedHere: false);
         }
+        catch (Exception e) when (e is Cbor.CborDecodeException or FrameTooLargeException)
+        {
+            // Nothing after a frame that can't be decoded can be read in step.
+            End(new MalformedFrameException($"the station sent a frame that could not be decoded: {e.Message}", e), closedHere: false);
+        }
         catch (Exception e)
         {
-            // Includes a frame that can't be decoded: nothing after it can be
-            // read in step.
             End(e as IOException ?? new IOException($"the control stream failed: {e.Message}", e), closedHere: false);
         }
     }
@@ -402,9 +418,14 @@ internal sealed class ControlChannel
 
     private void CompleteCall(string type, Value frame)
     {
-        if (CallFrameParsing.FrameCallId(frame) is not { } callId || !_calls.TryRemove(Convert.ToHexStringLower(callId), out var reply))
+        if (CallFrameParsing.FrameCallId(frame) is not { } callId)
         {
-            Drop(type);
+            DropReply(type, DropReason.Malformed, "");
+            return;
+        }
+        if (!_calls.TryRemove(Convert.ToHexStringLower(callId), out var reply))
+        {
+            DropReply(type, DropReason.UnknownCallId, DropWarnings.CallIdField(callId));
             return;
         }
         try
@@ -455,11 +476,27 @@ internal sealed class ControlChannel
 
     private void QueueInboundCall(Value frame)
     {
-        // A CALL that isn't signed by the caller it names gets no reply -- see
-        // CallFrameParsing.ParseSignedCall.
-        if (CallFrameParsing.ParseSignedCall(frame) is not { } call)
+        // A CALL that isn't signed by the caller it names gets no reply, and
+        // nothing else looks at it first, as in macula_station_link.erl's
+        // on_inbound_call/3.
+        if (frame is not Value.MapValue map)
         {
-            Drop("call");
+            DropCall(DropReason.Malformed, "");
+            return;
+        }
+        if (DropWarnings.CallerCheck(map) is { } unsigned)
+        {
+            DropCall(unsigned, DropWarnings.ProcedureField(map));
+            return;
+        }
+        CallInfo call;
+        try
+        {
+            call = CallFrameParsing.ParseCall(map);
+        }
+        catch (ParseFrameException)
+        {
+            DropCall(DropReason.Malformed, DropWarnings.ProcedureField(map));
             return;
         }
         if (_inboundCalls.Writer.TryWrite(call))
@@ -566,9 +603,27 @@ internal sealed class ControlChannel
     private static string GoodbyeReason(Value frame) =>
         frame is Value.MapValue map && map.Get("reason") is Value.TextValue reason ? reason.AsText() : "no reason given";
 
+    // Counts a dropped inbound CALL, with a bounded warning.
+    private void DropCall(DropReason reason, string procedureField)
+    {
+        Count("call");
+        DropWarnings.Record(DropKind.DroppedCall, reason, procedureField);
+    }
+
+    // Counts a RESULT or ERROR no call waits for, with a bounded warning.
+    private void DropReply(string type, DropReason reason, string callIdField)
+    {
+        Count(type);
+        DropWarnings.Record(DropKind.DroppedReply, reason, callIdField);
+    }
+
+    private void Count(string frameType) => _unrouted.AddOrUpdate(frameType, 1, (_, count) => count + 1);
+
+    // Counts a frame nothing routes, with at most one trace line per frame type
+    // a minute.
     private void Drop(string frameType)
     {
-        _unrouted.AddOrUpdate(frameType, 1, (_, count) => count + 1);
+        Count(frameType);
         lock (_logged)
         {
             var (dropped, loggedAt) = _logged.GetValueOrDefault(frameType);
