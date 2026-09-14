@@ -114,8 +114,8 @@ internal sealed class DropWarnings
 
     internal static string ProcedureField(string procedure) => ProcedureField(Encoding.UTF8.GetBytes(procedure));
 
-    /// <summary>A reply's call_id as a warning line carries it: its first 4 bytes in hex.</summary>
-    internal static string CallIdField(byte[] callId) => " call_id=" + Convert.ToHexStringLower(callId.AsSpan(0, 4));
+    /// <summary>A reply's call_id as a warning line carries it: its first 4 bytes in upper-case hex.</summary>
+    internal static string CallIdField(byte[] callId) => " call_id=" + Convert.ToHexString(callId.AsSpan(0, 4));
 
     // The procedure cut to ProcedureLimit bytes, on a character boundary.
     private static string ProcedureField(byte[] utf8)

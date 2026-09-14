@@ -54,7 +54,7 @@ public class DropWarningsTests
             await Task.Delay(Short * 3);
 
             var line = Assert.Single(About(listener, station));
-            Assert.Contains("kind=dropped_reply count=1 reason=unknown_call_id call_id=abababab", line.Message);
+            Assert.Contains("kind=dropped_reply count=1 reason=unknown_call_id call_id=ABABABAB", line.Message);
         }
         finally
         {
