@@ -11,7 +11,7 @@
     <PackageId>Macula</PackageId>
     <RootNamespace>Macula</RootNamespace>
     <AssemblyName>Macula</AssemblyName>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <Description>Native .NET client for the Macula mesh wire protocol -- QUIC transport, deterministic CBOR, Ed25519 identity, unary RPC, PubSub, content transfer, and streaming RPC (both caller and provider roles), direct-dial (plain and cert-chain-authorized), periodic re-advertise, a supervised pubsub pair, a StationPool connection pool (N concurrently-dialed links, automatic respawn with subscription/advertisement replay, cross-link event dedup, opt-in station discovery via hecate_stations.list_stations, and configurable link-selection ordering), UCAN (mint/verify/introspect and policy-gated serving), and RPC telemetry facts. Written in C#, usable from any .NET language (examples included for both C# and F#). No FFI, no native protocol library.</Description>
     <Authors>Macula</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
