@@ -104,11 +104,14 @@ internal sealed class DropWarnings
         };
     }
 
-    /// <summary>The procedure <paramref name="frame"/> names, as a warning line carries it.</summary>
+    /// <summary>
+    /// The procedure <paramref name="frame"/> names, as a warning line carries
+    /// it: only a byte string, the way macula sends a procedure, and nothing for
+    /// a procedure of any other type or none.
+    /// </summary>
     internal static string ProcedureField(Value.MapValue frame) => frame.Get("procedure") switch
     {
         Value.BytesValue bytes => ProcedureField(bytes.Value),
-        Value.TextValue text => ProcedureField(text.Utf8),
         _ => "",
     };
 

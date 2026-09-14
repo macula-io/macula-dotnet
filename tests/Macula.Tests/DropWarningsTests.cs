@@ -91,6 +91,25 @@ public class DropWarningsTests
         Assert.Equal(" procedure=" + new string('a', 255), DropWarnings.ProcedureField(procedure));
     }
 
+    /// <summary>
+    /// A drop warning names the procedure only when the frame carries it as a
+    /// byte string, the way macula sends it. A procedure sent as text, of
+    /// another type, or not at all leaves the field out.
+    /// </summary>
+    [Fact]
+    public void A_drop_warning_names_only_a_binary_procedure()
+    {
+        var bytes = (Value.MapValue)Value.Map([new(Value.Text("procedure"), Value.Bytes("app/echo"u8.ToArray()))]);
+        var text = (Value.MapValue)Value.Map([new(Value.Text("procedure"), Value.Text("app/echo"))]);
+        var number = (Value.MapValue)Value.Map([new(Value.Text("procedure"), Value.UInt(7))]);
+        var none = (Value.MapValue)Value.Map([]);
+
+        Assert.Equal(" procedure=app/echo", DropWarnings.ProcedureField(bytes));
+        Assert.Equal("", DropWarnings.ProcedureField(text));
+        Assert.Equal("", DropWarnings.ProcedureField(number));
+        Assert.Equal("", DropWarnings.ProcedureField(none));
+    }
+
     private static List<(TraceEventType Level, string Message)> About(CapturingListener listener, byte[] station) =>
         listener.Events.Where(e => e.Message.Contains(Convert.ToHexStringLower(station))).ToList();
 }
