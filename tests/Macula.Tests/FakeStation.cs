@@ -15,7 +15,10 @@ internal sealed class FakeStation
 {
     internal static readonly TimeSpan Wait = TimeSpan.FromSeconds(2);
     internal static readonly byte[] Realm = Enumerable.Repeat((byte)7, 32).ToArray();
-    internal static readonly byte[] NodeId = KeyPair.Generate().NodeId();
+
+    /// <summary>The station's own key: every reply it sends is signed with it.</summary>
+    internal static readonly KeyPair Key = KeyPair.Generate();
+    internal static readonly byte[] NodeId = Key.NodeId();
 
     private readonly InMemoryPipe _pipe;
     private readonly InMemoryPipe _session;
@@ -111,8 +114,9 @@ internal sealed class FakeStation
         }
     }
 
+    /// <summary>A RESULT for <paramref name="call"/>, signed by the station as the key its responded_by names.</summary>
     internal Task ReplyAsync(Value.MapValue call, string text) =>
-        SendAsync(ResultFrame.Build(new ResultSpec { CallId = ((Value.BytesValue)call.Get("call_id")!).Value, Payload = Value.Text(text), RespondedBy = NodeId }));
+        SendAsync(Envelope.Sign(ResultFrame.Build(new ResultSpec { CallId = ((Value.BytesValue)call.Get("call_id")!).Value, Payload = Value.Text(text), RespondedBy = NodeId }), Key));
 
     internal Task SendEventAsync(string topic, string payload) =>
         SendAsync(Envelope.Base("event", 0, Envelope.FreshFrameId(), Envelope.CurrentMillis())

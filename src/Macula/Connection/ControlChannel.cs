@@ -84,7 +84,8 @@ public sealed class SessionEndedException : IOException
 
 /// <summary>
 /// Reads a session's control stream and routes every frame to whatever waits
-/// for it: a RESULT or ERROR to its call, an EVENT to each subscription whose
+/// for it: a RESULT or ERROR signed by the responder it names to its call (any
+/// other is dropped and the call waits on), an EVENT to each subscription whose
 /// realm and topic match, and a CALL signed by its caller to the inbound call
 /// queue. GOODBYE, HELLO or CONNECT after the handshake, or a frame that can't
 /// be decoded, ends the channel. Any other frame is dropped and counted by
@@ -397,7 +398,8 @@ internal sealed class ControlChannel
         {
             case "result":
             case "error":
-                CompleteCall(type, frame);
+                // A frame with a frame_type is a map.
+                CompleteCall(type, (Value.MapValue)frame);
                 return null;
             case "event":
                 DeliverEvent(frame);
@@ -416,26 +418,40 @@ internal sealed class ControlChannel
         }
     }
 
-    private void CompleteCall(string type, Value frame)
+    // A RESULT or ERROR completes its call only when it is signed by the key
+    // its responded_by or reported_by names, parses with a call_id, and that
+    // call_id is one a call waits for, checked in that order, as macula checks
+    // it. Any other is dropped, and the call keeps waiting for the genuine one.
+    private void CompleteCall(string type, Value.MapValue frame)
     {
-        if (CallFrameParsing.FrameCallId(frame) is not { } callId)
+        var callId = CallFrameParsing.FrameCallId(frame);
+        var callIdField = callId is null ? "" : DropWarnings.CallIdField(callId);
+        if (DropWarnings.ReplySignerCheck(frame) is { } unsigned)
+        {
+            DropReply(type, unsigned, callIdField);
+            return;
+        }
+        CallResponse response;
+        try
+        {
+            response = CallFrameParsing.ParseCallResponse(frame);
+        }
+        catch (ParseFrameException)
+        {
+            DropReply(type, DropReason.Malformed, callIdField);
+            return;
+        }
+        if (callId is null)
         {
             DropReply(type, DropReason.Malformed, "");
             return;
         }
         if (!_calls.TryRemove(Convert.ToHexStringLower(callId), out var reply))
         {
-            DropReply(type, DropReason.UnknownCallId, DropWarnings.CallIdField(callId));
+            DropReply(type, DropReason.UnknownCallId, callIdField);
             return;
         }
-        try
-        {
-            reply.TrySetResult(CallFrameParsing.ParseCallResponse(frame));
-        }
-        catch (ParseFrameException e)
-        {
-            reply.TrySetException(e);
-        }
+        reply.TrySetResult(response);
     }
 
     private void DeliverEvent(Value frame)
@@ -610,7 +626,7 @@ internal sealed class ControlChannel
         DropWarnings.Record(DropKind.DroppedCall, reason, procedureField);
     }
 
-    // Counts a RESULT or ERROR no call waits for, with a bounded warning.
+    // Counts a RESULT or ERROR the reader dropped, with a bounded warning.
     private void DropReply(string type, DropReason reason, string callIdField)
     {
         Count(type);

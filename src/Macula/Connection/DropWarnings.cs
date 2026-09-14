@@ -15,10 +15,14 @@ internal enum DropKind
 /// <summary>Why a session dropped or refused it.</summary>
 internal enum DropReason
 {
-    /// <summary>A well-formed signature that doesn't verify against the caller the frame names.</summary>
+    /// <summary>
+    /// A well-formed signature that doesn't verify against the key the frame
+    /// names as its signer: caller on a CALL or STREAM_OPEN, responded_by on a
+    /// RESULT, reported_by on an ERROR.
+    /// </summary>
     InvalidSignature,
 
-    /// <summary>A signature that's missing or isn't 64 bytes, or a caller that isn't a 32-byte key.</summary>
+    /// <summary>A signature that's missing or isn't 64 bytes, or a signer that isn't a 32-byte key.</summary>
     Unsigned,
 
     /// <summary>A frame that doesn't parse.</summary>
@@ -90,13 +94,25 @@ internal sealed class DropWarnings
     /// null when it is: the check macula runs on an inbound CALL or
     /// STREAM_OPEN before anything else looks at it.
     /// </summary>
-    internal static DropReason? CallerCheck(Value.MapValue frame)
+    internal static DropReason? CallerCheck(Value.MapValue frame) => SignerCheck(frame, "caller");
+
+    /// <summary>
+    /// Why <paramref name="frame"/>, a reply, isn't signed by the key it names
+    /// as its responder, or null when it is: reported_by on an ERROR, and
+    /// responded_by on a RESULT or STREAM_REPLY. The check macula runs on a
+    /// reply before anything else looks at it.
+    /// </summary>
+    internal static DropReason? ReplySignerCheck(Value.MapValue frame) =>
+        SignerCheck(frame, frame.Get("frame_type") is Value.TextValue type && type.AsText() == "error" ? "reported_by" : "responded_by");
+
+    // Why frame isn't signed by the key in its signerField, or null when it is.
+    private static DropReason? SignerCheck(Value.MapValue frame, string signerField)
     {
-        if (frame.Get("caller") is not Value.BytesValue { Value.Length: 32 } caller)
+        if (frame.Get(signerField) is not Value.BytesValue { Value.Length: 32 } signer)
         {
             return DropReason.Unsigned;
         }
-        return Envelope.Verify(frame, caller.Value) switch
+        return Envelope.Verify(frame, signer.Value) switch
         {
             null => null,
             Envelope.VerifyError.MissingSignature or Envelope.VerifyError.BadSignature => DropReason.Unsigned,

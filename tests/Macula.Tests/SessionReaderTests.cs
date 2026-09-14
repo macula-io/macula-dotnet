@@ -540,6 +540,103 @@ public class SessionReaderTests
         Assert.Equal(1, channel.UnroutedFrames["call"]);
     }
 
+    /// <summary>
+    /// A RESULT counts only when it is signed by the key its responded_by
+    /// names: a forged one and an unsigned one are dropped, and the call waits
+    /// for the genuine reply.
+    /// </summary>
+    [Fact]
+    public async Task A_result_that_does_not_verify_leaves_the_call_pending()
+    {
+        var (channel, station, _) = Connect();
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextAsync("call");
+        await station.SendAsync(Envelope.Sign(ResultFor(sent, "forged"), KeyPair.Generate()));
+        await station.SendAsync(ResultFor(sent, "unsigned"));
+        await station.ReplyAsync(sent, "genuine");
+
+        Assert.Equal("genuine", ReplyText(await call.WaitAsync(Wait)));
+        Assert.Equal(2, channel.UnroutedFrames["result"]);
+    }
+
+    /// <summary>
+    /// An ERROR counts only when it is signed by the key its reported_by
+    /// names: a forged one and an unsigned one are dropped, and the call waits
+    /// for the genuine ERROR.
+    /// </summary>
+    [Fact]
+    public async Task An_error_that_does_not_verify_leaves_the_call_pending()
+    {
+        var (channel, station, _) = Connect();
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextAsync("call");
+        await station.SendAsync(Envelope.Sign(ErrorFor(sent, "forged"), KeyPair.Generate()));
+        await station.SendAsync(ErrorFor(sent, "unsigned"));
+        await station.SendAsync(Envelope.Sign(ErrorFor(sent, "genuine"), FakeStation.Key));
+
+        var error = Assert.IsType<CallResponse.Error>(await call.WaitAsync(Wait));
+        Assert.Equal("genuine", error.Detail);
+        Assert.Equal(2, channel.UnroutedFrames["error"]);
+    }
+
+    /// <summary>
+    /// A RESULT signed by its responder that doesn't parse is dropped as
+    /// malformed, and the call waits for the genuine reply instead of failing.
+    /// </summary>
+    [Fact]
+    public async Task A_signed_reply_that_does_not_parse_leaves_the_call_pending()
+    {
+        var (channel, station, _) = Connect();
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextAsync("call");
+        await station.SendAsync(Envelope.Sign(ResultFor(sent, "unparsed").Without("payload"), FakeStation.Key));
+        await station.ReplyAsync(sent, "genuine");
+
+        Assert.Equal("genuine", ReplyText(await call.WaitAsync(Wait)));
+        Assert.Equal(1, channel.UnroutedFrames["result"]);
+    }
+
+    [Fact]
+    public async Task A_result_that_does_not_verify_is_warned_about_as_a_dropped_reply()
+    {
+        var listener = new CapturingListener();
+        Trace.Listeners.Add(listener);
+        try
+        {
+            var (channel, station, _) = Connect();
+            var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+            var sent = await station.NextAsync("call");
+            await station.SendAsync(Envelope.Sign(ResultFor(sent, "forged"), KeyPair.Generate()));
+            await station.ReplyAsync(sent, "genuine");
+            await call.WaitAsync(Wait);
+
+            var prefix = Convert.ToHexString(((Value.BytesValue)sent.Get("call_id")!).Value.AsSpan(0, 4));
+            Assert.Contains(listener.Events, e => e.Message.Contains($"kind=dropped_reply count=1 reason=invalid_signature call_id={prefix}"));
+        }
+        finally
+        {
+            Trace.Listeners.Remove(listener);
+        }
+    }
+
+    private static Value.MapValue ResultFor(Value.MapValue call, string text) => ResultFrame.Build(new ResultSpec
+    {
+        CallId = ((Value.BytesValue)call.Get("call_id")!).Value,
+        Payload = Value.Text(text),
+        RespondedBy = FakeStation.NodeId,
+    });
+
+    private static Value.MapValue ErrorFor(Value.MapValue call, string detail) => CallErrorFrame.Build(new CallErrorSpec
+    {
+        CallId = ((Value.BytesValue)call.Get("call_id")!).Value,
+        Code = Bolt4Code.UnknownError,
+        ReportedBy = FakeStation.NodeId,
+        Detail = detail,
+    });
+
     private static Value.MapValue Publish(string topic) => PublishFrame.Build(new PublishSpec
     {
         Topic = topic,
