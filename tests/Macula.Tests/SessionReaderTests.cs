@@ -478,6 +478,21 @@ public class SessionReaderTests
         Assert.Equal(1, channel.UnroutedFrames["call"]);
     }
 
+    [Fact]
+    public async Task An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served()
+    {
+        var (channel, station, ended) = Connect();
+        var caller = KeyPair.Generate();
+        var wronglyTyped = CallFrame.Build(InboundCall("app/wrongly_typed", caller)).WithField("ucan_token", Value.UInt(7));
+
+        await station.SendAsync(Envelope.Sign(wronglyTyped, caller));
+        await station.SendInboundCallAsync("app/genuine");
+
+        Assert.Equal("app/genuine", (await channel.NextInboundCallAsync(CancellationToken.None).WaitAsync(Wait)).Procedure);
+        Assert.False(ended.Task.IsCompleted, "the session carries on");
+        Assert.Equal(1, channel.UnroutedFrames["call"]);
+    }
+
     /// <summary>Keeps every trace event, with its level, written while it is listening.</summary>
     private sealed class CapturingListener : TraceListener
     {
