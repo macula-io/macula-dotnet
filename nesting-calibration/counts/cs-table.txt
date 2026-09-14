@@ -1,0 +1,406 @@
+======================================================
+  NLOC    CCN   token  PARAM  length   NS   location  
+------------------------------------------------------
+       2      1     31      1       2     0 struct::FromValue@50-51@src/Macula/Bolt4/Bolt4Code.cs
+       6      1     32      1       6     0 CborCodec::Encode@16-21@src/Macula/Cbor/CborCodec.cs
+      10      2     43      1      10     1 CborCodec::Decode@23-32@src/Macula/Cbor/CborCodec.cs
+      43      9    260      2      43     2 CborCodec::WriteValue@36-78@src/Macula/Cbor/CborCodec.cs
+      16      2    158      2      18     1 CborCodec::WriteMap@87-104@src/Macula/Cbor/CborCodec.cs
+      35      5    260      3      39     1 CborCodec::WriteHead@106-144@src/Macula/Cbor/CborCodec.cs
+      58     11    391      1      60     2 CborCodec::DecodeOne@151-210@src/Macula/Cbor/CborCodec.cs
+      26      3    223      3      30     2 CborCodec::DecodeMap@218-247@src/Macula/Cbor/CborCodec.cs
+      23      5    175      3      23     1 CborCodec::DecodeMajor7@249-271@src/Macula/Cbor/CborCodec.cs
+      33      6    179      3      34     1 CborCodec::ReadArgument@273-306@src/Macula/Cbor/CborCodec.cs
+       7      2     35      3       7     1 CborCodec::RequireRemaining@308-314@src/Macula/Cbor/CborCodec.cs
+       1      1     12      1       1     0 CborDecodeException::CborDecodeException@5-5@src/Macula/Cbor/CborDecodeException.cs
+       4      1     11      1       4     0 EventDedup::EventDedup@30-33@src/Macula/Connection/EventDedup.cs
+       2      1     39      4       2     0 EventDedup::CheckNew@36-37@src/Macula/Connection/EventDedup.cs
+      13      3     56      0      13     2 EventDedup::Sweep@40-52@src/Macula/Connection/EventDedup.cs
+       2      1     31      4       2     0 EventDedup::Key@54-55@src/Macula/Connection/EventDedup.cs
+       4      1     11      1       4     0 FrameStream::FrameStream@19-22@src/Macula/Connection/FrameStream.cs
+       5      1     37      2       5     0 FrameStream::SendFrameAsync@24-28@src/Macula/Connection/FrameStream.cs
+      16      4     74      1      17     2 FrameStream::RecvFrameAsync@31-47@src/Macula/Connection/FrameStream.cs
+       2      1     54      7       2     0 FrameStream::CallAsync@58-59@src/Macula/Connection/FrameStream.cs
+      42      6    235      8      44     3 FrameStream::CallAsync@62-105@src/Macula/Connection/FrameStream.cs
+      17      3     91      1      18     2 FrameStream::TryTakeFrame@107-124@src/Macula/Connection/FrameStream.cs
+       6      1     37      1       6     0 FrameStream::Append@126-131@src/Macula/Connection/FrameStream.cs
+      13      3     49      1      13     1 FrameStream::EnsureCapacity@133-145@src/Macula/Connection/FrameStream.cs
+       4      1     50      5       4     0 RpcFacts::AnnounceSentAsync@30-33@src/Macula/Connection/RpcFacts.cs
+      17      3    139      7      17     2 RpcFacts::AnnounceCompletedAsync@36-52@src/Macula/Connection/RpcFacts.cs
+       4      1     50      5       4     0 RpcFacts::AnnounceReceivedAsync@54-57@src/Macula/Connection/RpcFacts.cs
+      13      2    109      6      13     1 RpcFacts::AnnounceRepliedAsync@67-79@src/Macula/Connection/RpcFacts.cs
+       2      1     35      1       2     0 RpcFacts::RequestIdFields@81-82@src/Macula/Connection/RpcFacts.cs
+      10      1     12      0     130     0 *global*@0-129@src/Macula/Connection/RpcFacts.cs
+       5      1     57      1       5     0 RpcFacts::OutcomeFailed@84-88@src/Macula/Connection/RpcFacts.cs
+      10      1     12      0     130     0 *global*@0-129@src/Macula/Connection/RpcFacts.cs
+      23      3    126      6      24     1 RpcFacts::AnnounceAsync@98-121@src/Macula/Connection/RpcFacts.cs
+       6      1     30      0       6     0 RpcFacts::RandomRequestId@123-128@src/Macula/Connection/RpcFacts.cs
+       1      1     12      1       1     0 CallHandlerException::CallHandlerException@24-24@src/Macula/Connection/Session.cs
+       5      1     26      1       5     0 ConnectRefusedException::ConnectRefusedException@31-35@src/Macula/Connection/Session.cs
+       5      1     19      1       5     0 HelloSignatureInvalidException::HelloSignatureInvalidException@46-50@src/Macula/Connection/Session.cs
+       7      1     32      4       7     0 Session::Session@71-77@src/Macula/Connection/Session.cs
+      68      8    399      6      89     2 Session::ConnectAsync@89-177@src/Macula/Connection/Session.cs
+       2      1     29      2       2     0 Session::SendAsync@180-181@src/Macula/Connection/Session.cs
+       1      1     15      1       1     0 Session::RecvAsync@184-184@src/Macula/Connection/Session.cs
+      21      4    142      6      21     1 Session::CallAsync@197-217@src/Macula/Connection/Session.cs
+      21      4    149      7      21     1 Session::CallWithUcanAsync@220-240@src/Macula/Connection/Session.cs
+       2      1     30      2       2     0 Session::PublishAsync@255-256@src/Macula/Connection/Session.cs
+       2      1     23      2       2     0 Session::SubscribeAsync@258-259@src/Macula/Connection/Session.cs
+       2      1     23      2       2     0 Session::UnsubscribeAsync@261-262@src/Macula/Connection/Session.cs
+       2      1     23      2       2     0 Session::AdvertiseAsync@271-272@src/Macula/Connection/Session.cs
+       2      1     23      2       2     0 Session::UnadvertiseAsync@274-275@src/Macula/Connection/Session.cs
+      15      2     80      2      15     1 Session::RecvEventAsync@284-298@src/Macula/Connection/Session.cs
+       2      1     25      3       2     0 Session::ServeOneCallAsync@315-316@src/Macula/Connection/Session.cs
+      13      2     76      4      13     1 Session::ServeOneCallGatedAsync@330-342@src/Macula/Connection/Session.cs
+       1      1     15      2       1     0 Session::OpenPolicy@344-344@src/Macula/Connection/Session.cs
+      19      3     95      3      20     2 Session::ServeOneCallInnerAsync@346-365@src/Macula/Connection/Session.cs
+      34      5    333      6      39     1 Session::BuildCallReplyAsync@391-429@src/Macula/Connection/Session.cs
+       5      1     36      1       5     0 Session::OpenDedicatedStreamAsync@432-436@src/Macula/Connection/Session.cs
+       5      1     32      1       5     0 Session::AcceptDedicatedStreamAsync@443-447@src/Macula/Connection/Session.cs
+      17      3     79      2      21     1 Session::CloseAsync@472-492@src/Macula/Connection/Session.cs
+       1      1     14      0       1     0 Session::DisposeAsync@494-494@src/Macula/Connection/Session.cs
+      23      5     87      1      23     2 StationPool::DiscoverStationsAsync@69-91@src/Macula/Connection/StationDiscovery.cs
+      19      4     66      1      19     2 StationPool::WaitForAnyHealthyLinkAsync@93-111@src/Macula/Connection/StationDiscovery.cs
+      14      3     64      1      14     1 StationPool::DiscoverOnceAsync@113-126@src/Macula/Connection/StationDiscovery.cs
+      30      5    162      1      30     3 StationPool::ResolveListStationsRealmAsync@136-165@src/Macula/Connection/StationDiscovery.cs
+      23      6    120      1      23     2 StationPool::TryMatchListStationsRealm@178-200@src/Macula/Connection/StationDiscovery.cs
+      18      5    129      2      18     2 StationPool::CallListStationsAsync@203-220@src/Macula/Connection/StationDiscovery.cs
+      28      8    130      2      28     2 StationPool::AddDiscoveredLinks@254-281@src/Macula/Connection/StationDiscovery.cs
+       8      2     42      1      13     1 StationPool::SpawnSeedLinkIfAbsent@291-303@src/Macula/Connection/StationDiscovery.cs
+       1      1     17      1       1     0 StationPool::HasLinkForNodeId@310-310@src/Macula/Connection/StationDiscovery.cs
+       2      1     26      2       2     0 StationPool::HasLinkForNodeIdCore@319-320@src/Macula/Connection/StationDiscovery.cs
+      15      2     29      0     441     0 *global*@0-440@src/Macula/Connection/StationDiscovery.cs
+      22      5     92      2      22     2 StationPool::TryStationNodeId@327-348@src/Macula/Connection/StationDiscovery.cs
+      35     10    181      3      36     1 StationPool::DialTargetFromStationRow@375-410@src/Macula/Connection/StationDiscovery.cs
+      18      3     56      2      18     2 StationPool::TryAsHostText@422-439@src/Macula/Connection/StationDiscovery.cs
+       4      1     10      0       4     0 Seed::NoHealthyStationException@25-28@src/Macula/Connection/StationPool.cs
+       3      1     12      1       3     0 PublishFailedException::PublishFailedException@34-36@src/Macula/Connection/StationPool.cs
+       7      2     29      0       7     1 StationPool::ThrowIfDisposed@284-290@src/Macula/Connection/StationPool.cs
+      13      1    128      4      17     0 StationPool::StationPool@292-308@src/Macula/Connection/StationPool.cs
+       6      1     58      1      22     0 StationPool::SpawnLinkTasks@316-337@src/Macula/Connection/StationPool.cs
+      19      5    171      4      26     1 StationPool::Connect@344-369@src/Macula/Connection/StationPool.cs
+      40      4    231      4      48     1 StationPool::PublishAsync@378-425@src/Macula/Connection/StationPool.cs
+      16      3     57      3      19     1 StationPool::TryPublishAsync@427-445@src/Macula/Connection/StationPool.cs
+      30      3    210      4      33     2 StationPool::SubscribeAsync@453-485@src/Macula/Connection/StationPool.cs
+      24      4    102      2      24     3 StationPool::UnsubscribeAsync@493-516@src/Macula/Connection/StationPool.cs
+      21      2    154      5      23     1 StationPool::AdvertiseAsync@525-547@src/Macula/Connection/StationPool.cs
+      21      1    140      3      23     1 StationPool::UnadvertiseAsync@550-572@src/Macula/Connection/StationPool.cs
+      21      1    137      3      23     1 StationPool::AdvertiseStreamAsync@581-603@src/Macula/Connection/StationPool.cs
+      21      1    140      3      23     1 StationPool::UnadvertiseStreamAsync@605-627@src/Macula/Connection/StationPool.cs
+      38      8    207      6      49     3 StationPool::CallAsync@641-689@src/Macula/Connection/StationPool.cs
+      48      5    356      7      65     1 StationPool::CallOnLinkAsync@704-768@src/Macula/Connection/StationPool.cs
+       5      2     39      0       8     0 StationPool::PickConnectedSession@781-788@src/Macula/Connection/StationPool.cs
+      11      3     55      0      22     1 StationPool::DisposeAsync@811-832@src/Macula/Connection/StationPool.cs
+      65      7    376      2     110     3 StationPool::RunLinkAsync@838-947@src/Macula/Connection/StationPool.cs
+      14      1     58      1      14     1 StationPool::MarkDisconnectedAsync@950-963@src/Macula/Connection/StationPool.cs
+      23      1    247      5      23     1 StationPool::ReplayAsync@979-1001@src/Macula/Connection/StationPool.cs
+      16      3     80      3      17     1 StationPool::TrySendReplayAsync@1019-1035@src/Macula/Connection/StationPool.cs
+      10      2     33      1      11     1 StationPool::DelayRespawnAsync@1037-1047@src/Macula/Connection/StationPool.cs
+      11      2     51      1      17     1 StationPool::CloseSessionAsync@1049-1065@src/Macula/Connection/StationPool.cs
+      10      2     51      2      10     2 StationPool::FailPendingCalls@1067-1076@src/Macula/Connection/StationPool.cs
+       1      1     30      0       1     0 StationPool::ConnectedLinksSnapshot@1086-1086@src/Macula/Connection/StationPool.cs
+       1      1     16      1       1     0 StationPool::SelectLinks@1094-1094@src/Macula/Connection/StationPool.cs
+      14      4    107      2      14     1 StationPool::SelectLinksCore@1108-1121@src/Macula/Connection/StationPool.cs
+       4      3     29      2       4     0 StationPool::ResolveLinkSelection@1128-1131@src/Macula/Connection/StationPool.cs
+      22      6    107      3      26     2 StationPool::PumpAsync@1161-1186@src/Macula/Connection/StationPool.cs
+      13      2     55      2      14     2 StationPool::ConsumeEventsAsync@1188-1201@src/Macula/Connection/StationPool.cs
+       2      3     33      1       2     0 StationPool::FrameType@1203-1204@src/Macula/Connection/StationPool.cs
+      30      5    121      2      35     2 StationPool::HandleEventAsync@1206-1240@src/Macula/Connection/StationPool.cs
+      20      4     84      2      20     1 StationPool::CompletePendingCall@1242-1261@src/Macula/Connection/StationPool.cs
+      23      8    170      3      35     1 StationPool::HandleInboundCallAsync@1268-1302@src/Macula/Connection/StationPool.cs
+       1      1     15      1       1     0 StationPool::ToHex@1304-1304@src/Macula/Connection/StationPool.cs
+       1      1     13      1       1     0 StationPool::FromHex@1306-1306@src/Macula/Connection/StationPool.cs
+       5      1     18      2       5     0 PooledLink::PooledLink@1380-1384@src/Macula/Connection/StationPool.cs
+      13      2     67      2      13     1 PooledLink::SendGatedAsync@1397-1409@src/Macula/Connection/StationPool.cs
+       2      1     31      2       2     0 PooledLink::PublishAsync@1411-1412@src/Macula/Connection/StationPool.cs
+      33      4    256      5      36     1 PublishOutcome::RunPublisherAsync@58-93@src/Macula/Connection/SupervisedPubSub.cs
+      35      5    146      5      38     3 PublishOutcome::RunSubscriberAsync@117-154@src/Macula/Connection/SupervisedPubSub.cs
+       6      1     30      0       6     0 PublishOutcome::RandomId@156-161@src/Macula/Connection/SupervisedPubSub.cs
+      23      4    114      6      25     1 PublishOutcome::AnnounceFact@167-191@src/Macula/Connection/SupervisedPubSub.cs
+      18      3    218      6      18     2 PublishOutcome::AnnounceCompletedAsync@193-210@src/Macula/Connection/SupervisedPubSub.cs
+       1      1      5      0       1     0 Trust::Trust@16-16@src/Macula/Connection/Trust.cs
+      17      4     69      2      19     1 WebPki::MatchesPinnedKey@75-93@src/Macula/Connection/Trust.cs
+       8      1     49      5       8     0 ContentTransferException::ContentTransferException@54-61@src/Macula/Content/ContentTransfer.cs
+      19      3    185      5      21     1 ContentTransferException::PutAsync@70-90@src/Macula/Content/ContentTransfer.cs
+      36      6    271      4      39     2 ContentTransferException::GetAsync@93-131@src/Macula/Content/ContentTransfer.cs
+      20      7    223      5      20     1 ContentTransferException::PutBlockAsync@133-152@src/Macula/Content/ContentTransfer.cs
+      14      5    155      4      14     1 ContentTransferException::PutManifestAsync@154-167@src/Macula/Content/ContentTransfer.cs
+      16      1    184      4      16     1 ContentTransferException::GetBlockAsync@169-184@src/Macula/Content/ContentTransfer.cs
+      25      6    216      4      25     2 ContentTransferException::GetManifestAsync@186-210@src/Macula/Content/ContentTransfer.cs
+      14      5    131      6      15     2 ContentTransferException::CallWithRetryAsync@219-233@src/Macula/Content/ContentTransfer.cs
+       6      1     62      2       6     1 AlgorithmExtensions::Hash@15-20@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       6      1     35      1       6     1 AlgorithmExtensions::Name@22-27@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       5      1     22      1       5     1 AlgorithmExtensions::FromName@30-34@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       8      1     47      2       8     0 Mcid::Make@46-53@src/Macula/Content/Manifest.cs
+       1      1     15      1       1     0 Mcid::IsChunked@56-56@src/Macula/Content/Manifest.cs
+       3      5     43      1       3     0 ChunkInfo::Equals@67-69@src/Macula/Content/Manifest.cs
+       1      1     15      0       1     0 ChunkInfo::GetHashCode@71-71@src/Macula/Content/Manifest.cs
+      12     11     89      1      12     0 Manifest::Equals@86-97@src/Macula/Content/Manifest.cs
+       1      1     23      0       1     0 Manifest::GetHashCode@99-99@src/Macula/Content/Manifest.cs
+       5      1     24      2       5     0 ManifestParseException::ManifestParseException@126-130@src/Macula/Content/Manifest.cs
+       2      1     28      2       2     0 ManifestBuilder::Create@149-150@src/Macula/Content/Manifest.cs
+      20      1    151      3      21     0 ManifestBuilder::CreateWithCreated@152-172@src/Macula/Content/Manifest.cs
+       2      3     45      2       2     0 ManifestBuilder::ChunkMcid@175-176@src/Macula/Content/Manifest.cs
+       1      1     30      1       1     0 ManifestBuilder::BlockMcid@184-184@src/Macula/Content/Manifest.cs
+      14      3    107      2      14     1 ManifestBuilder::Verify@187-200@src/Macula/Content/Manifest.cs
+      10      2     81      2      10     1 ManifestBuilder::DoChunk@202-211@src/Macula/Content/Manifest.cs
+      12      2     93      2      12     1 ManifestBuilder::ChunkInfos@213-224@src/Macula/Content/Manifest.cs
+      13      3     81      2      13     1 ManifestBuilder::RootHashFor@226-238@src/Macula/Content/Manifest.cs
+      14      3    137      2      14     1 ManifestBuilder::Combine@241-254@src/Macula/Content/Manifest.cs
+      15      1    222      6      15     0 ManifestBuilder::ComputeMcid@262-276@src/Macula/Content/Manifest.cs
+      14      1    291      1      14     0 ManifestBuilder::ToWire@284-297@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       8      1    124      1       8     0 ManifestBuilder::ChunkInfoToWire@299-306@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+      23      2    220      1      26     1 ManifestBuilder::FromWire@309-334@src/Macula/Content/Manifest.cs
+      12      2     74      1      12     1 ManifestBuilder::ChunkInfoFromWire@336-347@src/Macula/Content/Manifest.cs
+       6      1     55      2       6     1 ManifestBuilder::GetUInt@349-354@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       6      1     57      2       6     1 ManifestBuilder::GetText@356-361@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       6      1     62      2       6     1 ManifestBuilder::GetStringBytes@363-368@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       6      1     66      3       6     1 ManifestBuilder::GetBytesExact@370-375@src/Macula/Content/Manifest.cs
+      35      1     46      0     377     0 *global*@0-376@src/Macula/Content/Manifest.cs
+       1      1     20      2       1     0 CertChainException::CertChainException@25-25@src/Macula/Dht/CertChain.cs
+       1      1     10      0       1     0 CertChainAbsentException::CertChainAbsentException@31-31@src/Macula/Dht/CertChain.cs
+       1      1     14      1       1     0 CertChainBadSignatureException::CertChainBadSignatureException@37-37@src/Macula/Dht/CertChain.cs
+       1      1     17      1       1     0 CertChainUndecodableException::CertChainUndecodableException@43-43@src/Macula/Dht/CertChain.cs
+       1      1     10      0       1     0 CertChainKeyMismatchException::CertChainKeyMismatchException@49-49@src/Macula/Dht/CertChain.cs
+       1      1     13      1       1     0 CertChainUntrustedException::CertChainUntrustedException@55-55@src/Macula/Dht/CertChain.cs
+       1      1     10      0       1     0 CertChainOrgMismatchException::CertChainOrgMismatchException@61-61@src/Macula/Dht/CertChain.cs
+      25      8    172      3      29     1 CertChainOrgMismatchException::VerifyAdvertisementCertChain@83-111@src/Macula/Dht/CertChain.cs
+      17      3     65      1      17     1 CertChainOrgMismatchException::DecodeCertChain@116-132@src/Macula/Dht/CertChain.cs
+      26      4    147      1      26     2 CertChainOrgMismatchException::ParsePemBundle@134-159@src/Macula/Dht/CertChain.cs
+      12      3     39      1      12     1 CertChainOrgMismatchException::Ed25519PublicKeyFromCert@165-176@src/Macula/Dht/CertChain.cs
+      11      2     46      1      12     2 CertChainOrgMismatchException::OrganizationOf@178-189@src/Macula/Dht/CertChain.cs
+      33      5    204      2      35     1 CertChainOrgMismatchException::ValidateCertPath@194-228@src/Macula/Dht/CertChain.cs
+       1      1     12      1       1     0 DhtException::DhtException@34-34@src/Macula/Dht/DhtClient.cs
+       1      1     10      0       1     0 NotFoundException::NotFoundException@39-39@src/Macula/Dht/DhtClient.cs
+      17      2    183      1      17     1 NotFoundException::ToRpcValue@46-62@src/Macula/Dht/DhtClient.cs
+      15     15    218      1      15     1 NotFoundException::RecordFromRpcValue@74-88@src/Macula/Dht/DhtClient.cs
+       8      2     76      3       8     1 NotFoundException::PutRecordAsync@91-98@src/Macula/Dht/DhtClient.cs
+      15      4    160      3      15     1 NotFoundException::FindRecordAsync@101-115@src/Macula/Dht/DhtClient.cs
+      26      4    189      3      27     2 NotFoundException::FindRecordsAsync@118-144@src/Macula/Dht/DhtClient.cs
+       1      1     10      0       1     0 ProcedureNotAdvertisedException::ProcedureNotAdvertisedException@43-43@src/Macula/Dht/DirectDial.cs
+       1      1     10      0       1     0 NoTrustedAdvertisementException::NoTrustedAdvertisementException@48-48@src/Macula/Dht/DirectDial.cs
+       1      1     10      0       1     0 StationEndpointNotFoundException::StationEndpointNotFoundException@53-53@src/Macula/Dht/DirectDial.cs
+       1      1     15      1       1     0 NoAuthorizedAdvertisementException::NoAuthorizedAdvertisementException@59-59@src/Macula/Dht/DirectDial.cs
+       1      1     12      1       1     0 TrustViolationException::TrustViolationException@64-64@src/Macula/Dht/DirectDial.cs
+       4      1     16      1       4     1 Resolved::if@83-86@src/Macula/Dht/DirectDial.cs
+      21      4    114      3      21     2 Resolved::FindWithRetryAsync@92-112@src/Macula/Dht/DirectDial.cs
+      18      3     55      1      19     2 Resolved::FirstTrustedAdvertisement@114-132@src/Macula/Dht/DirectDial.cs
+      20      4    148      6      22     2 Resolved::ResolveWithCertChainAsync@141-162@src/Macula/Dht/DirectDial.cs
+      29      5    102      3      29     2 Resolved::FirstAuthorizedAdvertisement@169-197@src/Macula/Dht/DirectDial.cs
+      13      1    146      9      13     1 Resolved::CallWithCertChainAsync@200-212@src/Macula/Dht/DirectDial.cs
+       9      1    135      7      10     0 Resolved::AdvertiseDirectWithCertChainAsync@215-224@src/Macula/Dht/DirectDial.cs
+      38      7    224      3      43     2 Resolved::ResolveStationEndpointAsync@237-279@src/Macula/Dht/DirectDial.cs
+      11      2     95      6      11     1 Resolved::DialAndVerifyAsync@286-296@src/Macula/Dht/DirectDial.cs
+      13      1    134      7      13     1 Resolved::CallAsync@310-322@src/Macula/Dht/DirectDial.cs
+      13      1    141      8      13     1 Resolved::CallWithUcanAsync@333-345@src/Macula/Dht/DirectDial.cs
+       9      1    128      6      10     0 Resolved::AdvertiseDirectAsync@378-387@src/Macula/Dht/DirectDial.cs
+      26      4    146      8      28     2 Resolved::KeepAdvertisedDirectAsync@409-436@src/Macula/Dht/DirectDial.cs
+      15      2    145      9      15     1 Resolved::OpenStreamDirectAsync@452-466@src/Macula/Dht/DirectDial.cs
+      15      2    157     11      15     1 Resolved::OpenStreamDirectWithCertChainAsync@469-483@src/Macula/Dht/DirectDial.cs
+      13      1    119      7      13     1 Resolved::PutDirectAsync@502-514@src/Macula/Dht/DirectDial.cs
+      15      2    140      5      15     1 Resolved::GetDirectAsync@538-552@src/Macula/Dht/DirectDial.cs
+       1      1     10      0       1     0 ContentNotAnnouncedException::ContentNotAnnouncedException@557-557@src/Macula/Dht/DirectDial.cs
+      25      4     86      1      25     2 ContentNotAnnouncedException::FirstTrustedContentProvider@565-589@src/Macula/Dht/DirectDial.cs
+      22      7    151      1      24     2 ContentNotAnnouncedException::ParseSeedUrl@594-617@src/Macula/Dht/DirectDial.cs
+      22      4    168      4      22     1 RecordFactory::NewProcedureAdvertisement@61-82@src/Macula/Dht/Record.cs
+      16      1    135      5      16     0 RecordFactory::NewProcedureAdvertisementWithCertChain@90-105@src/Macula/Dht/Record.cs
+      18      3    152      4      18     1 RecordFactory::NewContentAnnouncement@108-125@src/Macula/Dht/Record.cs
+      13      1     70      4      13     0 RecordFactory::NewEnvelope@127-139@src/Macula/Dht/Record.cs
+      13      1    145      1      13     0 RecordFactory::CanonicalUnsigned@149-161@src/Macula/Dht/Record.cs
+      18      1    109      2      18     0 RecordFactory::Sign@164-181@src/Macula/Dht/Record.cs
+      20      6    133      1      20     1 RecordFactory::Verify@190-209@src/Macula/Dht/Record.cs
+       1      1     24      1       1     0 RecordFactory::ProcedureKey@212-212@src/Macula/Dht/Record.cs
+       8      1     68      1       8     0 RecordFactory::StationEndpointKey@215-222@src/Macula/Dht/Record.cs
+       1      1     15      1       1     0 RecordFactory::ContentKey@225-225@src/Macula/Dht/Record.cs
+       1      1     22      2       1     0 RecordFactory::DiscoveryUri@232-232@src/Macula/Dht/Record.cs
+      17      6    130      1      17     1 ProcedureAdvertisement::ReadProcedureAdvertisement@246-262@src/Macula/Dht/Record.cs
+      23      5    145      1      29     2 ProcedureAdvertisement::ReadStationEndpoint@264-292@src/Macula/Dht/Record.cs
+      16      4    103      1      16     1 ProcedureAdvertisement::ReadContentAnnouncement@294-309@src/Macula/Dht/Record.cs
+       2      3     31      2       2     0 ProcedureAdvertisement::RequireBytes@311-312@src/Macula/Dht/Record.cs
+       2      3     31      2       2     0 ProcedureAdvertisement::RequireText@314-315@src/Macula/Dht/Record.cs
+       6      1    100      3       9     0 AdvertiseFrame::Build@20-28@src/Macula/Frame/AdvertiseFrames.cs
+       2      1     23      1       2     0 AdvertiseFrame::Build@30-31@src/Macula/Frame/AdvertiseFrames.cs
+       5      1     76      3       5     0 UnadvertiseFrame::Build@43-47@src/Macula/Frame/AdvertiseFrames.cs
+       2      1     23      1       2     0 UnadvertiseFrame::Build@49-50@src/Macula/Frame/AdvertiseFrames.cs
+      11      1    155      3      13     0 CallFrame::Build@32-44@src/Macula/Frame/CallFrames.cs
+       2      1     23      1       2     0 CallFrame::Build@46-47@src/Macula/Frame/CallFrames.cs
+       6      1     78      3       8     0 ResultFrame::Build@60-67@src/Macula/Frame/CallFrames.cs
+       2      1     23      1       2     0 ResultFrame::Build@69-70@src/Macula/Frame/CallFrames.cs
+       9      3    156      3      10     0 CallErrorFrame::Build@86-95@src/Macula/Frame/CallFrames.cs
+       2      1     23      1       2     0 CallErrorFrame::Build@97-98@src/Macula/Frame/CallFrames.cs
+       6      1     37      2       6     0 ParseFrameException::ParseFrameException@116-121@src/Macula/Frame/CallFrames.cs
+       1      1      5      0       1     0 CallResponse::CallResponse@127-127@src/Macula/Frame/CallFrames.cs
+       2      2     28      1       2     0 Result::FrameType@136-137@src/Macula/Frame/CallFrames.cs
+       9      2     76      3       9     1 Result::RequireBytes@139-147@src/Macula/Frame/CallFrames.cs
+      12      2     52      2      12     1 Result::RequireProcedureLikeBytes@149-160@src/Macula/Frame/CallFrames.cs
+      21      6    221      1      28     1 Result::ParseCall@163-190@src/Macula/Frame/CallFrames.cs
+       2      2     30      1       2     0 Result::FrameCallId@193-194@src/Macula/Frame/CallFrames.cs
+      20      2     28      0     241     0 *global*@0-240@src/Macula/Frame/CallFrames.cs
+      41      6    287      1      43     2 Result::ParseCallResponse@197-239@src/Macula/Frame/CallFrames.cs
+       1      1     15      0       1     0 Envelope::CurrentMillis@32-32@src/Macula/Frame/Envelope.cs
+       1      1     17      0       1     0 Envelope::FreshFrameId@35-35@src/Macula/Frame/Envelope.cs
+      12      1    165      4      12     0 Envelope::Base@42-53@src/Macula/Frame/Envelope.cs
+      12      1     14      0     195     0 *global*@0-194@src/Macula/Frame/Envelope.cs
+       2      1     34      1       2     0 Envelope::Bytes32List@55-56@src/Macula/Frame/Envelope.cs
+       6      1     45      2       6     0 Envelope::Sign@63-68@src/Macula/Frame/Envelope.cs
+       9      1     69      1       9     0 Envelope::SignableBytes@70-78@src/Macula/Frame/Envelope.cs
+      13      4     81      2      14     1 Envelope::Verify@93-106@src/Macula/Frame/Envelope.cs
+       6      1     45      2       6     0 Envelope::SignPublisher@133-138@src/Macula/Frame/Envelope.cs
+      19      6    108      1      20     1 Envelope::VerifyPublisher@155-174@src/Macula/Frame/Envelope.cs
+      12      2    125      1      12     0 Envelope::PublisherSigningBytes@182-193@src/Macula/Frame/Envelope.cs
+       6      1     30      2       8     0 ConnectSpec::New@19-26@src/Macula/Frame/HandshakeFrames.cs
+      17      1     18      0     172     0 *global*@0-171@src/Macula/Frame/HandshakeFrames.cs
+      12      2    133      3      12     0 ConnectFrame::Build@31-42@src/Macula/Frame/HandshakeFrames.cs
+       2      1     23      1       2     0 ConnectFrame::Build@45-46@src/Macula/Frame/HandshakeFrames.cs
+       7      2     81      4       9     0 GoodbyeFrame::Build@51-59@src/Macula/Frame/HandshakeFrames.cs
+       2      1     31      2       2     0 GoodbyeFrame::Build@61-62@src/Macula/Frame/HandshakeFrames.cs
+       6      1     37      2       6     0 ParseHelloException::ParseHelloException@87-92@src/Macula/Frame/HandshakeFrames.cs
+       9      1     65      2       9     1 HelloFrame::GetBytes32@97-105@src/Macula/Frame/HandshakeFrames.cs
+      14      3    107      2      14     1 HelloFrame::GetBytes32List@107-120@src/Macula/Frame/HandshakeFrames.cs
+       9      1     58      2       9     1 HelloFrame::GetUInt@122-130@src/Macula/Frame/HandshakeFrames.cs
+      10      1     79      2      10     1 HelloFrame::GetBool@135-144@src/Macula/Frame/HandshakeFrames.cs
+      22      5    176      1      24     1 HelloFrame::Parse@147-170@src/Macula/Frame/HandshakeFrames.cs
+       9      1    123      3      10     0 PublishFrame::Build@18-27@src/Macula/Frame/PubSubFrames.cs
+      12      2     26      0     127     0 *global*@0-126@src/Macula/Frame/PubSubFrames.cs
+       2      1     23      1       2     0 PublishFrame::Build@34-35@src/Macula/Frame/PubSubFrames.cs
+       7      1    109      3       7     0 SubscribeFrame::Build@47-53@src/Macula/Frame/PubSubFrames.cs
+       2      1     23      1       2     0 SubscribeFrame::Build@56-57@src/Macula/Frame/PubSubFrames.cs
+       5      1     76      3       5     0 UnsubscribeFrame::Build@69-73@src/Macula/Frame/PubSubFrames.cs
+       2      1     23      1       2     0 UnsubscribeFrame::Build@75-76@src/Macula/Frame/PubSubFrames.cs
+      39      5    356      1      42     1 EventInfo::Parse@84-125@src/Macula/Frame/PubSubFrames.cs
+       7      1     41      1       7     1 StreamModeNames::Name@18-24@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+       7      1     32      1       7     1 StreamModeNames::FromName@26-32@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+       6      1     35      1       6     1 StreamEncodingNames::Name@52-57@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+       6      1     26      1       6     1 StreamEncodingNames::FromName@59-64@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+       6      1     35      1       6     1 StreamRoleNames::Name@78-83@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+       6      1     26      1       6     1 StreamRoleNames::FromName@85-90@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+      11      1    159      3      11     0 StreamOpenFrame::Build@109-119@src/Macula/Frame/StreamFrames.cs
+       2      1     23      1       2     0 StreamOpenFrame::Build@121-122@src/Macula/Frame/StreamFrames.cs
+      46      6    449      1      48     1 StreamOpenInfo::Parse@130-177@src/Macula/Frame/StreamFrames.cs
+       7      1     89      3       9     0 StreamDataFrame::Build@209-217@src/Macula/Frame/StreamFrames.cs
+       2      1     23      1       2     0 StreamDataFrame::Build@219-220@src/Macula/Frame/StreamFrames.cs
+       5      1     66      3       5     0 StreamEndFrame::Build@233-237@src/Macula/Frame/StreamFrames.cs
+       2      1     23      1       2     0 StreamEndFrame::Build@239-240@src/Macula/Frame/StreamFrames.cs
+       6      1     90      3       6     0 StreamErrorFrame::Build@261-266@src/Macula/Frame/StreamFrames.cs
+       2      1     23      1       2     0 StreamErrorFrame::Build@268-269@src/Macula/Frame/StreamFrames.cs
+       2      2     35      2       2     0 SignerFieldExtensions::WithOptionalSigner@275-276@src/Macula/Frame/StreamFrames.cs
+       5      1     64      3       5     0 StreamReplyFrame::Build@289-293@src/Macula/Frame/StreamFrames.cs
+       2      1     23      1       2     0 StreamReplyFrame::Build@295-296@src/Macula/Frame/StreamFrames.cs
+       1      1      5      0       1     0 StreamEvent::StreamEvent@302-302@src/Macula/Frame/StreamFrames.cs
+       2      2     30      1       2     0 Data::FrameStreamId@316-317@src/Macula/Frame/StreamFrames.cs
+      33      2     47      0     397     0 *global*@0-396@src/Macula/Frame/StreamFrames.cs
+      75     11    586      1      77     2 Data::ParseStreamEvent@319-395@src/Macula/Frame/StreamFrames.cs
+       2      1     13      1       2     0 FrameTooLargeException::FrameTooLargeException@8-9@src/Macula/Frame/WireCodec.cs
+       1      1      5      0       1     0 Decoded::Decoded@15-15@src/Macula/Frame/WireCodec.cs
+      12      2     77      1      13     1 Frame::Encode@27-39@src/Macula/Frame/WireCodec.cs
+      18      4    120      1      20     1 Frame::Decode@42-61@src/Macula/Frame/WireCodec.cs
+       5      1     19      1       5     0 KeyPair::KeyPair@22-26@src/Macula/Identity/KeyPair.cs
+       1      1     16      0       1     0 KeyPair::Generate@35-35@src/Macula/Identity/KeyPair.cs
+      11      3     40      1      11     2 KeyPair::GenerateWithPuzzle@42-52@src/Macula/Identity/KeyPair.cs
+       1      1     11      0       1     0 KeyPair::GenerateWithDefaultPuzzle@54-54@src/Macula/Identity/KeyPair.cs
+       8      2     44      1       8     1 KeyPair::FromSeedBytes@61-68@src/Macula/Identity/KeyPair.cs
+       1      1     10      0       1     0 KeyPair::PublicBytes@71-71@src/Macula/Identity/KeyPair.cs
+       1      1     10      0       1     0 KeyPair::PrivateBytes@74-74@src/Macula/Identity/KeyPair.cs
+       1      1      8      0       1     0 KeyPair::NodeId@77-77@src/Macula/Identity/KeyPair.cs
+       7      1     46      1       7     0 KeyPair::Sign@85-91@src/Macula/Identity/KeyPair.cs
+       1      1     13      0       1     0 KeyPair::PuzzleEvidence@94-94@src/Macula/Identity/KeyPair.cs
+      18      4     94      3      24     1 KeyPair::Verify@102-125@src/Macula/Identity/KeyPair.cs
+      14      2    112      1      15     1 KeyPair::Save@139-153@src/Macula/Identity/KeyPair.cs
+      18      4    136      1      20     1 KeyPair::Load@156-175@src/Macula/Identity/KeyPair.cs
+       1      1     12      1       1     0 LoadKeyException::LoadKeyException@180-180@src/Macula/Identity/KeyPair.cs
+       1      1     15      1       1     0 Puzzle::Evidence@21-21@src/Macula/Identity/Puzzle.cs
+       2      1     21      2       2     0 Puzzle::IsValid@23-24@src/Macula/Identity/Puzzle.cs
+      17      2     58      1      17     2 Puzzle::CountLeadingZeroBits@26-42@src/Macula/Identity/Puzzle.cs
+       6      1     27      3       6     0 StreamHandle::StreamHandle@51-56@src/Macula/Streaming/StreamHandle.cs
+      19      1    149      8      19     0 StreamHandle::OpenAsync@64-82@src/Macula/Streaming/StreamHandle.cs
+      18      2    126      3      20     1 StreamHandle::AcceptAsync@93-112@src/Macula/Streaming/StreamHandle.cs
+       5      1     60      3       5     0 StreamHandle::SendReplyAsync@119-123@src/Macula/Streaming/StreamHandle.cs
+       6      1     74      4       6     0 StreamHandle::SendDataAsync@131-136@src/Macula/Streaming/StreamHandle.cs
+       5      1     59      2       5     0 StreamHandle::CloseSendAsync@139-143@src/Macula/Streaming/StreamHandle.cs
+       5      1     29      3       5     0 RecvStreamException::RecvStreamException@152-156@src/Macula/Streaming/StreamHandle.cs
+      21      5    148      2      21     1 RecvStreamException::RecvAsync@160-180@src/Macula/Streaming/StreamHandle.cs
+      18      4    126      2      18     1 RecvStreamException::AwaitReplyAsync@183-200@src/Macula/Streaming/StreamHandle.cs
+      13      2     68      2      13     1 RecvStreamException::RecvFrameTimeoutAsync@202-214@src/Macula/Streaming/StreamHandle.cs
+       7      2     36      1       7     1 RecvStreamException::CheckStreamId@216-222@src/Macula/Streaming/StreamHandle.cs
+      11      2     81      4      12     1 RecvStreamException::AbortAsync@229-240@src/Macula/Streaming/StreamHandle.cs
+       1      1      5      0       1     0 StreamItem::StreamItem@246-246@src/Macula/Streaming/StreamHandle.cs
+       1      1     15      1       1     0 Policy::Required@24-24@src/Macula/Ucan/Policy.cs
+      12      3     46      1      12     1 Policy::Check@32-43@src/Macula/Ucan/Policy.cs
+       1      1     10      0       1     0 InvalidTokenException::InvalidTokenException@38-38@src/Macula/Ucan/Ucan.cs
+       1      1     10      0       1     0 InvalidSignatureException::InvalidSignatureException@43-43@src/Macula/Ucan/Ucan.cs
+       1      1     10      0       1     0 InvalidPublicKeyException::InvalidPublicKeyException@48-48@src/Macula/Ucan/Ucan.cs
+       1      1     10      0       1     0 ExpiredException::ExpiredException@53-53@src/Macula/Ucan/Ucan.cs
+       1      1     10      0       1     0 NotYetValidException::NotYetValidException@58-58@src/Macula/Ucan/Ucan.cs
+       1      1     10      0       1     0 NoTokenException::NoTokenException@64-64@src/Macula/Ucan/Ucan.cs
+      23      4    218      5      24     0 Payload::Create@120-143@src/Macula/Ucan/Ucan.cs
+       9      2     59      1       9     1 Payload::SplitToken@145-153@src/Macula/Ucan/Ucan.cs
+      19      5    105      1      19     1 Payload::DecodePayload@155-173@src/Macula/Ucan/Ucan.cs
+       5      1     29      1       5     0 Payload::Decode@181-185@src/Macula/Ucan/Ucan.cs
+      33      8    177      2      35     1 Payload::Verify@198-232@src/Macula/Ucan/Ucan.cs
+       1      1     20      1       1     0 Payload::ComputeCid@240-240@src/Macula/Ucan/Ucan.cs
+       1      1     15      1       1     0 Payload::GetIssuer@243-243@src/Macula/Ucan/Ucan.cs
+       1      1     15      1       1     0 Payload::GetAudience@246-246@src/Macula/Ucan/Ucan.cs
+       1      1     15      1       1     0 Payload::GetCapabilities@249-249@src/Macula/Ucan/Ucan.cs
+       1      1     15      1       1     0 Payload::GetExpiration@252-252@src/Macula/Ucan/Ucan.cs
+       1      1     15      1       1     0 Payload::GetProofs@255-255@src/Macula/Ucan/Ucan.cs
+       5      2     36      1       5     0 Payload::IsExpired@258-262@src/Macula/Ucan/Ucan.cs
+       1      1      5      0       1     0 Value::Value@12-12@src/Macula/Value.cs
+      22      5    142      2      22     2 UIntValue::WithField@41-62@src/Macula/Value.cs
+       8      2     68      1       8     0 UIntValue::Without@65-72@src/Macula/Value.cs
+      11      3     48      1      11     2 UIntValue::Get@75-85@src/Macula/Value.cs
+31 file analyzed.
+==============================================================
+NLOC    Avg.NLOC  AvgCCN  Avg.token  function_cnt    file
+--------------------------------------------------------------
+     44       2.0     1.0       31.0         1     src/Macula/Bolt4/Bolt4Code.cs
+    262      25.7     4.6      175.6        10     src/Macula/Cbor/CborCodec.cs
+      5       1.0     1.0       12.0         1     src/Macula/Cbor/CborDecodeException.cs
+     29       5.2     1.5       34.2         4     src/Macula/Connection/EventDedup.cs
+    115      13.1     2.5       73.5         8     src/Macula/Connection/FrameStream.cs
+      6       0.0     0.0        0.0         0     src/Macula/Connection/IFrameSink.cs
+     84       9.4     1.5       62.0        10     src/Macula/Connection/RpcFacts.cs
+    287      10.5     2.0       72.1        24     src/Macula/Connection/Session.cs
+    252      18.3     4.3       85.8        14     src/Macula/Connection/StationDiscovery.cs
+    745      16.2     2.7      100.7        40     src/Macula/Connection/StationPool.cs
+    133      23.0     3.4      152.8         5     src/Macula/Connection/SupervisedPubSub.cs
+     40       9.0     2.5       37.0         2     src/Macula/Connection/Trust.cs
+    181      19.0     4.2      176.8         8     src/Macula/Content/ContentTransfer.cs
+    291      14.8     1.7       73.3        37     src/Macula/Content/Manifest.cs
+    158      10.1     2.5       59.0        13     src/Macula/Dht/CertChain.cs
+    105      11.9     4.1      121.1         7     src/Macula/Dht/DhtClient.cs
+    378      13.4     2.4       98.0        25     src/Macula/Dht/DirectDial.cs
+    232      11.9     2.6       92.6        16     src/Macula/Dht/Record.cs
+     35       3.8     1.0       55.5         4     src/Macula/Frame/AdvertiseFrames.cs
+    186       9.7     2.1       81.5        15     src/Macula/Frame/CallFrames.cs
+    103       8.5     1.8       65.3        11     src/Macula/Frame/Envelope.cs
+    139       9.7     1.7       69.8        12     src/Macula/Frame/HandshakeFrames.cs
+    103       9.8     1.6       94.9         8     src/Macula/Frame/PubSubFrames.cs
+    306      15.7     1.9       79.0        28     src/Macula/Frame/StreamFrames.cs
+     47       8.2     2.0       53.8         4     src/Macula/Frame/WireCodec.cs
+    101       6.3     1.7       40.8        14     src/Macula/Identity/KeyPair.cs
+     27       6.7     1.3       31.3         3     src/Macula/Identity/Puzzle.cs
+    162      10.4     1.8       76.0        13     src/Macula/Streaming/StreamHandle.cs
+     18       6.5     2.0       30.5         2     src/Macula/Ucan/Policy.cs
+    174       5.9     1.9       43.3        18     src/Macula/Ucan/Ucan.cs
+     89      10.5     2.8       65.8         4     src/Macula/Value.cs
+
+============================================================================================================================================
+No thresholds exceeded (cyclomatic_complexity > 15 or max_nested_structures > 3 or length > 1000 or nloc > 1000000 or parameter_count > 100)
+==========================================================================================
+Total nloc   Avg.NLOC  AvgCCN  Avg.token   Fun Cnt  Warning cnt   Fun Rt   nloc Rt
+------------------------------------------------------------------------------------------
+      4837      12.6     2.3       81.9      361            0      0.00    0.00

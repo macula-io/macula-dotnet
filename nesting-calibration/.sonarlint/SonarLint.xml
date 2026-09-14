@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AnalysisInput xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Settings>
+    <Setting>
+      <Key>sonar.cs.ignoreHeaderComments</Key>
+      <Value>true</Value>
+    </Setting>
+  </Settings>
+  <Rules>
+    <Rule>
+      <Key>S134</Key>
+      <Parameters>
+        <Parameter>
+          <Key>max</Key>
+          <Value>1</Value>
+        </Parameter>
+      </Parameters>
+    </Rule>
+  </Rules>
+  <Files />
+</AnalysisInput>
