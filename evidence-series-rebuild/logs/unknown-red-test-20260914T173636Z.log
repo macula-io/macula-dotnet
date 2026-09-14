@@ -1,0 +1,48 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.31]     Macula.Tests.SessionReaderTests.Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown [FAIL]
+[xUnit.net 00:00:00.31]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.31]       Expected: 2
+[xUnit.net 00:00:00.31]       Actual:   1003
+[xUnit.net 00:00:00.31]       Stack Trace:
+[xUnit.net 00:00:00.31]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs(481,0): at Macula.Tests.SessionReaderTests.Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown()
+[xUnit.net 00:00:00.31]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.32]     Macula.Tests.SessionReaderTests.An_oversize_frame_type_is_counted_as_unknown [FAIL]
+[xUnit.net 00:00:00.32]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.32]                  ↓ (pos 0)
+[xUnit.net 00:00:00.32]       Expected: "unknown"
+[xUnit.net 00:00:00.32]       Actual:   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"···
+[xUnit.net 00:00:00.32]                  ↑ (pos 0)
+[xUnit.net 00:00:00.32]       Stack Trace:
+[xUnit.net 00:00:00.32]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs(452,0): at Macula.Tests.SessionReaderTests.An_oversize_frame_type_is_counted_as_unknown()
+[xUnit.net 00:00:00.32]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.32]   Finished:    Macula.Tests
+  Passed Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type [60 ms]
+  Failed Macula.Tests.SessionReaderTests.Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown [43 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   1003
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs:line 481
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.SessionReaderTests.An_oversize_frame_type_is_counted_as_unknown [7 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "unknown"
+Actual:   "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"···
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.An_oversize_frame_type_is_counted_as_unknown() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs:line 452
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 3
+     Passed: 1
+     Failed: 2
+ Total time: 0.6493 Seconds

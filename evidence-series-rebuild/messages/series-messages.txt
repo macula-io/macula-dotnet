@@ -1,0 +1,282 @@
+==== d1f67da
+Try each direct-dial provider in turn within the call's timeout
+
+DirectDial now treats every advertisement (or content announcement) that
+verifies as a candidate, in DHT order, and moves to the next one when a
+candidate's endpoint lookup, dial or identity check fails before anything
+is sent. A request that has gone out is never sent again. When nothing
+qualifies, the DHT is queried again with a backoff of 100 ms doubling to
+1 s, and within one call a station that already failed is dialed again
+only once its advertisement or endpoint record has changed.
+
+The call's timeout now bounds resolution, every endpoint lookup, every
+dial and the request, with each candidate getting a share of what remains.
+Resolve and ResolveStationEndpoint get a 10 s budget. GetDirect retries
+while nothing is announced and moves on after a failed or unverified
+fetch.
+
+The resolution logic sits behind internal delegates over the DHT lookups,
+the dial and the request, so DirectDialCandidatesTests exercises it with
+real signed records and no network. The cert-chain test certificates move
+to CertChainFixtures so both test classes share them.
+
+Bumps the package to 0.5.0 and starts CHANGELOG.md.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== ddb3e29
+Bind UCAN-gated calls to the caller that signed them
+
+A provider now answers an inbound CALL only when the CALL's signature
+verifies against the caller it names. One that doesn't is dropped with no
+reply, before policy or a handler runs, in both Session's serve loop and
+StationPool's inbound path, matching macula_station_link.erl's
+on_inbound_call/3.
+
+Policy.Check takes the caller as well as the token. A Policy.Required
+procedure accepts a token only when its aud is that caller's node id as
+lowercase hex, the comparison macula_station_link.erl uses; a missing
+caller or a different audience is unauthorized. UcanToken.Create's doc,
+the UCAN examples and the live UCAN tests mint tokens with that audience.
+
+ServeCallerTests and the new UcanTests cases carry the same names as
+macula-go's.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== cdff56a
+Report the last candidate failure when a later pass finds none
+
+Once a direct-dial candidate has failed before sending, the call now
+throws the most recent candidate failure. A later pass whose query finds
+no candidate, or fails, no longer replaces it with ProcedureNotAdvertised,
+NoTrustedAdvertisement or a content lookup error. Until a candidate has
+been tried, the reason none qualified is still what the call throws.
+
+Found live: a get_direct whose dial reused the resolver session's identity
+got that session replaced by the station, so the next lookup failed and
+hid the trust violation that the dial itself had reported.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== cbbf756
+Reuse an open session for stream and content direct dial
+
+A station keeps one connection per identity and closes the older one when
+a newer one completes its handshake. Direct dial opened a second
+connection under the caller's identity, which closed resolveVia or a pool
+link to the same station.
+
+Sessions now register by identity and station once HELLO is accepted,
+and unregister on close. OpenStreamDirectAsync,
+OpenStreamDirectWithCertChainAsync, PutDirectAsync and GetDirectAsync run
+on a registered session, on a dedicated QUIC stream, and leave it open.
+The stream calls return DirectDial.OpenedStream, which says whether the
+caller owns the session. Calls still dial their own connection: reusing a
+session for a call needs a per-session reader first.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== bec6c5b
+Serialize frame sends on a FrameStream
+
+System.Net.Quic's QuicStream fails a write that starts while another is
+still pending, with InvalidOperationException. FrameStream wrote each
+frame with its own WriteAsync and nothing serialized them, so two tasks
+sending on one Session at once, such as a publish and the
+publish_started fact RunPublisherAsync fires beside it, could fail one
+of the sends.
+
+SendFrameAsync now takes turns through a gate, on the control stream and
+on dedicated streams alike, and each frame is still written whole in a
+single write.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 1d50860
+Send the publish_started fact before the publish, not beside it
+
+RunPublisherAsync started sending pubsub.publish_started_v1 without
+awaiting it and began the publish on a background task right away. Both
+sends ran on the session at once: on a session that takes one send at a
+time the publish failed with InvalidOperationException, or the fact was
+lost. The unawaited call was also compiler warning CS4014.
+
+The started fact is now sent first inside the background task and
+awaited, then the publish, then the completed fact. A fact that fails to
+send is still caught where it is sent and never fails the publish it
+describes, matching macula_publisher.erl.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 30e5db9
+Record the 0.4.1 fixes in the changelog
+
+The frame send gate and the publisher fact order fix were released on their own branch as 0.4.1 and are carried into main above; main's changelog now lists that release too.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 080b424
+Report what a direct-dial call observed when it runs out of time
+
+A procedure call whose DHT lookups all failed threw
+ProcedureNotAdvertisedException, and a call whose lookups were never
+answered in time threw ProcedureNotAdvertisedException,
+ContentNotAnnouncedException or StationEndpointNotFoundException: an
+absence nobody observed. A failed content lookup after an answered one
+also replaced what the answered one found, and a station_endpoint lookup
+that failed ended at once instead of being retried.
+
+At its deadline a call now throws the last candidate failure, else why
+the latest answered lookup found nothing, else the latest failed
+lookup's exception, else a TimeoutException. A lookup cut off by the
+deadline records nothing. A station_endpoint lookup retries a failed
+lookup within its budget and throws StationEndpointNotFoundException
+only when a lookup was answered, else the lookup's exception, else a
+TimeoutException, and that is what a candidate's failure carries.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 99372c6
+Share a dialed session between the direct-dial requests that reuse it
+
+A session direct dial dialed for one request was registered for reuse,
+so a later stream or transfer to the same station ran on it, and the
+first request then closed it underneath the second when it finished.
+
+A dialed session now carries a lease count. Every request that reuses it
+takes a lease and releases its own when done, and the session closes
+when the last lease is released; a request that finds the last lease
+already released dials afresh. The session is marked as dialed before it
+becomes findable, so no reuse misses its lease. OpenedStream holds its
+lease until it is disposed and loses OwnsSession. Sessions the
+application opened are still reused without a lease and never closed by
+direct dial.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== f1f0c35
+Read each session's control stream with one reader that routes every frame
+
+Calls, subscriptions and serving now run at the same time on one Session. The reader hands a RESULT or ERROR to its call by call_id, an EVENT to each matching Subscription (256 queued), and a CALL signed by its caller to a queue of 64. GOODBYE, or HELLO or CONNECT after the handshake, ends the session and fails waiting calls. Other frames are counted per type and traced at most once a minute.
+
+Session.SubscribeAsync returns a Subscription with its own RecvEventAsync. Session.RecvAsync, RecvEventAsync and UnsubscribeAsync are gone. StationPool drops its pump, pending-call map and send gate. A session whose control stream ends unregisters itself from direct-dial reuse.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 0f90ac8
+Pair RPC telemetry facts by publisher and request_id in the live test
+
+The watchers took the latest fact on each shared topic, so another call on the public fleet landing in between failed the test. It now waits for a sent and completed pair, and a received and replied pair, that share a request_id and were published by the test's own caller and provider, as macula-go's test pairs them.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 4bb2283
+Bound every write on a session and keep the reader clear of writes
+
+Writes on the control stream take turns. A call waits for its turn within its own timeout and every other send within a 30 s send timeout; when that runs out only that caller times out, and the frame was never sent. A write that stalls past 30 s ends the session with SendTimeoutException. A call that times out throws CallTimeoutException, whose WriteStarted says whether the CALL may have reached the station.
+
+The reader never waits on a write: temporary_relay_failure for an overflowing inbound CALL and the RPC telemetry facts go through a hand-off of 64 and are dropped when it is full, with rpc.sent_v1 handed over once the CALL is written. An overflowing call queue no longer ends serving. Subscribing and closing take turns across the count change and the frame, so SUBSCRIBE and UNSUBSCRIBE reach the station in order, and an overflowed subscription keeps the station subscribed until it is closed. The pool's link calls and its overflow consumer run on the same paths. Test names match macula-go.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 7ec12f4
+End a session cleanly and retry pool calls only when they were not sent
+
+An operation on a session that has ended throws SessionEndedException, whose InnerException is the reason and whose WriteStarted says whether a call's CALL may have reached the station. A call waiting for its turn to write returns promptly when the session ends, and a frame that can't be decoded ends the session. A session whose control stream ends also closes its connection now.
+
+StationPool.CallAsync moves to the next link only when the CALL was not sent there. A reply, RESULT or ERROR, comes back from the link that gave it, and a call that timed out after its write started is not tried again. Pool calls publish no RPC telemetry facts, as macula's pool doesn't. The in-memory station the reader tests use moves to its own file so the pool tests share it. Test names match macula-go.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 80202e6
+Deliver pool events to wildcard subscriptions
+
+StationPool looked up handlers by an event's own topic, so a subscription to a wildcard pattern never received its events. Each link subscription now hands its events to the handlers of its own pattern, which the session reader already matched by the station's rule, and dedup is keyed per pattern too, so overlapping subscriptions such as orders/* and orders/placed each receive an event once. The dedup key carries the topic's length so a topic containing ':' can't run into the pattern. The test name matches macula-go, and the test fails with either half of the fix removed.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== b48ba67
+Run direct calls on an open session and retry a call that was not sent
+
+DirectDial.CallAsync, CallWithUcanAsync and CallWithCertChainAsync run on a session this process already has open to the provider's station under the same identity, such as resolveVia or a StationPool link, instead of dialing a second connection that the station would answer by closing the first.
+
+A request whose CALL was never sent, because its session had ended or its turn to write didn't come in time, lets the next candidate be tried and isn't remembered as a failure, so the same station is tried again on a later pass. A CALL whose write started is never sent again. Test names match macula-go. The not-sent tests fail without the change, and a live test confirms the resolver stays connected after a direct call to its own station.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== c4875ae
+Report every session end once with its reason
+
+When a session's control stream ends, the session writes one System.Diagnostics.Trace line with the reason, its own node id and the station's: a warning when the station or the connection ended it, information when it was closed here. A session that goes away can then be matched to what the station saw.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 7ff3e6e
+Check the level of each session-end report
+
+The session-end log test now also closes a second session locally and expects exactly one information line for it, alongside the single warning for the session the station ended, matching macula-go's test.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 20c5611
+Ask again past a station_endpoint record that names no dialable address
+
+A verified station_endpoint record with no advertised host used to end the lookup as not found. It is now looked up again within the budget, as macula_direct_dial's endpoint_or_again does, and when it is the latest answer the call throws the new StationEndpointMalformedException. Test names match macula-go.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 7878e91
+Give a CALL handler its verified caller in a map payload
+
+A map payload now reaches the handler with the caller's node id under caller, the caller the CALL's signature was verified against, replacing any caller the sender put in the payload. A payload that is not a map reaches the handler unchanged. This matches macula_station_link:with_caller/2.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+
+==== 61e1fbb
+Refuse a STREAM_OPEN not signed by its caller, drop a CALL with a wrongly typed field, and bound drop warnings
+
+StreamHandle.AcceptAsync checks the first frame of every inbound stream
+before anything else looks at it. A STREAM_OPEN whose signature doesn't
+verify against the caller it names (invalid_signature), one without a
+64-byte signature or a 32-byte caller (unsigned), a frame of another type
+(not_a_stream_open) or bytes that don't decode (malformed) get the stream
+aborted in both directions with code 2, with nothing written, and
+AcceptAsync waits for the next stream within its timeout. Stream handlers
+previously received the caller field unverified. A verified STREAM_OPEN
+carries its caller in map args, as a CALL handler's payload does.
+StreamHandle.RefuseAsync writes a STREAM_ERROR, finishes the send side and
+stops reading with code 2.
+
+An inbound CALL whose ucan_token is neither bytes, text nor null is dropped
+as malformed and serving goes on; it used to end the session.
+
+A session traces a dropped CALL, a reply for no pending call and a refused
+stream with one bounded warning per kind: a line at once, and one closing
+line with the rest counted when the interval ends
+(Session.DropWarningInterval, 60 seconds by default). Control characters in
+a procedure are escaped so a warning stays on one line. A frame that
+doesn't decode ends a session with MalformedFrameException.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+

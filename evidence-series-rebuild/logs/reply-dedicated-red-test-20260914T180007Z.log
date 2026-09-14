@@ -1,0 +1,36 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.19]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.33]     Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_that_does_not_verify_leaves_the_call_waiting [FAIL]
+[xUnit.net 00:00:00.33]       a forged result reply first: the call got Result { Payload = TextValue { IsNull = False, Utf8 = System.Byte[] }, RespondedBy = System.Byte[] }
+[xUnit.net 00:00:00.33]       Stack Trace:
+[xUnit.net 00:00:00.33]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FrameStreamTests.cs(57,0): at Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_that_does_not_verify_leaves_the_call_waiting()
+[xUnit.net 00:00:00.33]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.63]     Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_dropped_is_warned_about_on_its_session [FAIL]
+[xUnit.net 00:00:00.63]       a forged and a misaddressed reply first: the call got Result { Payload = TextValue { IsNull = False, Utf8 = System.Byte[] }, RespondedBy = System.Byte[] }
+[xUnit.net 00:00:00.63]       Stack Trace:
+[xUnit.net 00:00:00.63]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FrameStreamTests.cs(87,0): at Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_dropped_is_warned_about_on_its_session()
+[xUnit.net 00:00:00.63]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.63]   Finished:    Macula.Tests
+  Passed Macula.Tests.FrameStreamTests.Concurrent_sends_all_complete_as_whole_frames [60 ms]
+  Failed Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_that_does_not_verify_leaves_the_call_waiting [47 ms]
+  Error Message:
+   a forged result reply first: the call got Result { Payload = TextValue { IsNull = False, Utf8 = System.Byte[] }, RespondedBy = System.Byte[] }
+  Stack Trace:
+     at Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_that_does_not_verify_leaves_the_call_waiting() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FrameStreamTests.cs:line 57
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_dropped_is_warned_about_on_its_session [305 ms]
+  Error Message:
+   a forged and a misaddressed reply first: the call got Result { Payload = TextValue { IsNull = False, Utf8 = System.Byte[] }, RespondedBy = System.Byte[] }
+  Stack Trace:
+     at Macula.Tests.FrameStreamTests.A_dedicated_stream_reply_dropped_is_warned_about_on_its_session() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FrameStreamTests.cs:line 87
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 3
+     Passed: 1
+     Failed: 2
+ Total time: 0.9704 Seconds

@@ -1,0 +1,200 @@
+diff --git a/src/Macula/Connection/DropWarnings.cs b/src/Macula/Connection/DropWarnings.cs
+new file mode 100644
+index 0000000..00422bd
+--- /dev/null
++++ b/src/Macula/Connection/DropWarnings.cs
+@@ -0,0 +1,194 @@
++using System.Diagnostics;
++using System.Text;
++using Macula.Frame;
++
++namespace Macula.Connection;
++
++/// <summary>What a session dropped or refused.</summary>
++internal enum DropKind
++{
++    RefusedStreamOpen,
++    DroppedCall,
++    DroppedReply,
++}
++
++/// <summary>Why a session dropped or refused it.</summary>
++internal enum DropReason
++{
++    /// <summary>A well-formed signature that doesn't verify against the caller the frame names.</summary>
++    InvalidSignature,
++
++    /// <summary>A signature that's missing or isn't 64 bytes, or a caller that isn't a 32-byte key.</summary>
++    Unsigned,
++
++    /// <summary>A frame that doesn't parse.</summary>
++    Malformed,
++
++    /// <summary>A dedicated stream whose first frame is of another type.</summary>
++    NotAStreamOpen,
++
++    /// <summary>A RESULT or ERROR for no pending call.</summary>
++    UnknownCallId,
++}
++
++/// <summary>
++/// The warnings a session traces when it drops an inbound frame or refuses a
++/// stream, bounded per kind: the first drop in an interval is traced at once,
++/// and the rest in that interval are counted into one closing line when it
++/// ends, so a flood of bad frames can't flood the trace. The kinds, reasons
++/// and fields are the same in every Macula stack.
++/// </summary>
++internal sealed class DropWarnings
++{
++    /// <summary>The interval a session starts with.</summary>
++    internal static readonly TimeSpan DefaultInterval = TimeSpan.FromSeconds(60);
++
++    private const int ProcedureLimit = 256;
++
++    private readonly string _station;
++    private readonly Limiter[] _limiters = [new(), new(), new()];
++    private long _intervalTicks = DefaultInterval.Ticks;
++
++    internal DropWarnings(byte[] stationId)
++    {
++        _station = Convert.ToHexStringLower(stationId);
++    }
++
++    /// <summary>How long an interval lasts, for the intervals that start after a change.</summary>
++    internal TimeSpan Interval
++    {
++        get => TimeSpan.FromTicks(Interlocked.Read(ref _intervalTicks));
++        set => Interlocked.Exchange(ref _intervalTicks, value.Ticks);
++    }
++
++    /// <summary>
++    /// Records one drop of <paramref name="kind"/>, with the subject field
++    /// from <see cref="ProcedureField(string)"/> or <see cref="CallIdField"/>,
++    /// or an empty one. The first in an interval is traced at once; later ones
++    /// are counted and reported in one line when the interval ends, and not at
++    /// all when none came.
++    /// </summary>
++    internal void Record(DropKind kind, DropReason reason, string subjectField)
++    {
++        var limiter = _limiters[(int)kind];
++        lock (limiter)
++        {
++            if (limiter.Open)
++            {
++                limiter.Later++;
++                limiter.Latest = (reason, subjectField);
++                return;
++            }
++            limiter.Open = true;
++        }
++        Trace(kind, 1, reason, subjectField);
++        _ = CloseAsync(limiter, kind, Interval);
++    }
++
++    /// <summary>
++    /// Why <paramref name="frame"/> isn't signed by the caller it names, or
++    /// null when it is: the check macula runs on an inbound CALL or
++    /// STREAM_OPEN before anything else looks at it.
++    /// </summary>
++    internal static DropReason? CallerCheck(Value.MapValue frame)
++    {
++        if (frame.Get("caller") is not Value.BytesValue { Value.Length: 32 } caller)
++        {
++            return DropReason.Unsigned;
++        }
++        return Envelope.Verify(frame, caller.Value) switch
++        {
++            null => null,
++            Envelope.VerifyError.MissingSignature or Envelope.VerifyError.BadSignature => DropReason.Unsigned,
++            _ => DropReason.InvalidSignature,
++        };
++    }
++
++    /// <summary>The procedure <paramref name="frame"/> names, as a warning line carries it.</summary>
++    internal static string ProcedureField(Value.MapValue frame) => frame.Get("procedure") switch
++    {
++        Value.BytesValue bytes => ProcedureField(bytes.Value),
++        Value.TextValue text => ProcedureField(text.Utf8),
++        _ => "",
++    };
++
++    internal static string ProcedureField(string procedure) => ProcedureField(Encoding.UTF8.GetBytes(procedure));
++
++    /// <summary>A reply's call_id as a warning line carries it: its first 4 bytes in hex.</summary>
++    internal static string CallIdField(byte[] callId) => " call_id=" + Convert.ToHexStringLower(callId.AsSpan(0, 4));
++
++    // The procedure cut to ProcedureLimit bytes, on a character boundary.
++    private static string ProcedureField(byte[] utf8)
++    {
++        var end = Math.Min(utf8.Length, ProcedureLimit);
++        while (end > 0 && end < utf8.Length && (utf8[end] & 0xC0) == 0x80)
++        {
++            end--;
++        }
++        return " procedure=" + Printable(Encoding.UTF8.GetString(utf8, 0, end));
++    }
++
++    // The text with its control characters escaped, \n, \r and \t by name and
++    // any other as \u{..}, so a trace line never breaks.
++    private static string Printable(string text)
++    {
++        var builder = new StringBuilder(text.Length);
++        foreach (var c in text)
++        {
++            builder.Append(c switch
++            {
++                '\n' => "\\n",
++                '\r' => "\\r",
++                '\t' => "\\t",
++                _ when char.IsControl(c) => $"\\u{{{(int)c:x}}}",
++                _ => c.ToString(),
++            });
++        }
++        return builder.ToString();
++    }
++
++    private async Task CloseAsync(Limiter limiter, DropKind kind, TimeSpan interval)
++    {
++        await Task.Delay(interval).ConfigureAwait(false);
++        long later;
++        (DropReason Reason, string Field)? latest;
++        lock (limiter)
++        {
++            (later, latest) = (limiter.Later, limiter.Latest);
++            (limiter.Open, limiter.Later, limiter.Latest) = (false, 0, null);
++        }
++        if (later > 0 && latest is { } last)
++        {
++            Trace(kind, later, last.Reason, last.Field);
++        }
++    }
++
++    private void Trace(DropKind kind, long count, DropReason reason, string subjectField) =>
++        System.Diagnostics.Trace.TraceWarning($"macula: kind={Name(kind)} count={count} reason={Name(reason)}{subjectField} (station {_station})");
++
++    private static string Name(DropKind kind) => kind switch
++    {
++        DropKind.RefusedStreamOpen => "refused_stream_open",
++        DropKind.DroppedCall => "dropped_call",
++        _ => "dropped_reply",
++    };
++
++    private static string Name(DropReason reason) => reason switch
++    {
++        DropReason.InvalidSignature => "invalid_signature",
++        DropReason.Unsigned => "unsigned",
++        DropReason.Malformed => "malformed",
++        DropReason.NotAStreamOpen => "not_a_stream_open",
++        _ => "unknown_call_id",
++    };
++
++    private sealed class Limiter
++    {
++        // An interval is running: its first drop was traced at once.
++        internal bool Open;
++
++        // The drops after that first one, and the latest one's reason and field.
++        internal long Later;
++        internal (DropReason Reason, string Field)? Latest;
++    }
++}

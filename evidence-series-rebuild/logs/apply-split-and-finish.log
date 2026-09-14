@@ -1,0 +1,16 @@
+######## part 1: CALL ucan_token typing
+  split-part1: Total tests: 54  Passed: 54
+588ff26 Drop an inbound CALL whose ucan_token has the wrong type and serve the next
+######## part 2: drop warnings and MalformedFrameException
+  split-part2: Total tests: 30  Passed: 30
+8f6469b Trace dropped CALLs and replies as bounded drop warnings
+######## part 3: STREAM_OPEN refusal and RefuseAsync
+  split-part3: Total tests: 34  Passed: 34
+ac351e3 Refuse a STREAM_OPEN not signed by its caller and let a provider refuse a stream
+######## version 0.5.0 and changelog
+  final-version: built
+c2a11bb Set version 0.5.0 and record its changes in the changelog
+######## guard: rebuilt tree vs the series tip with 0.4.2 merged, outside the changelog
+GUARD PASSED: the rebuilt tree equals e2c122f apart from CHANGELOG.md
+32
+FINISHED at c2a11bb

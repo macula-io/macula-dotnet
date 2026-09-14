@@ -1,0 +1,33 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_accepts_a_token_from_its_audience [75 ms]
+  Passed Macula.Tests.ServeCallerTests.Reply_to_frame_ignores_an_unsigned_call [3 ms]
+  Passed Macula.Tests.ServeCallerTests.Reply_to_frame_answers_a_call_signed_by_its_caller [7 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_call_without_caller [2 ms]
+  Passed Macula.Tests.ServeCallerTests.Reply_to_frame_ignores_a_call_not_signed_by_its_caller [1 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_token_without_audience [1 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_token_presented_by_another_caller [2 ms]
+  Passed Macula.Tests.UcanTests.Policy_gated_rejects_no_token [253 ms]
+  Passed Macula.Tests.UcanTests.Policy_open_always_passes [< 1 ms]
+  Passed Macula.Tests.UcanTests.Getters_read_claims_without_verifying [3 ms]
+  Passed Macula.Tests.UcanTests.Policy_gated_accepts_a_valid_token_from_the_required_issuer [164 ms]
+  Passed Macula.Tests.UcanTests.Is_expired_reports_correctly_without_verifying [2 ms]
+  Passed Macula.Tests.UcanTests.Verify_rejects_a_not_yet_valid_token [28 ms]
+  Passed Macula.Tests.UcanTests.Create_then_verify_round_trips [34 ms]
+  Passed Macula.Tests.UcanTests.Policy_required_refuses_a_missing_or_malformed_audience_or_caller [1 ms]
+  Passed Macula.Tests.UcanTests.Cross_language_token_from_go_sdk_verifies_here [3 ms]
+  Passed Macula.Tests.UcanTests.Verify_rejects_an_expired_token [17 ms]
+  Passed Macula.Tests.UcanTests.Policy_required_refuses_a_token_for_another_audience [< 1 ms]
+[xUnit.net 00:00:00.75]   Finished:    Macula.Tests
+  Passed Macula.Tests.UcanTests.Verify_rejects_a_tampered_signature [7 ms]
+  Passed Macula.Tests.UcanTests.Verify_rejects_the_wrong_signer [5 ms]
+  Passed Macula.Tests.UcanTests.Policy_gated_rejects_a_token_from_a_different_issuer [17 ms]
+
+Test Run Successful.
+Total tests: 21
+     Passed: 21
+ Total time: 1.0646 Seconds

@@ -1,0 +1,19 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.17]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.19]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.29]   Finished:    Macula.Tests
+  Passed Macula.Tests.ServeCallerTests.An_inbound_call_threads_its_caller_into_the_payload [38 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_accepts_a_token_from_its_audience [27 ms]
+  Passed Macula.Tests.ServeCallerTests.A_caller_the_sender_put_in_the_payload_is_replaced_by_the_verified_caller [3 ms]
+  Passed Macula.Tests.ServeCallerTests.A_non_map_payload_carries_no_caller [< 1 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_call_without_caller [2 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_token_without_audience [1 ms]
+  Passed Macula.Tests.ServeCallerTests.Build_call_reply_gated_policy_refuses_a_token_presented_by_another_caller [1 ms]
+
+Test Run Successful.
+Total tests: 7
+     Passed: 7
+ Total time: 0.6177 Seconds

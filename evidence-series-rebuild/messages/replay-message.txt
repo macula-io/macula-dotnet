@@ -1,0 +1,7 @@
+Give a CALL handler its verified caller in a map payload
+
+A map payload now reaches the handler with the caller's node id under caller, the caller the CALL's signature was verified against, replacing any caller the sender put in the payload. A payload that is not a map reaches the handler unchanged. This matches macula_station_link:with_caller/2.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01En7T4rpzV5Lt7gGjNJmPw5
+

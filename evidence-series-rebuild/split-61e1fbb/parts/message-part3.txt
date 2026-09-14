@@ -1,0 +1,15 @@
+Refuse a STREAM_OPEN not signed by its caller and let a provider refuse a stream
+
+StreamHandle.AcceptAsync checks the first frame of every inbound stream
+before anything else looks at it. A STREAM_OPEN whose signature doesn't
+verify against the caller it names (invalid_signature), one without a
+64-byte signature or a 32-byte caller (unsigned), a frame of another type
+(not_a_stream_open) or bytes that don't decode (malformed) get the stream
+aborted in both directions with code 2, with nothing written, and
+AcceptAsync waits for the next stream within its timeout. Each refusal is a
+refused_stream_open drop warning. A verified STREAM_OPEN carries its caller
+in map args, as a CALL handler's payload does. StreamHandle.RefuseAsync
+writes a STREAM_ERROR, finishes the send side and stops reading with code 2.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

@@ -1,0 +1,49 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+  Passed Macula.Tests.OpenSessionsTests.A_session_is_found_by_its_identity_and_station [40 ms]
+  Passed Macula.Tests.OpenSessionsTests.The_newest_session_per_identity_and_station_wins [< 1 ms]
+  Passed Macula.Tests.OpenSessionsTests.Closing_an_older_session_leaves_the_newer_one_registered [1 ms]
+  Passed Macula.Tests.OpenSessionsTests.A_closed_session_is_no_longer_found [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_timeout_bounds_resolution [312 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_with_cert_chain_reports_the_authorization_failure_at_its_deadline [344 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_reuses_an_open_session_to_the_station [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolve_station_endpoint_timeout_bounds_the_lookup [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_dials_a_refusing_station_once_per_endpoint_version [3 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_never_sends_the_request_twice [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_picks_up_an_endpoint_record_that_changes_mid_deadline [703 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_fetches_from_a_failing_provider_once_per_announcement [2 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_timeout_bounds_resolution [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_never_opens_the_stream_twice [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_timeout_that_is_not_positive_is_rejected [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_timeout_bounds_the_endpoint_lookup [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolve_timeout_bounds_resolution [301 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_an_advertisement_that_appears_on_a_later_pass [103 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Put_direct_timeout_bounds_the_endpoint_lookup [302 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_candidate_share_splits_what_remains_evenly_with_a_one_second_floor [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Resolution_backs_off_between_passes [3 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reports_the_last_candidate_failure_when_a_later_lookup_fails [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_dialed_session_is_closed_after_the_request_even_when_it_fails [2 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_retries_when_no_advertisement_qualifies [102 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_reuses_an_open_session_to_the_provider_station [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_the_next_advertisement_when_a_station_has_no_endpoint [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_skips_a_station_whose_endpoint_is_signed_by_another_key [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.A_reused_session_is_never_closed_by_the_request [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_the_last_candidate_failure_when_a_later_pass_finds_none [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_tries_the_next_station_when_a_dial_fails [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_retries_when_no_provider_qualifies [101 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_tries_the_next_provider_after_a_failed_fetch [1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_reuses_an_open_session_to_the_provider_station [< 1 ms]
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_reports_the_last_candidate_failure_when_a_later_lookup_fails [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Open_stream_direct_tries_the_next_station_when_a_dial_fails [1 ms]
+[xUnit.net 00:00:18.44]   Finished:    Macula.Tests
+  Passed Macula.Tests.DirectDialCandidatesTests.Call_with_cert_chain_tries_the_next_advertisement_when_a_station_has_no_endpoint [1 s]
+  Passed Macula.Tests.DirectDialCandidatesTests.Get_direct_timeout_during_a_transfer_carries_the_last_failure [1 s]
+
+Test Run Successful.
+Total tests: 37
+     Passed: 37
+ Total time: 18.7509 Seconds

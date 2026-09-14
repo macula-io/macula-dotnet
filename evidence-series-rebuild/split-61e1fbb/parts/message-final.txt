@@ -1,0 +1,7 @@
+Set version 0.5.0 and record its changes in the changelog
+
+The 0.5.0 section lists the changes on main since the 0.4.1 release branch
+left it, above the 0.4.2 and 0.4.1 sections that came in with the merge.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

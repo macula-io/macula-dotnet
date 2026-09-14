@@ -1,0 +1,13 @@
+Accept a dedicated stream reply only when signed by its responder
+
+A call on a dedicated stream, as content transfer makes, takes a RESULT or
+ERROR only when it is signed by the key its responded_by or reported_by
+names, parses, and carries the call's call_id, checked in that order. Any
+other reply is dropped and warned about as a dropped reply on the session
+the stream belongs to, and the call keeps waiting until its timeout. A
+stream a session opens or accepts carries the session's drop warnings.
+
+The two tests have macula-go's names.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

@@ -1,0 +1,24 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+  Passed Macula.Tests.EventDedupTests.Different_realm_or_publisher_or_seq_are_independently_new [3 ms]
+  Passed Macula.Tests.EventDedupTests.A_topic_containing_the_key_separator_does_not_run_into_the_pattern [< 1 ms]
+  Passed Macula.Tests.EventDedupTests.Duplicate_check_uses_byte_CONTENT_equality_not_reference_equality [< 1 ms]
+  Passed Macula.Tests.EventDedupTests.The_same_event_for_two_different_patterns_is_new_for_each [< 1 ms]
+  Passed Macula.Tests.StationPoolReaderTests.Call_falls_through_to_next_connected_link [55 ms]
+  Passed Macula.Tests.EventDedupTests.Sweep_removes_only_entries_older_than_the_window [122 ms]
+  Passed Macula.Tests.EventDedupTests.Same_realm_publisher_and_seq_on_two_DIFFERENT_topics_are_both_new [< 1 ms]
+  Passed Macula.Tests.EventDedupTests.First_sighting_of_a_key_is_new [< 1 ms]
+[xUnit.net 00:00:01.21]   Finished:    Macula.Tests
+  Passed Macula.Tests.EventDedupTests.Repeating_the_exact_same_key_is_a_duplicate [< 1 ms]
+  Passed Macula.Tests.StationPoolReaderTests.A_wildcard_subscription_through_the_pool_receives_matching_events [422 ms]
+  Passed Macula.Tests.StationPoolReaderTests.A_pool_call_that_timed_out_after_its_write_started_is_not_tried_on_another_link [407 ms]
+  Passed Macula.Tests.StationPoolReaderTests.An_overflowed_subscription_is_replaced_before_it_is_closed [113 ms]
+
+Test Run Successful.
+Total tests: 12
+     Passed: 12
+ Total time: 1.5149 Seconds

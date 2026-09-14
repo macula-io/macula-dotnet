@@ -1,0 +1,9 @@
+Drop an inbound CALL whose ucan_token has the wrong type and serve the next
+
+CallFrameParsing.ParseCall now throws ParseFrameException for a ucan_token
+that is neither bytes, text nor null, so the reader drops the CALL as
+malformed and serving goes on. Value.AsBytes used to throw
+InvalidOperationException there, which ended the session.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

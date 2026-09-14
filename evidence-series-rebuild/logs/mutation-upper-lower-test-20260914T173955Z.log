@@ -1,0 +1,27 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.53]     Macula.Tests.DropWarningsTests.A_single_drop_logs_only_the_immediate_line [FAIL]
+[xUnit.net 00:00:00.53]       Assert.Contains() Failure: Sub-string not found
+[xUnit.net 00:00:00.53]       String:    "macula: kind=dropped_reply count=1 reason"···
+[xUnit.net 00:00:00.53]       Not found: "kind=dropped_reply count=1 reason=unknown"···
+[xUnit.net 00:00:00.53]       Stack Trace:
+[xUnit.net 00:00:00.53]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/DropWarningsTests.cs(57,0): at Macula.Tests.DropWarningsTests.A_single_drop_logs_only_the_immediate_line()
+[xUnit.net 00:00:00.53]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.54]   Finished:    Macula.Tests
+  Failed Macula.Tests.DropWarningsTests.A_single_drop_logs_only_the_immediate_line [315 ms]
+  Error Message:
+   Assert.Contains() Failure: Sub-string not found
+String:    "macula: kind=dropped_reply count=1 reason"···
+Not found: "kind=dropped_reply count=1 reason=unknown"···
+  Stack Trace:
+     at Macula.Tests.DropWarningsTests.A_single_drop_logs_only_the_immediate_line() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/DropWarningsTests.cs:line 57
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 1
+     Failed: 1
+ Total time: 0.8577 Seconds

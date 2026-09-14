@@ -1,0 +1,33 @@
+diff --git a/src/Macula/Connection/Session.cs b/src/Macula/Connection/Session.cs
+index 1f52eea..27529e1 100644
+--- a/src/Macula/Connection/Session.cs
++++ b/src/Macula/Connection/Session.cs
+@@ -80,10 +80,27 @@ public sealed class Session : IAsyncDisposable, IFrameSink
+     /// How many frames of each type the station sent that nothing on this
+     /// session was waiting for, such as the station's own advertise
+     /// broadcasts. They are dropped, and at most one trace line per type per
+-    /// minute reports them.
++    /// minute reports them, except a dropped CALL, RESULT or ERROR, which gets
++    /// a drop warning instead (see <see cref="DropWarningInterval"/>).
+     /// </summary>
+     public IReadOnlyDictionary<string, long> UnroutedFrameCounts => _channel.UnroutedFrames;
+ 
++    /// <summary>
++    /// How long this session's drop warning intervals last. The first inbound
++    /// CALL or reply of an interval this session drops, and the first stream
++    /// it refuses, is traced at once with the reason; the rest of the same kind
++    /// in that interval are counted into one closing line when it ends.
++    /// Defaults to 60 seconds; a change applies to the intervals that start
++    /// after it.
++    /// </summary>
++    public TimeSpan DropWarningInterval
++    {
++        get => _channel.DropWarnings.Interval;
++        set => _channel.DropWarnings.Interval = value;
++    }
++
++    internal DropWarnings DropWarnings => _channel.DropWarnings;
++
+     /// <summary>Completes with the reason once this session's control stream has ended.</summary>
+     internal Task<Exception> Ended => _channel.Ended;
+ 

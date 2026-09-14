@@ -1,0 +1,15 @@
+Trace dropped CALLs and replies as bounded drop warnings
+
+A session traces a dropped inbound CALL and a RESULT or ERROR for no pending
+call with one bounded warning per kind: a line at once, and one closing line
+with the rest counted when the interval ends (Session.DropWarningInterval,
+60 seconds by default). The kinds, reasons and fields follow the shared
+drop warning rule: unsigned for a signature that is missing or not 64 bytes
+or a caller that is not a 32-byte key, invalid_signature for one that fails,
+and the procedure cut to 256 bytes with its control characters escaped so a
+warning stays on one line, or the call_id's first 4 bytes. A frame that
+doesn't decode ends a session with MalformedFrameException. The trace
+listener the tests share moves to its own file.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

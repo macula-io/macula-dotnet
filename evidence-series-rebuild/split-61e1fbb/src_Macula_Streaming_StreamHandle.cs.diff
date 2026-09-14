@@ -1,0 +1,132 @@
+diff --git a/src/Macula/Streaming/StreamHandle.cs b/src/Macula/Streaming/StreamHandle.cs
+index 8a4e962..c353e69 100644
+--- a/src/Macula/Streaming/StreamHandle.cs
++++ b/src/Macula/Streaming/StreamHandle.cs
+@@ -89,26 +89,89 @@ public sealed class StreamHandle
+     /// procedure. Returns the ready-to-use handle alongside the parsed
+     /// <see cref="StreamOpenInfo"/> (check its Procedure if this session
+     /// advertised more than one).
++    ///
++    /// The app decides whether to serve a stream it accepts. One it refuses
++    /// should get a STREAM_ERROR with macula's codes, "unauthorized" when the
++    /// caller may not use the procedure and "not_found" for a procedure it
++    /// doesn't serve, sent with <see cref="RefuseAsync"/>, so a caller sees the
++    /// same refusal from every stack.
+     /// </summary>
+     public static async Task<(StreamHandle Handle, StreamOpenInfo Info)> AcceptAsync(Session session, TimeSpan timeout, CancellationToken ct = default)
+     {
+         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+         timeoutCts.CancelAfter(timeout);
+-
+-        FrameStream stream;
+         try
+         {
+-            stream = await session.AcceptDedicatedStreamAsync(timeoutCts.Token).ConfigureAwait(false);
++            while (true)
++            {
++                var stream = await session.AcceptDedicatedStreamAsync(timeoutCts.Token).ConfigureAwait(false);
++                var inbound = await OpenInboundAsync(stream, timeoutCts.Token).ConfigureAwait(false);
++                if (inbound.Opened is { } opened)
++                {
++                    return opened;
++                }
++                session.DropWarnings.Record(DropKind.RefusedStreamOpen, inbound.Reason, inbound.Subject);
++            }
+         }
+         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+         {
+             throw new TimeoutException("no inbound stream within the given timeout");
+         }
++    }
++
++    /// <summary>
++    /// The application error code a refused inbound stream is aborted with,
++    /// in both directions. The same code in every Macula stack.
++    /// </summary>
++    public const long RefusedStreamCode = 2;
+ 
+-        var first = await stream.RecvFrameAsync(ct).ConfigureAwait(false);
+-        var open = StreamOpenFrameParsing.Parse(first);
+-        var handle = new StreamHandle(stream, open.StreamId, open.Mode);
+-        return (handle, open);
++    /// <summary>What an inbound dedicated stream came to: opened, or refused with a reason and subject field.</summary>
++    internal readonly record struct Inbound((StreamHandle Handle, StreamOpenInfo Info)? Opened, DropReason Reason, string Subject);
++
++    /// <summary>
++    /// Opens <paramref name="stream"/>, an inbound dedicated stream, when its
++    /// first frame is a STREAM_OPEN signed by the caller it names, with that
++    /// caller in map args as a CALL handler gets it. Any other first frame
++    /// gets the stream refused before anything else looks at it: both
++    /// directions are aborted with <see cref="RefusedStreamCode"/> and nothing
++    /// is written, as macula does.
++    /// </summary>
++    internal static async Task<Inbound> OpenInboundAsync(FrameStream stream, CancellationToken ct)
++    {
++        Value first;
++        try
++        {
++            first = await stream.RecvFrameAsync(ct).ConfigureAwait(false);
++        }
++        catch (Exception e) when (e is Cbor.CborDecodeException or FrameTooLargeException)
++        {
++            return await RefuseAsync(stream, DropReason.Malformed, "").ConfigureAwait(false);
++        }
++        if (first is not Value.MapValue map || map.Get("frame_type") is not Value.TextValue type || type.AsText() != "stream_open")
++        {
++            return await RefuseAsync(stream, DropReason.NotAStreamOpen, "").ConfigureAwait(false);
++        }
++        if (DropWarnings.CallerCheck(map) is { } unsigned)
++        {
++            return await RefuseAsync(stream, unsigned, DropWarnings.ProcedureField(map)).ConfigureAwait(false);
++        }
++        StreamOpenInfo open;
++        try
++        {
++            open = StreamOpenFrameParsing.Parse(map);
++        }
++        catch (ParseFrameException)
++        {
++            return await RefuseAsync(stream, DropReason.Malformed, DropWarnings.ProcedureField(map)).ConfigureAwait(false);
++        }
++        open = open with { Args = Session.WithCaller(open.Args, open.Caller) };
++        return new Inbound((new StreamHandle(stream, open.StreamId, open.Mode), open), default, "");
++    }
++
++    private static async Task<Inbound> RefuseAsync(FrameStream stream, DropReason reason, string subject)
++    {
++        await stream.AbortBothAsync(RefusedStreamCode).ConfigureAwait(false);
++        return new Inbound(null, reason, subject);
+     }
+ 
+     /// <summary>
+@@ -226,6 +289,30 @@ public sealed class StreamHandle
+     /// aborting -- the only signal the peer gets to distinguish a
+     /// cancellation/failure from a dropped connection. Best-effort.
+     /// </summary>
++    /// <summary>
++    /// Refuses a stream this provider accepted and won't serve: writes a
++    /// STREAM_ERROR with <paramref name="code"/> and
++    /// <paramref name="message"/>, macula's "unauthorized" or "not_found",
++    /// then finishes the send side so the error reaches the caller and stops
++    /// reading with <see cref="RefusedStreamCode"/>. When the STREAM_ERROR
++    /// can't be written, the stream is aborted in both directions with
++    /// <see cref="RefusedStreamCode"/> instead, and the failure is thrown.
++    /// </summary>
++    public async Task RefuseAsync(string code, string message, KeyPair identity, CancellationToken ct = default)
++    {
++        var spec = new StreamErrorSpec { StreamId = StreamId, Code = code, Message = message, Signer = identity.NodeId() };
++        try
++        {
++            await _stream.SendFrameAsync(Envelope.Sign(StreamErrorFrame.Build(spec), identity), ct).ConfigureAwait(false);
++        }
++        catch (Exception)
++        {
++            await _stream.AbortBothAsync(RefusedStreamCode).ConfigureAwait(false);
++            throw;
++        }
++        await _stream.FinishAndStopReadingAsync(RefusedStreamCode).ConfigureAwait(false);
++    }
++
+     public async Task AbortAsync(string code, string message, KeyPair identity, CancellationToken ct = default)
+     {
+         var spec = new StreamErrorSpec { StreamId = StreamId, Code = code, Message = message, Signer = identity.NodeId() };

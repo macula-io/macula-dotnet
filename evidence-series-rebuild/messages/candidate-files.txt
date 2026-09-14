@@ -1,0 +1,10 @@
+CHANGELOG.md
+src/Macula/Cbor/CborCodec.cs
+src/Macula/Content/ContentTransfer.cs
+src/Macula/Content/Manifest.cs
+src/Macula/Frame/WireCodec.cs
+src/Macula/Macula.csproj
+tests/Macula.Tests/CborCodecTests.cs
+tests/Macula.Tests/ContentAssembleTests.cs
+tests/Macula.Tests/FrameGoldenVectorTests.cs
+tests/Macula.Tests/ManifestTests.cs

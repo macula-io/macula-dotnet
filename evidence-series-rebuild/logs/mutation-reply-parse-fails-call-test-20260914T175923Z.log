@@ -1,0 +1,25 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.09]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.18]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.20]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.30]     Macula.Tests.SessionReaderTests.A_signed_reply_that_does_not_parse_leaves_the_call_pending [FAIL]
+[xUnit.net 00:00:00.30]       System.IO.IOException : the reply did not parse
+[xUnit.net 00:00:00.30]       Stack Trace:
+[xUnit.net 00:00:00.30]         /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/src/Macula/Connection/ControlChannel.cs(244,0): at Macula.Connection.ControlChannel.CallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct, MapValue afterWritten)
+[xUnit.net 00:00:00.30]         /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs(598,0): at Macula.Tests.SessionReaderTests.A_signed_reply_that_does_not_parse_leaves_the_call_pending()
+[xUnit.net 00:00:00.30]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.31]   Finished:    Macula.Tests
+  Failed Macula.Tests.SessionReaderTests.A_signed_reply_that_does_not_parse_leaves_the_call_pending [71 ms]
+  Error Message:
+   System.IO.IOException : the reply did not parse
+  Stack Trace:
+     at Macula.Connection.ControlChannel.CallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct, MapValue afterWritten) in /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/src/Macula/Connection/ControlChannel.cs:line 244
+   at Macula.Tests.SessionReaderTests.A_signed_reply_that_does_not_parse_leaves_the_call_pending() in /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs:line 598
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 1
+     Failed: 1
+ Total time: 0.6774 Seconds

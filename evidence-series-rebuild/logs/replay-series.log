@@ -1,0 +1,31 @@
+9349dc9 Try each direct-dial provider in turn within the call's timeout
+  d1f67da: Total tests: 33  Passed: 33
+617456f Bind UCAN-gated calls to the caller that signed them
+  ddb3e29: Total tests: 21  Passed: 21
+b5aedf3 Report the last candidate failure when a later pass finds none
+  cdff56a: Total tests: 28  Passed: 28
+bcb6841 Reuse an open session for stream and content direct dial
+  cbbf756: Total tests: 37  Passed: 37
+2bbdaff Report what a direct-dial call observed when it runs out of time
+  080b424: Total tests: 48  Passed: 48
+6909eed Share a dialed session between the direct-dial requests that reuse it
+  99372c6: Total tests: 52  Passed: 52
+aad61f0 Read each session's control stream with one reader that routes every frame
+  f1f0c35: Total tests: 18  Passed: 18
+278f9b8 Pair RPC telemetry facts by publisher and request_id in the live test
+  0f90ac8: No test matches the given testcase filter `(FullyQualifiedName~Macula.Tests.RpcFactsTests)&Category!=Live` in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll
+9f791f4 Bound every write on a session and keep the reader clear of writes
+  4bb2283: Total tests: 22  Passed: 22
+f7aaee4 End a session cleanly and retry pool calls only when they were not sent
+  7ec12f4: Total tests: 27  Passed: 27
+079dc5c Deliver pool events to wildcard subscriptions
+  80202e6: Total tests: 12  Passed: 12
+a7d3f88 Run direct calls on an open session and retry a call that was not sent
+  b48ba67: Total tests: 57  Passed: 57
+ba8bdb6 Report every session end once with its reason
+  c4875ae+7ff3e6e: Total tests: 25  Passed: 25
+bcc6b5f Ask again past a station_endpoint record that names no dialable address
+  20c5611: Total tests: 59  Passed: 59
+1f54d58 Give a CALL handler its verified caller in a map payload
+  7878e91: Total tests: 7  Passed: 7
+REPLAY COMPLETE at 1f54d58

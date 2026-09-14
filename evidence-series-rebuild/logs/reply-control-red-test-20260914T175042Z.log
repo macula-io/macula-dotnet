@@ -1,0 +1,90 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.72]     Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending [FAIL]
+[xUnit.net 00:00:00.72]       Assert.IsType() Failure: Value is not the exact type
+[xUnit.net 00:00:00.72]       Expected: typeof(Macula.Frame.CallResponse+Result)
+[xUnit.net 00:00:00.72]       Actual:   typeof(Macula.Frame.CallResponse+Error)
+[xUnit.net 00:00:00.72]       Stack Trace:
+[xUnit.net 00:00:00.72]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FakeStation.cs(72,0): at Macula.Tests.FakeStation.ReplyText(CallResponse response)
+[xUnit.net 00:00:00.72]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs(579,0): at Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending()
+[xUnit.net 00:00:00.72]         --- End of stack trace from previous location ---
+  Passed Macula.Tests.SessionReaderTests.The_reader_keeps_delivering_while_a_write_is_stalled [87 ms]
+  Passed Macula.Tests.SessionReaderTests.An_unsigned_inbound_call_is_dropped [10 ms]
+  Passed Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events [406 ms]
+  Failed Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending [7 ms]
+  Error Message:
+   Assert.IsType() Failure: Value is not the exact type
+Expected: typeof(Macula.Frame.CallResponse+Result)
+Actual:   typeof(Macula.Frame.CallResponse+Error)
+  Stack Trace:
+     at Macula.Tests.FakeStation.ReplyText(CallResponse response) in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/FakeStation.cs:line 72
+   at Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs:line 579
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.SessionReaderTests.A_queued_call_past_its_deadline_is_still_served [4 ms]
+  Passed Macula.Tests.SessionReaderTests.Concurrent_calls_on_one_session_each_get_their_own_reply [16 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_that_cannot_get_the_write_lock_in_time_times_out_and_the_session_stays_up [106 ms]
+  Passed Macula.Tests.SessionReaderTests.An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served [3 ms]
+  Passed Macula.Tests.SessionReaderTests.A_session_end_is_logged_once_with_its_reason [9 ms]
+[xUnit.net 00:00:00.87]     Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_is_warned_about_as_a_dropped_reply [FAIL]
+[xUnit.net 00:00:00.87]       Assert.Contains() Failure: Filter not matched in collection
+[xUnit.net 00:00:00.87]       Collection: []
+[xUnit.net 00:00:00.87]       Stack Trace:
+[xUnit.net 00:00:00.87]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs(598,0): at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_is_warned_about_as_a_dropped_reply()
+[xUnit.net 00:00:00.87]         --- End of stack trace from previous location ---
+  Failed Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_is_warned_about_as_a_dropped_reply [3 ms]
+  Error Message:
+   Assert.Contains() Failure: Filter not matched in collection
+Collection: []
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_is_warned_about_as_a_dropped_reply() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs:line 598
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies [11 ms]
+  Passed Macula.Tests.SessionReaderTests.A_hello_after_the_handshake_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_session_whose_connection_ends_is_no_longer_found_for_reuse [4 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_timing_out_while_its_frame_is_being_written_reports_it_may_have_been_sent [103 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_on_a_session_that_has_ended_reports_it_was_not_sent [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_write_stalled_past_the_send_timeout_ends_the_session [203 ms]
+  Passed Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment [203 ms]
+  Passed Macula.Tests.SessionReaderTests.An_inbound_call_not_signed_by_its_caller_is_dropped [7 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up [11 ms]
+  Passed Macula.Tests.SessionReaderTests.Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown [15 ms]
+  Passed Macula.Tests.SessionReaderTests.An_oversize_frame_type_is_counted_as_unknown [5 ms]
+  Passed Macula.Tests.SessionReaderTests.A_frame_that_cannot_be_decoded_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowing_call_queue_answers_the_extra_call_and_keeps_serving [39 ms]
+  Passed Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber [3 ms]
+  Passed Macula.Tests.SessionReaderTests.Closing_the_last_subscription_for_a_topic_unsubscribes [3 ms]
+[xUnit.net 00:00:01.50]     Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending [FAIL]
+[xUnit.net 00:00:01.50]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:01.50]                  ↓ (pos 0)
+[xUnit.net 00:00:01.50]       Expected: "genuine"
+[xUnit.net 00:00:01.50]       Actual:   "forged"
+[xUnit.net 00:00:01.50]                  ↑ (pos 0)
+[xUnit.net 00:00:01.50]       Stack Trace:
+[xUnit.net 00:00:01.50]         /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs(559,0): at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending()
+[xUnit.net 00:00:01.50]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:01.52]   Finished:    Macula.Tests
+  Failed Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending [3 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "genuine"
+Actual:   "forged"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending() in /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/SessionReaderTests.cs:line 559
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.SessionReaderTests.A_call_waiting_for_the_write_lock_when_the_session_ends_reports_it_was_not_sent [2 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowed_subscription_keeps_the_station_subscribed_until_it_is_closed [11 ms]
+  Passed Macula.Tests.SessionReaderTests.Serving_a_call_while_calling_on_the_same_session [3 ms]
+
+Test Run Failed.
+Total tests: 31
+     Passed: 28
+     Failed: 3
+ Total time: 1.8257 Seconds

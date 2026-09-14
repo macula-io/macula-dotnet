@@ -1,0 +1,14 @@
+Complete a call only with a reply signed by its responder
+
+A RESULT or ERROR on the control stream completes its call only when it is
+signed by the key its responded_by or reported_by names, parses with a
+call_id, and that call_id is one a call waits for, checked in that order.
+Any other reply is dropped, counted as unrouted and warned about as a
+dropped reply with its reason, and the call keeps waiting. A signed reply
+for a waiting call that does not parse no longer fails the call.
+
+The fake station in the tests signs its replies with its own key. The two
+tests for replies that do not verify have macula-go's names.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

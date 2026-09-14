@@ -1,0 +1,37 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 5aab0cc..5491b2b 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -15,6 +15,32 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
+   the CALL's signature was verified against, replacing any `"caller"` the
+   sender put in the payload. A payload that isn't a map reaches the
+   handler unchanged and carries no caller.
++- **Breaking: `StreamHandle.AcceptAsync` refuses a STREAM_OPEN not signed by
++  its caller.** Stream handlers previously received the STREAM_OPEN's caller
++  field unverified; upgrade if a stream handler relies on it. A stream whose
++  first frame doesn't verify against the caller it names, has no signature
++  or caller, is of another type, or doesn't decode is aborted in both
++  directions with application error code 2
++  (`StreamHandle.RefusedStreamCode`), with nothing written, and
++  `AcceptAsync` waits for the next stream within its timeout. A provider
++  that accepts a stream and won't serve it refuses it with
++  `StreamHandle.RefuseAsync`, which writes a STREAM_ERROR, finishes the
++  send side and stops reading with code 2.
++- **A frame that doesn't decode ends a session with
++  `MalformedFrameException`**, where it used to end with a plain
++  `IOException`.
++- **An inbound CALL with a wrongly typed `ucan_token` is dropped as
++  malformed**, and serving goes on. It used to end the session.
++- **A stream handler receives its caller.** Map args of an accepted
++  STREAM_OPEN carry the verified caller under `"caller"`, replacing any
++  `"caller"` the opener put there, as a CALL handler's payload does.
++- **Drop warnings.** A session traces a dropped CALL (`dropped_call`), a
++  RESULT or ERROR for no pending call (`dropped_reply`) and a refused
++  stream (`refused_stream_open`) with its `count`, `reason`, and
++  `procedure` or `call_id`. The first of a kind in an interval is traced at
++  once, and the rest are counted into one closing line when the interval
++  ends. `Session.DropWarningInterval` sets the interval, 60 seconds by
++  default.
+ - **Direct dial tries every authorized provider.** `DirectDial.CallAsync`,
+   `CallWithUcanAsync`, `CallWithCertChainAsync`, `OpenStreamDirectAsync`,
+   `OpenStreamDirectWithCertChainAsync` and `GetDirectAsync` try each

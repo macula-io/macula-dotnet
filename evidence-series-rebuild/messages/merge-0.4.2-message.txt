@@ -1,0 +1,8 @@
+Merge the 0.4.1 release and the 0.4.2 fixes into main
+
+The 0.4.1 release branch never came back to main. Merging the 0.4.2
+candidate, which is built on it, puts both versions in main's history and
+gives main its changelog.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_012autaf2dnckUJ3RakEBrot

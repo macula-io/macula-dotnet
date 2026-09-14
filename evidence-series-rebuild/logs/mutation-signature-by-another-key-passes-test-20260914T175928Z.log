@@ -1,0 +1,50 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.08]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.16]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.27]     Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending [FAIL]
+[xUnit.net 00:00:00.27]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.27]                  ↓ (pos 0)
+[xUnit.net 00:00:00.27]       Expected: "genuine"
+[xUnit.net 00:00:00.27]       Actual:   "forged"
+[xUnit.net 00:00:00.27]                  ↑ (pos 0)
+[xUnit.net 00:00:00.27]       Stack Trace:
+[xUnit.net 00:00:00.27]         /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs(580,0): at Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending()
+[xUnit.net 00:00:00.27]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.28]     Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending [FAIL]
+[xUnit.net 00:00:00.28]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.28]                  ↓ (pos 0)
+[xUnit.net 00:00:00.28]       Expected: "genuine"
+[xUnit.net 00:00:00.28]       Actual:   "forged"
+[xUnit.net 00:00:00.28]                  ↑ (pos 0)
+[xUnit.net 00:00:00.28]       Stack Trace:
+[xUnit.net 00:00:00.28]         /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs(559,0): at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending()
+[xUnit.net 00:00:00.28]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.28]   Finished:    Macula.Tests
+  Failed Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending [63 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "genuine"
+Actual:   "forged"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.An_error_that_does_not_verify_leaves_the_call_pending() in /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs:line 580
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending [3 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "genuine"
+Actual:   "forged"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.SessionReaderTests.A_result_that_does_not_verify_leaves_the_call_pending() in /home/rl/work/worktrees/macula-dotnet/uranus-rebuild-guard/tests/Macula.Tests/SessionReaderTests.cs:line 559
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 2
+     Failed: 2
+ Total time: 0.6067 Seconds

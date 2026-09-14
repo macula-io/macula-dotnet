@@ -1,0 +1,66 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-series-rebuild/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+  Passed Macula.Tests.FrameGoldenVectorTests.Error_frame_matches_the_reference_byte_for_byte [26 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.PublisherSig_matches_the_erlang_reference [13 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Event_frame_matches_the_reference_byte_for_byte [2 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Result_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_msgpack_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_end_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 2147483648) [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 4294967295) [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Verify_rejects_a_tampered_field [3 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Unsubscribe_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_over_the_cap [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Verify_rejects_a_missing_signature [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_error_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Publish_frame_with_both_signatures_round_trips [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_end_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Unadvertise_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Publish_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Parse_stream_open_round_trips_a_well_formed_frame [3 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Advertise_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Connect_frame_matches_the_reference_byte_for_byte [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Call_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_reply_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_open_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Subscribe_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_reports_more_for_a_short_buffer [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_error_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_raw_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.SessionReaderTests.The_reader_keeps_delivering_while_a_write_is_stalled [69 ms]
+  Passed Macula.Tests.SessionReaderTests.An_unsigned_inbound_call_is_dropped [6 ms]
+  Passed Macula.Tests.SessionReaderTests.Two_subscribers_with_different_topics_each_get_only_their_events [407 ms]
+  Passed Macula.Tests.SessionReaderTests.A_queued_call_past_its_deadline_is_still_served [4 ms]
+  Passed Macula.Tests.SessionReaderTests.Concurrent_calls_on_one_session_each_get_their_own_reply [17 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_that_cannot_get_the_write_lock_in_time_times_out_and_the_session_stays_up [104 ms]
+  Passed Macula.Tests.SessionReaderTests.An_inbound_call_with_a_wrongly_typed_field_is_dropped_and_the_next_one_served [3 ms]
+  Passed Macula.Tests.SessionReaderTests.A_session_end_is_logged_once_with_its_reason [8 ms]
+  Passed Macula.Tests.SessionReaderTests.A_stalled_event_consumer_does_not_stall_call_replies [18 ms]
+  Passed Macula.Tests.SessionReaderTests.A_hello_after_the_handshake_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.An_unrouted_frame_is_counted_by_type [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_session_whose_connection_ends_is_no_longer_found_for_reuse [4 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_timing_out_while_its_frame_is_being_written_reports_it_may_have_been_sent [102 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_on_a_session_that_has_ended_reports_it_was_not_sent [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_goodbye_from_the_station_fails_pending_calls_and_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.A_write_stalled_past_the_send_timeout_ends_the_session [202 ms]
+  Passed Macula.Tests.SessionReaderTests.A_wildcard_subscription_matches_exactly_one_segment [202 ms]
+  Passed Macula.Tests.SessionReaderTests.An_inbound_call_not_signed_by_its_caller_is_dropped [3 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowing_event_consumer_ends_with_an_overflow_error_and_the_session_stays_up [10 ms]
+  Passed Macula.Tests.SessionReaderTests.A_frame_that_cannot_be_decoded_ends_the_session [2 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowing_call_queue_answers_the_extra_call_and_keeps_serving [37 ms]
+  Passed Macula.Tests.SessionReaderTests.An_event_arriving_during_a_call_reaches_its_subscriber [3 ms]
+  Passed Macula.Tests.SessionReaderTests.Closing_the_last_subscription_for_a_topic_unsubscribes [3 ms]
+  Passed Macula.Tests.SessionReaderTests.A_call_waiting_for_the_write_lock_when_the_session_ends_reports_it_was_not_sent [3 ms]
+  Passed Macula.Tests.SessionReaderTests.An_overflowed_subscription_keeps_the_station_subscribed_until_it_is_closed [14 ms]
+[xUnit.net 00:00:01.46]   Finished:    Macula.Tests
+  Passed Macula.Tests.SessionReaderTests.Serving_a_call_while_calling_on_the_same_session [3 ms]
+
+Test Run Successful.
+Total tests: 54
+     Passed: 54
+ Total time: 1.7505 Seconds
