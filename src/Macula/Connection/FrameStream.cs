@@ -35,6 +35,12 @@ public sealed class FrameStream
     }
 
     /// <summary>
+    /// The warnings of the session this dedicated stream belongs to, where a
+    /// reply it drops is warned about. None for a stream of no session.
+    /// </summary>
+    internal DropWarnings? DropWarnings { get; init; }
+
+    /// <summary>
     /// How a dedicated stream ends short of a normal close, each with a code
     /// and then freed: both directions aborted, or the send side finished and
     /// the receive side stopped.
