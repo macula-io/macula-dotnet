@@ -340,4 +340,50 @@ public class CborCodecTests
         Assert.Equal(blobLength, Assert.IsType<Value.BytesValue>(value).Value.Length);
         Assert.True(allocated <= 8L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 8 times the input");
     }
+
+    /// <summary>A list of <paramref name="items"/> one-byte items: that many values, plus the list itself.</summary>
+    private static byte[] ListOfOneByteItems(int items)
+    {
+        var head = new byte[] { 0x9A, 0, 0, 0, 0 };
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(head.AsSpan(1), (uint)items);
+        return [.. head, .. new byte[items]];
+    }
+
+    [Fact]
+    public void Decode_refuses_a_value_of_more_than_max_elements_values()
+    {
+        var payload = ListOfOneByteItems(CborCodec.MaxElements);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+
+        Assert.Contains($"more than {CborCodec.MaxElements} values", ex.Message);
+    }
+
+    [Fact]
+    public void Decode_accepts_a_value_of_exactly_max_elements_values()
+    {
+        var payload = ListOfOneByteItems(CborCodec.MaxElements - 1);
+
+        var list = Assert.IsType<Value.ListValue>(CborCodec.Decode(payload));
+
+        Assert.Equal(CborCodec.MaxElements - 1, list.Items.Count);
+    }
+
+    /// <summary>
+    /// A map of MaxElements / 2 entries is one value past the budget once the
+    /// map itself counts: each key and each value counts, and so does a key
+    /// that merges into an earlier one.
+    /// </summary>
+    [Fact]
+    public void Decode_counts_a_maps_keys_and_values_against_max_elements()
+    {
+        const int entries = CborCodec.MaxElements / 2;
+        var head = new byte[] { 0xBA, 0, 0, 0, 0 };
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(head.AsSpan(1), entries);
+        byte[] payload = [.. head, .. new byte[2 * entries]];
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+
+        Assert.Contains($"more than {CborCodec.MaxElements} values", ex.Message);
+    }
 }

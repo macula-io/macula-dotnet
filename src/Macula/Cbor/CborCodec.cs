@@ -22,6 +22,14 @@ public static class CborCodec
     /// </summary>
     internal const int MaxNestingDepth = 128;
 
+    /// <summary>
+    /// How many values one decode may produce: the top-level value, every
+    /// list or map, and every list item, map key and map value, a key that
+    /// merges into an earlier one included. The same budget macula-go keeps,
+    /// so what a frame decodes to is bounded by this, not by its length.
+    /// </summary>
+    internal const int MaxElements = 1 << 20;
+
     public static byte[] Encode(Value value)
     {
         var buf = new List<byte>();
@@ -31,8 +39,8 @@ public static class CborCodec
 
     public static Value Decode(ReadOnlySpan<byte> data)
     {
-        using var hashers = new IdentityHashers();
-        var decoded = DecodeOne(data, 0, false, hashers);
+        using var state = new DecodeState();
+        var decoded = DecodeOne(data, 0, false, state);
         if (decoded.Consumed != data.Length)
         {
             throw new CborDecodeException(
@@ -168,14 +176,18 @@ public static class CborCodec
     /// Decodes the value at the start of <paramref name="data"/>, which sits
     /// <paramref name="depth"/> list or map levels below the top-level value,
     /// with its key identity when <paramref name="withIdentity"/> is set: a
-    /// map key needs one, and so does everything nested inside a key.
+    /// map key needs one, and so does everything nested inside a key. Every
+    /// value takes one from the decode's budget (<see cref="MaxElements"/>)
+    /// as it starts.
     /// </summary>
-    private static DecodedValue DecodeOne(ReadOnlySpan<byte> data, int depth, bool withIdentity, IdentityHashers hashers)
+    private static DecodedValue DecodeOne(ReadOnlySpan<byte> data, int depth, bool withIdentity, DecodeState state)
     {
         if (depth > MaxNestingDepth)
         {
             throw new CborDecodeException($"list or map nesting exceeds {MaxNestingDepth} levels");
         }
+
+        state.TakeElement();
 
         if (data.Length < 1)
         {
@@ -187,9 +199,9 @@ public static class CborCodec
         return major switch
         {
             0 or 1 => DecodeInteger(data, major, ai, withIdentity),
-            2 or 3 => DecodeString(data, major, ai, withIdentity ? hashers.At(depth) : null),
-            4 => DecodeList(data, ai, depth, withIdentity, hashers),
-            5 => DecodeMap(data, ai, depth, withIdentity, hashers),
+            2 or 3 => DecodeString(data, major, ai, withIdentity ? state.At(depth) : null),
+            4 => DecodeList(data, ai, depth, withIdentity, state),
+            5 => DecodeMap(data, ai, depth, withIdentity, state),
             6 => throw new CborDecodeException("major type 6 (tags) is not supported"),
             _ => DecodeSimple(data, ai, withIdentity),
         };
@@ -244,15 +256,15 @@ public static class CborCodec
         return new DecodedValue(value, pos + len, KeyIdentity.OfString(identity, major, content));
     }
 
-    private static DecodedValue DecodeList(ReadOnlySpan<byte> data, byte ai, int depth, bool withIdentity, IdentityHashers hashers)
+    private static DecodedValue DecodeList(ReadOnlySpan<byte> data, byte ai, int depth, bool withIdentity, DecodeState state)
     {
         int pos = 1;
         int count = ReadLength(data, ref pos, ai, 1);
-        var identity = withIdentity ? KeyIdentity.Start(hashers.At(depth), 4, (ulong)count) : null;
+        var identity = withIdentity ? KeyIdentity.Start(state.At(depth), 4, (ulong)count) : null;
         var items = new List<Value>(Math.Min(count, MaxPreallocatedItems));
         for (int i = 0; i < count; i++)
         {
-            var item = DecodeOne(data.Slice(pos), depth + 1, withIdentity, hashers);
+            var item = DecodeOne(data.Slice(pos), depth + 1, withIdentity, state);
             items.Add(item.Value);
             item.Identity.AppendTo(identity);
             pos += item.Consumed;
@@ -267,20 +279,20 @@ public static class CborCodec
     /// levels below the top-level value, so its keys and values sit one level
     /// further down.
     /// </summary>
-    private static DecodedValue DecodeMap(ReadOnlySpan<byte> data, byte ai, int depth, bool withIdentity, IdentityHashers hashers)
+    private static DecodedValue DecodeMap(ReadOnlySpan<byte> data, byte ai, int depth, bool withIdentity, DecodeState state)
     {
         int pos = 1;
         int count = ReadLength(data, ref pos, ai, 2);
         var entries = new MapEntries(Math.Min(count, MaxPreallocatedItems), withIdentity);
         for (int i = 0; i < count; i++)
         {
-            var key = DecodeOne(data.Slice(pos), depth + 1, true, hashers);
+            var key = DecodeOne(data.Slice(pos), depth + 1, true, state);
             pos += key.Consumed;
-            var value = DecodeOne(data.Slice(pos), depth + 1, withIdentity, hashers);
+            var value = DecodeOne(data.Slice(pos), depth + 1, withIdentity, state);
             pos += value.Consumed;
             entries.Put(key, value);
         }
-        return new DecodedValue(Value.Map(entries.Pairs), pos, withIdentity ? entries.Identity(hashers.At(depth)) : default);
+        return new DecodedValue(Value.Map(entries.Pairs), pos, withIdentity ? entries.Identity(state.At(depth)) : default);
     }
 
     private static DecodedValue DecodeSimple(ReadOnlySpan<byte> data, byte ai, bool withIdentity)
@@ -445,14 +457,27 @@ public static class CborCodec
     }
 
     /// <summary>
-    /// One SHA-256 hasher per nesting level, made on first use and reused. A
-    /// value finishes its identity before the next value at its level starts,
-    /// and its items sit one level down, so one hasher per level serves a
-    /// whole decode however many values need an identity.
+    /// What one decode keeps across its values: how many more values it may
+    /// produce (<see cref="MaxElements"/>), and one SHA-256 hasher per
+    /// nesting level, made on first use and reused. A value finishes its
+    /// identity before the next value at its level starts, and its items sit
+    /// one level down, so one hasher per level serves the whole decode however
+    /// many values need an identity.
     /// </summary>
-    private sealed class IdentityHashers : IDisposable
+    private sealed class DecodeState : IDisposable
     {
         private IncrementalHash?[]? _byDepth;
+        private int _valuesLeft = MaxElements;
+
+        /// <summary>Takes one value from the budget as it starts decoding, refusing the value that goes past it.</summary>
+        public void TakeElement()
+        {
+            if (_valuesLeft == 0)
+            {
+                throw new CborDecodeException($"more than {MaxElements} values");
+            }
+            _valuesLeft--;
+        }
 
         public IncrementalHash At(int depth)
         {
