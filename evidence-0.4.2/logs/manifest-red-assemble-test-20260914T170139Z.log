@@ -1,0 +1,230 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.17]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.24]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another chunk count", describes: False) [FAIL]
+[xUnit.net 00:00:00.24]       another chunk count: ArgumentNullException Value cannot be null. (Parameter 'inArray') after 4 fetches
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(179,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.24]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.25]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "a name with no UTF-8 form, for its own MCID", describes: False) [FAIL]
+[xUnit.net 00:00:00.25]       a name with no UTF-8 form, for its own MCID: assembled
+[xUnit.net 00:00:00.25]       Stack Trace:
+[xUnit.net 00:00:00.25]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(178,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.25]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.28]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another root hash", describes: False) [FAIL]
+[xUnit.net 00:00:00.28]       another root hash: ContentTransferException reassembled content failed verification: RootHashMismatch after 3 fetches
+[xUnit.net 00:00:00.28]       Stack Trace:
+[xUnit.net 00:00:00.28]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(179,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.28]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.30]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another name", describes: False) [FAIL]
+[xUnit.net 00:00:00.30]       another name: assembled
+[xUnit.net 00:00:00.30]       Stack Trace:
+[xUnit.net 00:00:00.30]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(178,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.30]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.31]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "an unknown hash algorithm", describes: False) [FAIL]
+[xUnit.net 00:00:00.31]       an unknown hash algorithm: ArgumentOutOfRangeException Specified argument was out of the range of valid values. (Parameter 'algorithm') after 3 fetches
+[xUnit.net 00:00:00.31]       Stack Trace:
+[xUnit.net 00:00:00.31]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(179,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.31]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.33]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another size", describes: False) [FAIL]
+[xUnit.net 00:00:00.33]       another size: ContentTransferException reassembled content failed verification: RootHashMismatch after 3 fetches
+[xUnit.net 00:00:00.33]       Stack Trace:
+[xUnit.net 00:00:00.33]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(179,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.33]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.60]     Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero [FAIL]
+[xUnit.net 00:00:00.60]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.60]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.60]       Actual:   typeof(System.OutOfMemoryException)
+[xUnit.net 00:00:00.60]       ---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+[xUnit.net 00:00:00.60]       Stack Trace:
+[xUnit.net 00:00:00.60]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(110,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero()
+[xUnit.net 00:00:00.60]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.60]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.60]            at System.Collections.Generic.List`1.set_Capacity(Int32 value)
+[xUnit.net 00:00:00.60]            at System.Collections.Generic.List`1.AddWithResize(T item)
+[xUnit.net 00:00:00.60]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(212,0): at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize)
+[xUnit.net 00:00:00.60]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(201,0): at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data)
+[xUnit.net 00:00:00.60]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(135,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.62]     Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256 [FAIL]
+[xUnit.net 00:00:00.62]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.62]       Expected: HashMismatch
+[xUnit.net 00:00:00.62]       Actual:   VerifyFailed
+[xUnit.net 00:00:00.62]       Stack Trace:
+[xUnit.net 00:00:00.62]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(208,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256()
+[xUnit.net 00:00:00.62]         --- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another chunk count", describes: False) [33 ms]
+  Error Message:
+   another chunk count: ArgumentNullException Value cannot be null. (Parameter 'inArray') after 4 fetches
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 179
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "a name with no UTF-8 form, for its own MCID", describes: False) [20 ms]
+  Error Message:
+   a name with no UTF-8 form, for its own MCID: assembled
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 178
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another created time, version and own mcid", describes: True) [15 ms]
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another root hash", describes: False) [17 ms]
+  Error Message:
+   another root hash: ContentTransferException reassembled content failed verification: RootHashMismatch after 3 fetches
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 179
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another name", describes: False) [15 ms]
+  Error Message:
+   another name: assembled
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 178
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "an unknown hash algorithm", describes: False) [12 ms]
+  Error Message:
+   an unknown hash algorithm: ArgumentOutOfRangeException Specified argument was out of the range of valid values. (Parameter 'algorithm') after 3 fetches
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 179
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another size", describes: False) [14 ms]
+  Error Message:
+   another size: ContentTransferException reassembled content failed verification: RootHashMismatch after 3 fetches
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 179
+--- End of stack trace from previous location ---
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero [270 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.OutOfMemoryException)
+---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 110
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.Collections.Generic.List`1.set_Capacity(Int32 value)
+   at System.Collections.Generic.List`1.AddWithResize(T item)
+   at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 212
+   at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 201
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 135
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256 [16 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: HashMismatch
+Actual:   VerifyFailed
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 208
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.63]     Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists [FAIL]
+[xUnit.net 00:00:00.63]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.63]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.63]       Actual:   typeof(System.ArgumentNullException)
+[xUnit.net 00:00:00.63]       ---- System.ArgumentNullException : Value cannot be null. (Parameter 'inArray')
+[xUnit.net 00:00:00.63]       Stack Trace:
+[xUnit.net 00:00:00.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(76,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists()
+[xUnit.net 00:00:00.63]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.63]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.63]            at System.ArgumentNullException.Throw(String paramName)
+[xUnit.net 00:00:00.63]            at System.Convert.ToHexString(Byte[] inArray)
+[xUnit.net 00:00:00.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(29,0): at Macula.Tests.ContentAssembleTests.BlockServer.FetchAsync(Byte[] mcid, CancellationToken ct)
+[xUnit.net 00:00:00.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(124,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.66]     Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold [FAIL]
+[xUnit.net 00:00:00.66]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.66]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.66]       Actual:   typeof(System.OverflowException)
+[xUnit.net 00:00:00.66]       ---- System.OverflowException : Arithmetic operation resulted in an overflow.
+[xUnit.net 00:00:00.66]       Stack Trace:
+[xUnit.net 00:00:00.66]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(93,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold()
+[xUnit.net 00:00:00.66]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.66]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.66]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(119,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.67]     Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold [FAIL]
+[xUnit.net 00:00:00.67]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.67]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.67]       Actual:   typeof(System.OverflowException)
+[xUnit.net 00:00:00.67]       ---- System.OverflowException : Arithmetic operation resulted in an overflow.
+[xUnit.net 00:00:00.67]       Stack Trace:
+[xUnit.net 00:00:00.67]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(149,0): at Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold()
+[xUnit.net 00:00:00.67]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.67]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.67]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(119,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.69]     Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says [FAIL]
+[xUnit.net 00:00:00.69]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.69]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.69]       Actual:   typeof(System.ArgumentException)
+[xUnit.net 00:00:00.69]       ---- System.ArgumentException : Destination array was not long enough. Check the destination index, length, and the array's lower bounds. (Parameter 'destinationArray')
+[xUnit.net 00:00:00.69]       Stack Trace:
+[xUnit.net 00:00:00.69]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(127,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says()
+[xUnit.net 00:00:00.69]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.69]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.69]            at System.Array.CopyImpl(Array sourceArray, Int32 sourceIndex, Array destinationArray, Int32 destinationIndex, Int32 length, Boolean reliable)
+[xUnit.net 00:00:00.69]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(129,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.72]     Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid [FAIL]
+[xUnit.net 00:00:00.72]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.72]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.72]       Stack Trace:
+[xUnit.net 00:00:00.72]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(62,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid()
+[xUnit.net 00:00:00.72]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.72]   Finished:    Macula.Tests
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists [13 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.ArgumentNullException)
+---- System.ArgumentNullException : Value cannot be null. (Parameter 'inArray')
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 76
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.ArgumentNullException.Throw(String paramName)
+   at System.Convert.ToHexString(Byte[] inArray)
+   at Macula.Tests.ContentAssembleTests.BlockServer.FetchAsync(Byte[] mcid, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 29
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 124
+  Passed Macula.Tests.ContentAssembleTests.Get_assembles_the_content_a_whole_manifest_for_its_mcid_describes [17 ms]
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold [9 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.OverflowException)
+---- System.OverflowException : Arithmetic operation resulted in an overflow.
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 93
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 119
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold [10 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.OverflowException)
+---- System.OverflowException : Arithmetic operation resulted in an overflow.
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 149
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 119
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says [19 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.ArgumentException)
+---- System.ArgumentException : Destination array was not long enough. Check the destination index, length, and the array's lower bounds. (Parameter 'destinationArray')
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 127
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.Array.CopyImpl(Array sourceArray, Int32 sourceIndex, Array destinationArray, Int32 destinationIndex, Int32 length, Boolean reliable)
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 129
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid [26 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 62
+--- End of stack trace from previous location ---
+
+Test Run Failed.
+Total tests: 15
+     Passed: 2
+     Failed: 13
+ Total time: 1.0278 Seconds

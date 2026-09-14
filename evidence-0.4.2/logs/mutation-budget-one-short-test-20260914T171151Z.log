@@ -1,0 +1,38 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.29]     Macula.Tests.CborCodecTests.Decode_accepts_a_value_of_exactly_max_elements_values [FAIL]
+[xUnit.net 00:00:00.29]       Macula.Cbor.CborDecodeException : more than 1048576 values
+[xUnit.net 00:00:00.29]       Stack Trace:
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs(477,0): at Macula.Cbor.CborCodec.DecodeState.TakeElement()
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs(190,0): at Macula.Cbor.CborCodec.DecodeOne(ReadOnlySpan`1 data, Int32 depth, Boolean withIdentity, DecodeState state)
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs(267,0): at Macula.Cbor.CborCodec.DecodeList(ReadOnlySpan`1 data, Byte ai, Int32 depth, Boolean withIdentity, DecodeState state)
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs(203,0): at Macula.Cbor.CborCodec.DecodeOne(ReadOnlySpan`1 data, Int32 depth, Boolean withIdentity, DecodeState state)
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs(43,0): at Macula.Cbor.CborCodec.Decode(ReadOnlySpan`1 data)
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(367,0): at Macula.Tests.CborCodecTests.Decode_accepts_a_value_of_exactly_max_elements_values()
+[xUnit.net 00:00:00.29]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.29]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.74]   Finished:    Macula.Tests
+  Failed Macula.Tests.CborCodecTests.Decode_accepts_a_value_of_exactly_max_elements_values [97 ms]
+  Error Message:
+   Macula.Cbor.CborDecodeException : more than 1048576 values
+  Stack Trace:
+     at Macula.Cbor.CborCodec.DecodeState.TakeElement() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs:line 477
+   at Macula.Cbor.CborCodec.DecodeOne(ReadOnlySpan`1 data, Int32 depth, Boolean withIdentity, DecodeState state) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs:line 190
+   at Macula.Cbor.CborCodec.DecodeList(ReadOnlySpan`1 data, Byte ai, Int32 depth, Boolean withIdentity, DecodeState state) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs:line 267
+   at Macula.Cbor.CborCodec.DecodeOne(ReadOnlySpan`1 data, Int32 depth, Boolean withIdentity, DecodeState state) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs:line 203
+   at Macula.Cbor.CborCodec.Decode(ReadOnlySpan`1 data) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Cbor/CborCodec.cs:line 43
+   at Macula.Tests.CborCodecTests.Decode_accepts_a_value_of_exactly_max_elements_values() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 367
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Passed Macula.Tests.CborCodecTests.Decode_counts_a_maps_keys_and_values_against_max_elements [330 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_refuses_a_value_of_more_than_max_elements_values [124 ms]
+
+Test Run Failed.
+Total tests: 3
+     Passed: 2
+     Failed: 1
+ Total time: 1.0651 Seconds

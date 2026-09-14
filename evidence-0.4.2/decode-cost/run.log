@@ -1,0 +1,6 @@
+list of 1-byte uints                       input   1048581 B  allocated   32.0 B/B (  32.0 B/element)  held   32.0 B/B (  32.0 B/element)
+list of empty lists                        input   1048581 B  allocated   56.0 B/B (  56.0 B/element)  held   56.0 B/B (  56.0 B/element)
+list of empty maps                         input   1048581 B  allocated  144.0 B/B ( 144.0 B/element)  held   64.0 B/B (  64.0 B/element)
+list of 1-byte byte strings                input   2097157 B  allocated   32.0 B/B (  64.0 B/element)  held   32.0 B/B (  64.0 B/element)
+map of 5-byte uint keys to 1-byte uints    input   6291461 B  allocated   33.3 B/B ( 199.9 B/element)  held   10.7 B/B (  64.0 B/element)
+map of 4-byte text keys to 1-byte uints    input   5242885 B  allocated   44.8 B/B ( 223.9 B/element)  held   19.2 B/B (  96.0 B/element)

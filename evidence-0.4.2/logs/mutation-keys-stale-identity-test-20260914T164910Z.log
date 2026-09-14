@@ -1,0 +1,31 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a map whose own duplicate leaves it equal to anoth"···, hex: "A2A2616101616102 01 A1616102 02", entries: 1) [FAIL]
+[xUnit.net 00:00:00.20]       a map whose own duplicate leaves it equal to another: decoded 2 entries, want 1
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.21]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(309,0): at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries)
+[xUnit.net 00:00:00.21]            at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+[xUnit.net 00:00:00.21]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.21]   Finished:    Macula.Tests
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "lists with their elements in another order", hex: "A2 820102 01 820201 02", entries: 2) [8 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a uint and the equal float", hex: "A2 01 01 FB3FF0000000000000 02", entries: 2) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "the same uint with a non-minimal head", hex: "A2 1801 01 01 02", entries: 1) [< 1 ms]
+  Failed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a map whose own duplicate leaves it equal to anoth"···, hex: "A2A2616101616102 01 A1616102 02", entries: 1) [1 ms]
+  Error Message:
+   a map whose own duplicate leaves it equal to another: decoded 2 entries, want 1
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 309
+   at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "bytes and text with the same content", hex: "A2 4161 01 6161 02", entries: 2) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "maps with the same entries in another wire order", hex: "A2A2616101616202 01 A2616202616101 02", entries: 1) [< 1 ms]
+
+Test Run Failed.
+Total tests: 6
+     Passed: 5
+     Failed: 1
+ Total time: 0.5389 Seconds

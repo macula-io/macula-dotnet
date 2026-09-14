@@ -1,0 +1,92 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.19]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a list claiming 2^64-1 items", hex: "9BFFFFFFFFFFFFFFFF") [FAIL]
+[xUnit.net 00:00:00.19]       a list claiming 2^64-1 items: threw ArgumentOutOfRangeException, want CborDecodeException
+[xUnit.net 00:00:00.19]       Stack Trace:
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "text claiming 2^32 bytes", hex: "7B0000000100000000") [FAIL]
+[xUnit.net 00:00:00.20]       text claiming 2^32 bytes: threw nothing, want CborDecodeException
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a map claiming 2^31 entries", hex: "BA80000000") [FAIL]
+[xUnit.net 00:00:00.20]       a map claiming 2^31 entries: threw ArgumentOutOfRangeException, want CborDecodeException
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a map claiming 2^64-1 entries", hex: "BBFFFFFFFFFFFFFFFF") [FAIL]
+[xUnit.net 00:00:00.20]       a map claiming 2^64-1 entries: threw ArgumentOutOfRangeException, want CborDecodeException
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a list claiming 2^31 items", hex: "9A80000000") [FAIL]
+[xUnit.net 00:00:00.20]       a list claiming 2^31 items: threw ArgumentOutOfRangeException, want CborDecodeException
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "bytes claiming 2^64-1 bytes", hex: "5BFFFFFFFFFFFFFFFF") [FAIL]
+[xUnit.net 00:00:00.20]       bytes claiming 2^64-1 bytes: threw ArgumentOutOfRangeException, want CborDecodeException
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(267,0): at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]   Finished:    Macula.Tests
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a list claiming 2^64-1 items", hex: "9BFFFFFFFFFFFFFFFF") [3 ms]
+  Error Message:
+   a list claiming 2^64-1 items: threw ArgumentOutOfRangeException, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "text claiming 2^32 bytes", hex: "7B0000000100000000") [< 1 ms]
+  Error Message:
+   text claiming 2^32 bytes: threw nothing, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a map claiming 2^31 entries", hex: "BA80000000") [< 1 ms]
+  Error Message:
+   a map claiming 2^31 entries: threw ArgumentOutOfRangeException, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a map claiming 2^64-1 entries", hex: "BBFFFFFFFFFFFFFFFF") [< 1 ms]
+  Error Message:
+   a map claiming 2^64-1 entries: threw ArgumentOutOfRangeException, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a list claiming 2^31-1 items", hex: "9A7FFFFFFF") [< 1 ms]
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "a list claiming 2^31 items", hex: "9A80000000") [< 1 ms]
+  Error Message:
+   a list claiming 2^31 items: threw ArgumentOutOfRangeException, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(claim: "bytes claiming 2^64-1 bytes", hex: "5BFFFFFFFFFFFFFFFF") [< 1 ms]
+  Error Message:
+   bytes claiming 2^64-1 bytes: threw ArgumentOutOfRangeException, want CborDecodeException
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(String claim, String hex) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 267
+   at InvokeStub_CborCodecTests.Decode_rejects_huge_claimed_count_without_panicking(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+Test Run Failed.
+Total tests: 7
+     Passed: 1
+     Failed: 6
+ Total time: 0.5246 Seconds

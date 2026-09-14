@@ -1,0 +1,424 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.15]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.18]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.23]     Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_size", value: 2147483648) [FAIL]
+[xUnit.net 00:00:00.23]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.23]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.23]       Stack Trace:
+[xUnit.net 00:00:00.23]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(186,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value)
+[xUnit.net 00:00:00.23]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.23]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "version", value: 4294967296) [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.24]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(186,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value)
+[xUnit.net 00:00:00.24]            at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_count", value: 2147483648) [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.24]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(186,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value)
+[xUnit.net 00:00:00.24]            at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.24]       Expected: "opts"
+[xUnit.net 00:00:00.24]       Actual:   null
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(314,0): at Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.98]     Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [FAIL]
+[xUnit.net 00:00:00.98]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.98]       Expected: typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.98]       Actual:   typeof(System.OutOfMemoryException)
+[xUnit.net 00:00:00.98]       ---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+[xUnit.net 00:00:00.98]       Stack Trace:
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(312,0): at Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize)
+[xUnit.net 00:00:00.98]            at InvokeStub_ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Object, Span`1)
+[xUnit.net 00:00:00.98]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.98]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.98]            at System.Collections.Generic.List`1.set_Capacity(Int32 value)
+[xUnit.net 00:00:00.98]            at System.Collections.Generic.List`1.AddWithResize(T item)
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(212,0): at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize)
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(162,0): at Macula.Content.ManifestBuilder.CreateWithCreated(Byte[] data, CreateOptions opts, UInt64 created)
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(158,0): at Macula.Content.ManifestBuilder.Create(Byte[] data, CreateOptions opts)
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(312,0): at Macula.Tests.ManifestTests.<>c__DisplayClass22_0.<Create_refuses_a_chunk_size_that_is_not_positive>b__0()
+[xUnit.net 00:00:00.98]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a gap between chunks") [FAIL]
+[xUnit.net 00:00:00.98]       a gap between chunks: accepted 
+[xUnit.net 00:00:00.98]       Stack Trace:
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.98]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.98]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.98]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk larger than the chunk size") [FAIL]
+[xUnit.net 00:00:00.98]       a chunk larger than the chunk size: accepted 
+[xUnit.net 00:00:00.98]       Stack Trace:
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.98]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.98]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.98]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk cut short before the last, with the count "···) [FAIL]
+[xUnit.net 00:00:00.98]       a chunk cut short before the last, with the count still right: accepted 
+[xUnit.net 00:00:00.98]       Stack Trace:
+[xUnit.net 00:00:00.98]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.98]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.98]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_size", value: 2147483648) [16 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 186
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "version", value: 4294967296) [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 186
+   at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_count", value: 2147483648) [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 186
+   at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Empty_data_produces_zero_chunks [8 ms]
+  Failed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+Expected: "opts"
+Actual:   null
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 314
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [742 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.ArgumentOutOfRangeException)
+Actual:   typeof(System.OutOfMemoryException)
+---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 312
+   at InvokeStub_ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+----- Inner Stack Trace -----
+   at System.Collections.Generic.List`1.set_Capacity(Int32 value)
+   at System.Collections.Generic.List`1.AddWithResize(T item)
+   at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 212
+   at Macula.Content.ManifestBuilder.CreateWithCreated(Byte[] data, CreateOptions opts, UInt64 created) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 162
+   at Macula.Content.ManifestBuilder.Create(Byte[] data, CreateOptions opts) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 158
+   at Macula.Tests.ManifestTests.<>c__DisplayClass22_0.<Create_refuses_a_chunk_size_that_is_not_positive>b__0() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 312
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a gap between chunks") [1 ms]
+  Error Message:
+   a gap between chunks: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk larger than the chunk size") [< 1 ms]
+  Error Message:
+   a chunk larger than the chunk size: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk cut short before the last, with the count "···) [< 1 ms]
+  Error Message:
+   a chunk cut short before the last, with the count still right: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "chunks out of index order") [FAIL]
+[xUnit.net 00:00:00.99]       chunks out of index order: accepted 
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a size the chunks don't add up to") [FAIL]
+[xUnit.net 00:00:00.99]       a size the chunks don't add up to: accepted 
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk size of zero") [FAIL]
+[xUnit.net 00:00:00.99]       a chunk size of zero: accepted 
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk counted that isn't listed") [FAIL]
+[xUnit.net 00:00:00.99]       a chunk counted that isn't listed: accepted 
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3 [FAIL]
+[xUnit.net 00:00:00.99]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.99]       Expected: typeof(System.ArgumentException)
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(302,0): at Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3()
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "size") [FAIL]
+[xUnit.net 00:00:00.99]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.99]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(200,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "offset") [FAIL]
+[xUnit.net 00:00:00.99]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.99]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(200,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "index") [FAIL]
+[xUnit.net 00:00:00.99]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.99]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(200,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "chunks out of index order") [< 1 ms]
+  Error Message:
+   chunks out of index order: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a size the chunks don't add up to") [< 1 ms]
+  Error Message:
+   a size the chunks don't add up to: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk size of zero") [< 1 ms]
+  Error Message:
+   a chunk size of zero: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk counted that isn't listed") [< 1 ms]
+  Error Message:
+   a chunk counted that isn't listed: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.FromWire_rejects_a_missing_field [2 ms]
+  Failed Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3 [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(System.ArgumentException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 302
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "size") [1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 200
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "offset") [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 200
+   at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "index") [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 200
+   at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole [FAIL]
+[xUnit.net 00:00:00.99]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.99]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(280,0): at Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole()
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "missing", name: "", accepted: True) [FAIL]
+[xUnit.net 00:00:00.99]       missing : MissingField: hash_algorithm
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(162,0): at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.99]     Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "md5", accepted: False) [FAIL]
+[xUnit.net 00:00:00.99]       text md5: accepted
+[xUnit.net 00:00:00.99]       Stack Trace:
+[xUnit.net 00:00:00.99]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(162,0): at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted)
+[xUnit.net 00:00:00.99]            at InvokeStub_ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(Object, Span`1)
+[xUnit.net 00:00:00.99]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:01.00]     Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "blake3", accepted: True) [FAIL]
+[xUnit.net 00:00:01.00]       bytes blake3: WrongFieldType: hash_algorithm
+[xUnit.net 00:00:01.00]       Stack Trace:
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(162,0): at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted)
+[xUnit.net 00:00:01.00]            at InvokeStub_ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(Object, Span`1)
+[xUnit.net 00:00:01.00]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Odd_chunk_count_matches_the_reference [< 1 ms]
+  Failed Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 280
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Passed Macula.Tests.ManifestTests.Verify_rejects_tampered_content_of_the_same_size [< 1 ms]
+  Failed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "missing", name: "", accepted: True) [< 1 ms]
+  Error Message:
+   missing : MissingField: hash_algorithm
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 162
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "md5", accepted: False) [1 ms]
+  Error Message:
+   text md5: accepted
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 162
+   at InvokeStub_ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "blake3", accepted: True) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "a number", name: "", accepted: False) [< 1 ms]
+  Failed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "blake3", accepted: True) [< 1 ms]
+  Error Message:
+   bytes blake3: WrongFieldType: hash_algorithm
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(String form, String name, Boolean accepted) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 162
+   at InvokeStub_ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "sha256", accepted: False) [< 1 ms]
+[xUnit.net 00:00:01.00]     Macula.Tests.ManifestTests.Empty_content_has_one_whole_form [FAIL]
+[xUnit.net 00:00:01.00]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:01.00]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:01.00]       Stack Trace:
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(266,0): at Macula.Tests.ManifestTests.Empty_content_has_one_whole_form()
+[xUnit.net 00:00:01.00]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:01.00]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.00]     Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [FAIL]
+[xUnit.net 00:00:01.00]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:01.00]       Expected: typeof(System.InvalidOperationException)
+[xUnit.net 00:00:01.00]       Actual:   typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:01.00]       ---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+[xUnit.net 00:00:01.00]       Stack Trace:
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(293,0): at Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize)
+[xUnit.net 00:00:01.00]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:01.00]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:01.00]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(216,0): at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize)
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(201,0): at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data)
+[xUnit.net 00:00:01.00]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(293,0): at Macula.Tests.ManifestTests.<>c__DisplayClass20_0.<Verify_refuses_a_chunk_size_that_is_not_positive>b__0()
+[xUnit.net 00:00:01.63]     Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [FAIL]
+[xUnit.net 00:00:01.63]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:01.63]       Expected: typeof(System.InvalidOperationException)
+[xUnit.net 00:00:01.63]       Actual:   typeof(System.OutOfMemoryException)
+[xUnit.net 00:00:01.63]       ---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+[xUnit.net 00:00:01.63]       Stack Trace:
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(293,0): at Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize)
+[xUnit.net 00:00:01.63]            at InvokeStub_ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Object, Span`1)
+[xUnit.net 00:00:01.63]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:01.63]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:01.63]            at System.Collections.Generic.List`1.AddWithResize(T item)
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(212,0): at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize)
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs(201,0): at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data)
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(293,0): at Macula.Tests.ManifestTests.<>c__DisplayClass20_0.<Verify_refuses_a_chunk_size_that_is_not_positive>b__0()
+[xUnit.net 00:00:01.63]     Macula.Tests.ManifestTests.A_sha256_manifest_is_refused [FAIL]
+[xUnit.net 00:00:01.63]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:01.63]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:01.63]       Stack Trace:
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(171,0): at Macula.Tests.ManifestTests.A_sha256_manifest_is_refused()
+[xUnit.net 00:00:01.63]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:01.63]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:01.63]     Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8 [FAIL]
+[xUnit.net 00:00:01.63]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:01.63]       Expected: typeof(Macula.Content.ManifestParseException)
+[xUnit.net 00:00:01.63]       Stack Trace:
+[xUnit.net 00:00:01.63]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(211,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8()
+[xUnit.net 00:00:01.63]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:01.63]            at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:01.63]   Finished:    Macula.Tests
+  Failed Macula.Tests.ManifestTests.Empty_content_has_one_whole_form [2 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Empty_content_has_one_whole_form() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 266
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Passed Macula.Tests.ManifestTests.ToWire_matches_the_reference_byte_for_byte [3 ms]
+  Failed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.InvalidOperationException)
+Actual:   typeof(System.ArgumentOutOfRangeException)
+---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 293
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+----- Inner Stack Trace -----
+   at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 216
+   at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 201
+   at Macula.Tests.ManifestTests.<>c__DisplayClass20_0.<Verify_refuses_a_chunk_size_that_is_not_positive>b__0() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 293
+  Failed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [630 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(System.InvalidOperationException)
+Actual:   typeof(System.OutOfMemoryException)
+---- System.OutOfMemoryException : Exception of type 'System.OutOfMemoryException' was thrown.
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 293
+   at InvokeStub_ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+----- Inner Stack Trace -----
+   at System.Collections.Generic.List`1.AddWithResize(T item)
+   at Macula.Content.ManifestBuilder.DoChunk(Byte[] data, Int32 chunkSize) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 212
+   at Macula.Content.ManifestBuilder.Verify(Manifest manifest, Byte[] data) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/Manifest.cs:line 201
+   at Macula.Tests.ManifestTests.<>c__DisplayClass20_0.<Verify_refuses_a_chunk_size_that_is_not_positive>b__0() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 293
+  Passed Macula.Tests.ManifestTests.Algorithm_from_name_defaults_to_blake3 [< 1 ms]
+  Failed Macula.Tests.ManifestTests.A_sha256_manifest_is_refused [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.A_sha256_manifest_is_refused() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 171
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8 [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Content.ManifestParseException)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 211
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Even_chunk_count_matches_the_reference [< 1 ms]
+
+Test Run Failed.
+Total tests: 35
+     Passed: 10
+     Failed: 25
+ Total time: 1.9737 Seconds

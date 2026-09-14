@@ -1,0 +1,60 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.17]   Starting:    Macula.Tests
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_size", value: 2147483648) [16 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "version", value: 4294967296) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_count", value: 2147483648) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Empty_data_produces_zero_chunks [2 ms]
+  Passed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a gap between chunks") [2 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk larger than the chunk size") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk cut short before the last, with the count "···) [< 1 ms]
+[xUnit.net 00:00:00.23]     Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a size the chunks don't add up to") [FAIL]
+[xUnit.net 00:00:00.23]       a size the chunks don't add up to: accepted 
+[xUnit.net 00:00:00.23]       Stack Trace:
+[xUnit.net 00:00:00.23]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(238,0): at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit)
+[xUnit.net 00:00:00.23]            at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+[xUnit.net 00:00:00.23]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "chunks out of index order") [< 1 ms]
+  Failed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a size the chunks don't add up to") [3 ms]
+  Error Message:
+   a size the chunks don't add up to: accepted 
+  Stack Trace:
+     at Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(String edit) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 238
+   at InvokeStub_ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk size of zero") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk counted that isn't listed") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.FromWire_rejects_a_missing_field [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3 [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "size") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "offset") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "index") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Odd_chunk_count_matches_the_reference [< 1 ms]
+  Passed Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Verify_rejects_tampered_content_of_the_same_size [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "missing", name: "", accepted: True) [1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "md5", accepted: False) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "blake3", accepted: True) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "a number", name: "", accepted: False) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "blake3", accepted: True) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "sha256", accepted: False) [< 1 ms]
+[xUnit.net 00:00:00.24]   Finished:    Macula.Tests
+  Passed Macula.Tests.ManifestTests.Empty_content_has_one_whole_form [2 ms]
+  Passed Macula.Tests.ManifestTests.ToWire_matches_the_reference_byte_for_byte [3 ms]
+  Passed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Algorithm_from_name_defaults_to_blake3 [< 1 ms]
+  Passed Macula.Tests.ManifestTests.A_sha256_manifest_is_refused [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8 [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Even_chunk_count_matches_the_reference [< 1 ms]
+
+Test Run Failed.
+Total tests: 35
+     Passed: 34
+     Failed: 1
+ Total time: 0.5444 Seconds

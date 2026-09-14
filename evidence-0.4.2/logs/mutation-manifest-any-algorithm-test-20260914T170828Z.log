@@ -1,0 +1,52 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.28]     Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "an unknown hash algorithm", describes: False) [FAIL]
+[xUnit.net 00:00:00.28]       an unknown hash algorithm: ArgumentOutOfRangeException Specified argument was out of the range of valid values. (Parameter 'algorithm') after 0 fetches
+[xUnit.net 00:00:00.28]       Stack Trace:
+[xUnit.net 00:00:00.29]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(179,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes)
+[xUnit.net 00:00:00.29]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.32]     Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256 [FAIL]
+[xUnit.net 00:00:00.32]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:00.32]       Expected: HashMismatch
+[xUnit.net 00:00:00.32]       Actual:   VerifyFailed
+[xUnit.net 00:00:00.32]       Stack Trace:
+[xUnit.net 00:00:00.32]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(208,0): at Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256()
+[xUnit.net 00:00:00.32]         --- End of stack trace from previous location ---
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another chunk count", describes: False) [29 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "a name with no UTF-8 form, for its own MCID", describes: False) [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another created time, version and own mcid", describes: True) [22 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another root hash", describes: False) [11 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another name", describes: False) [8 ms]
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "an unknown hash algorithm", describes: False) [9 ms]
+  Error Message:
+   an unknown hash algorithm: ArgumentOutOfRangeException Specified argument was out of the range of valid values. (Parameter 'algorithm') after 0 fetches
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(String edit, Boolean describes) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 179
+--- End of stack trace from previous location ---
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another size", describes: False) [8 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero [13 ms]
+  Failed Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256 [15 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: HashMismatch
+Actual:   VerifyFailed
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 208
+--- End of stack trace from previous location ---
+[xUnit.net 00:00:00.40]   Finished:    Macula.Tests
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists [8 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_assembles_the_content_a_whole_manifest_for_its_mcid_describes [17 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold [8 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says [16 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid [16 ms]
+
+Test Run Failed.
+Total tests: 15
+     Passed: 13
+     Failed: 2
+ Total time: 0.6926 Seconds

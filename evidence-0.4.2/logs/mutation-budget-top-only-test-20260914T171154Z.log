@@ -1,0 +1,44 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.62]     Macula.Tests.CborCodecTests.Decode_counts_a_maps_keys_and_values_against_max_elements [FAIL]
+[xUnit.net 00:00:00.62]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.62]       Expected: typeof(Macula.Cbor.CborDecodeException)
+[xUnit.net 00:00:00.62]       Stack Trace:
+[xUnit.net 00:00:00.62]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(385,0): at Macula.Tests.CborCodecTests.Decode_counts_a_maps_keys_and_values_against_max_elements()
+[xUnit.net 00:00:00.62]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.62]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.76]     Macula.Tests.CborCodecTests.Decode_refuses_a_value_of_more_than_max_elements_values [FAIL]
+[xUnit.net 00:00:00.76]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.76]       Expected: typeof(Macula.Cbor.CborDecodeException)
+[xUnit.net 00:00:00.76]       Stack Trace:
+[xUnit.net 00:00:00.76]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(357,0): at Macula.Tests.CborCodecTests.Decode_refuses_a_value_of_more_than_max_elements_values()
+[xUnit.net 00:00:00.76]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.76]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.76]   Finished:    Macula.Tests
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_a_value_of_exactly_max_elements_values [94 ms]
+  Failed Macula.Tests.CborCodecTests.Decode_counts_a_maps_keys_and_values_against_max_elements [336 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Cbor.CborDecodeException)
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_counts_a_maps_keys_and_values_against_max_elements() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 385
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed Macula.Tests.CborCodecTests.Decode_refuses_a_value_of_more_than_max_elements_values [140 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Cbor.CborDecodeException)
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_refuses_a_value_of_more_than_max_elements_values() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 357
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Test Run Failed.
+Total tests: 3
+     Passed: 1
+     Failed: 2
+ Total time: 1.0802 Seconds

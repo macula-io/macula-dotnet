@@ -1,0 +1,17 @@
+/home/rl/work/worktrees/macula-dotnet/uranus-v0.2.0-samples/src/Macula/Connection/SupervisedPubSub.cs(63,9): warning CS4014: Because this call is not awaited, execution of the current method continues before the call is completed. Consider applying the 'await' operator to the result of the call. [/home/rl/work/worktrees/macula-dotnet/uranus-v0.2.0-samples/src/Macula/Macula.csproj]
+/home/rl/work/worktrees/macula-dotnet/uranus-v0.2.0-samples/src/Macula/Connection/RpcFacts.cs(109,19): warning CA1416: This call site is reachable on all platforms. 'Session.PublishAsync(PublishSpec, CancellationToken)' is only supported on: 'linux', 'macOS/OSX', 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/home/rl/work/worktrees/macula-dotnet/uranus-v0.2.0-samples/src/Macula/Macula.csproj]
+connect.bin 375 bytes
+call.bin 408 bytes
+result.bin 300 bytes
+error.bin 347 bytes
+publish.bin 434 bytes
+subscribe.bin 315 bytes
+unsubscribe.bin 300 bytes
+advertise.bin 307 bytes
+unadvertise.bin 300 bytes
+stream_open.bin 388 bytes
+stream_data.bin 302 bytes
+stream_end.bin 280 bytes
+stream_error.bin 333 bytes
+stream_reply.bin 291 bytes
+goodbye.bin 225 bytes

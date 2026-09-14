@@ -1,0 +1,62 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.13]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.15]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.18]     Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 2147483648) [FAIL]
+[xUnit.net 00:00:00.18]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.18]       Expected: typeof(Macula.Frame.FrameTooLargeException)
+[xUnit.net 00:00:00.18]       Actual:   typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.18]       ---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+[xUnit.net 00:00:00.18]       Stack Trace:
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs(121,0): at Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(UInt32 length)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.19]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Frame/WireCodec.cs(65,0): at Macula.Frame.WireCodec.Decode(ReadOnlySpan`1 buf)
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs(121,0): at Macula.Tests.FrameGoldenVectorTests.<>c__DisplayClass25_0.<Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap>b__0()
+[xUnit.net 00:00:00.19]     Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 4294967295) [FAIL]
+[xUnit.net 00:00:00.19]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.19]       Expected: typeof(Macula.Frame.FrameTooLargeException)
+[xUnit.net 00:00:00.19]       Actual:   typeof(System.ArgumentOutOfRangeException)
+[xUnit.net 00:00:00.19]       ---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+[xUnit.net 00:00:00.19]       Stack Trace:
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs(121,0): at Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(UInt32 length)
+[xUnit.net 00:00:00.19]            at InvokeStub_FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(Object, Span`1)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.19]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Frame/WireCodec.cs(65,0): at Macula.Frame.WireCodec.Decode(ReadOnlySpan`1 buf)
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs(121,0): at Macula.Tests.FrameGoldenVectorTests.<>c__DisplayClass25_0.<Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap>b__0()
+[xUnit.net 00:00:00.19]   Finished:    Macula.Tests
+  Failed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 2147483648) [3 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Frame.FrameTooLargeException)
+Actual:   typeof(System.ArgumentOutOfRangeException)
+---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+  Stack Trace:
+     at Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(UInt32 length) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs:line 121
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+----- Inner Stack Trace -----
+   at Macula.Frame.WireCodec.Decode(ReadOnlySpan`1 buf) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Frame/WireCodec.cs:line 65
+   at Macula.Tests.FrameGoldenVectorTests.<>c__DisplayClass25_0.<Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap>b__0() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs:line 121
+  Failed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 4294967295) [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Frame.FrameTooLargeException)
+Actual:   typeof(System.ArgumentOutOfRangeException)
+---- System.ArgumentOutOfRangeException : Specified argument was out of the range of valid values.
+  Stack Trace:
+     at Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(UInt32 length) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs:line 121
+   at InvokeStub_FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+----- Inner Stack Trace -----
+   at Macula.Frame.WireCodec.Decode(ReadOnlySpan`1 buf) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Frame/WireCodec.cs:line 65
+   at Macula.Tests.FrameGoldenVectorTests.<>c__DisplayClass25_0.<Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap>b__0() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/FrameGoldenVectorTests.cs:line 121
+
+Test Run Failed.
+Total tests: 2
+     Failed: 2
+ Total time: 0.5170 Seconds

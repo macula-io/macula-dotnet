@@ -1,0 +1,148 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.17]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.21]     Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_size", value: 2147483648) [FAIL]
+[xUnit.net 00:00:00.22]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.22]                       ↓ (pos 5)
+[xUnit.net 00:00:00.22]       Expected: "chunk_size"
+[xUnit.net 00:00:00.22]       Actual:   "chunks"
+[xUnit.net 00:00:00.22]                       ↑ (pos 5)
+[xUnit.net 00:00:00.22]       Stack Trace:
+[xUnit.net 00:00:00.22]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(189,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value)
+[xUnit.net 00:00:00.22]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.22]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.23]     Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_count", value: 2147483648) [FAIL]
+[xUnit.net 00:00:00.23]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.23]                       ↓ (pos 5)
+[xUnit.net 00:00:00.23]       Expected: "chunk_count"
+[xUnit.net 00:00:00.23]       Actual:   "chunks"
+[xUnit.net 00:00:00.23]                       ↑ (pos 5)
+[xUnit.net 00:00:00.23]       Stack Trace:
+[xUnit.net 00:00:00.23]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(189,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value)
+[xUnit.net 00:00:00.23]            at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.23]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_size", value: 2147483648) [17 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+                ↓ (pos 5)
+Expected: "chunk_size"
+Actual:   "chunks"
+                ↑ (pos 5)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 189
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "version", value: 4294967296) [< 1 ms]
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(field: "chunk_count", value: 2147483648) [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+                ↓ (pos 5)
+Expected: "chunk_count"
+Actual:   "chunks"
+                ↑ (pos 5)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(String field, UInt64 value) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 189
+   at InvokeStub_ManifestTests.From_wire_refuses_a_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Empty_data_produces_zero_chunks [7 ms]
+  Passed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Create_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a gap between chunks") [2 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk larger than the chunk size") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk cut short before the last, with the count "···) [< 1 ms]
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "size") [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.24]                  ↓ (pos 0)
+[xUnit.net 00:00:00.24]       Expected: "size"
+[xUnit.net 00:00:00.24]       Actual:   "chunks"
+[xUnit.net 00:00:00.24]                  ↑ (pos 0)
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(203,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "offset") [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.24]                  ↓ (pos 0)
+[xUnit.net 00:00:00.24]       Expected: "offset"
+[xUnit.net 00:00:00.24]       Actual:   "chunks"
+[xUnit.net 00:00:00.24]                  ↑ (pos 0)
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(203,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.24]            at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.24]     Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "index") [FAIL]
+[xUnit.net 00:00:00.24]       Assert.Equal() Failure: Strings differ
+[xUnit.net 00:00:00.24]                  ↓ (pos 0)
+[xUnit.net 00:00:00.24]       Expected: "index"
+[xUnit.net 00:00:00.24]       Actual:   "chunks"
+[xUnit.net 00:00:00.24]                  ↑ (pos 0)
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs(203,0): at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field)
+[xUnit.net 00:00:00.24]            at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "chunks out of index order") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a size the chunks don't add up to") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk size of zero") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Check_whole_refuses_chunks_that_do_not_describe_the_content_whole(edit: "a chunk counted that isn't listed") [< 1 ms]
+  Passed Macula.Tests.ManifestTests.FromWire_rejects_a_missing_field [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Create_offers_no_hash_algorithm_but_blake3 [< 1 ms]
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "size") [1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "size"
+Actual:   "chunks"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 203
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "offset") [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "offset"
+Actual:   "chunks"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 203
+   at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(field: "index") [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+           ↓ (pos 0)
+Expected: "index"
+Actual:   "chunks"
+           ↑ (pos 0)
+  Stack Trace:
+     at Macula.Tests.ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(String field) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ManifestTests.cs:line 203
+   at InvokeStub_ManifestTests.From_wire_refuses_a_chunk_number_too_large_for_its_field(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.ManifestTests.Odd_chunk_count_matches_the_reference [< 1 ms]
+  Passed Macula.Tests.ManifestTests.An_empty_chunk_is_not_whole [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Verify_rejects_tampered_content_of_the_same_size [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "missing", name: "", accepted: True) [1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "md5", accepted: False) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "text", name: "blake3", accepted: True) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "a number", name: "", accepted: False) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "blake3", accepted: True) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_reads_the_hash_algorithm_as_macula_does(form: "bytes", name: "sha256", accepted: False) [< 1 ms]
+[xUnit.net 00:00:00.24]   Finished:    Macula.Tests
+  Passed Macula.Tests.ManifestTests.Empty_content_has_one_whole_form [2 ms]
+  Passed Macula.Tests.ManifestTests.ToWire_matches_the_reference_byte_for_byte [4 ms]
+  Passed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: -1) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Verify_refuses_a_chunk_size_that_is_not_positive(chunkSize: 0) [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Algorithm_from_name_defaults_to_blake3 [< 1 ms]
+  Passed Macula.Tests.ManifestTests.A_sha256_manifest_is_refused [< 1 ms]
+  Passed Macula.Tests.ManifestTests.From_wire_refuses_a_name_that_is_not_utf8 [< 1 ms]
+  Passed Macula.Tests.ManifestTests.Even_chunk_count_matches_the_reference [< 1 ms]
+
+Test Run Failed.
+Total tests: 35
+     Passed: 30
+     Failed: 5
+ Total time: 0.5519 Seconds

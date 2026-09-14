@@ -1,0 +1,25 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.13]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.15]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.24]     Macula.Tests.CborCodecTests.Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims [FAIL]
+[xUnit.net 00:00:00.24]       decoding 262784 bytes allocated 262 MiB, want at most 96 times the input
+[xUnit.net 00:00:00.24]       Stack Trace:
+[xUnit.net 00:00:00.24]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(288,0): at Macula.Tests.CborCodecTests.Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims()
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.24]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.25]   Finished:    Macula.Tests
+  Failed Macula.Tests.CborCodecTests.Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims [57 ms]
+  Error Message:
+   decoding 262784 bytes allocated 262 MiB, want at most 96 times the input
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 288
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Test Run Failed.
+Total tests: 1
+     Failed: 1
+ Total time: 0.5672 Seconds

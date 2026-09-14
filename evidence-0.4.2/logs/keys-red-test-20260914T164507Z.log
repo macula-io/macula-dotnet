@@ -1,0 +1,68 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.31]     Macula.Tests.CborCodecTests.Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth [FAIL]
+[xUnit.net 00:00:00.31]       decoding 524549 bytes allocated 256 MiB, want at most 8 times the input
+[xUnit.net 00:00:00.31]       Stack Trace:
+[xUnit.net 00:00:00.31]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(341,0): at Macula.Tests.CborCodecTests.Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth()
+[xUnit.net 00:00:00.31]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.31]            at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.32]     Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "the same uint with a non-minimal head", hex: "A2 1801 01 01 02", entries: 1) [FAIL]
+[xUnit.net 00:00:00.32]       the same uint with a non-minimal head: decoded 2 entries, want 1
+[xUnit.net 00:00:00.32]       Stack Trace:
+[xUnit.net 00:00:00.32]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(309,0): at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries)
+[xUnit.net 00:00:00.32]            at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+[xUnit.net 00:00:00.32]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.32]     Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a map whose own duplicate leaves it equal to anoth"···, hex: "A2A2616101616102 01 A1616102 02", entries: 1) [FAIL]
+[xUnit.net 00:00:00.32]       a map whose own duplicate leaves it equal to another: decoded 2 entries, want 1
+[xUnit.net 00:00:00.32]       Stack Trace:
+[xUnit.net 00:00:00.32]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(309,0): at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries)
+[xUnit.net 00:00:00.32]            at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+[xUnit.net 00:00:00.32]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.32]     Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "maps with the same entries in another wire order", hex: "A2A2616101616202 01 A2616202616101 02", entries: 1) [FAIL]
+[xUnit.net 00:00:00.32]       maps with the same entries in another wire order: decoded 2 entries, want 1
+[xUnit.net 00:00:00.32]       Stack Trace:
+[xUnit.net 00:00:00.32]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(309,0): at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries)
+[xUnit.net 00:00:00.32]            at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+[xUnit.net 00:00:00.32]            at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.32]   Finished:    Macula.Tests
+  Failed Macula.Tests.CborCodecTests.Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth [123 ms]
+  Error Message:
+   decoding 524549 bytes allocated 256 MiB, want at most 8 times the input
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 341
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "lists with their elements in another order", hex: "A2 820102 01 820201 02", entries: 2) [2 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a uint and the equal float", hex: "A2 01 01 FB3FF0000000000000 02", entries: 2) [< 1 ms]
+  Failed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "the same uint with a non-minimal head", hex: "A2 1801 01 01 02", entries: 1) [< 1 ms]
+  Error Message:
+   the same uint with a non-minimal head: decoded 2 entries, want 1
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 309
+   at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "a map whose own duplicate leaves it equal to anoth"···, hex: "A2A2616101616102 01 A1616102 02", entries: 1) [< 1 ms]
+  Error Message:
+   a map whose own duplicate leaves it equal to another: decoded 2 entries, want 1
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 309
+   at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "bytes and text with the same content", hex: "A2 4161 01 6161 02", entries: 2) [< 1 ms]
+  Failed Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(keys: "maps with the same entries in another wire order", hex: "A2A2616101616202 01 A2616202616101 02", entries: 1) [< 1 ms]
+  Error Message:
+   maps with the same entries in another wire order: decoded 2 entries, want 1
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(String keys, String hex, Int32 entries) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 309
+   at InvokeStub_CborCodecTests.Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithFewArgs(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+Test Run Failed.
+Total tests: 7
+     Passed: 3
+     Failed: 4
+ Total time: 0.6428 Seconds

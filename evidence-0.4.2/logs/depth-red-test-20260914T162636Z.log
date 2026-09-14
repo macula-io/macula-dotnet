@@ -1,0 +1,61 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.13]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+[xUnit.net 00:00:00.19]     Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map value") [FAIL]
+[xUnit.net 00:00:00.19]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.19]       Expected: typeof(Macula.Cbor.CborDecodeException)
+[xUnit.net 00:00:00.19]       Stack Trace:
+[xUnit.net 00:00:00.19]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(227,0): at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+[xUnit.net 00:00:00.19]            at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "list") [FAIL]
+[xUnit.net 00:00:00.20]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.20]       Expected: typeof(Macula.Cbor.CborDecodeException)
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(227,0): at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]     Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map key") [FAIL]
+[xUnit.net 00:00:00.20]       Assert.Throws() Failure: No exception was thrown
+[xUnit.net 00:00:00.20]       Expected: typeof(Macula.Cbor.CborDecodeException)
+[xUnit.net 00:00:00.20]       Stack Trace:
+[xUnit.net 00:00:00.20]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs(227,0): at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape)
+[xUnit.net 00:00:00.20]            at InvokeStub_CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(Object, Span`1)
+[xUnit.net 00:00:00.20]            at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+[xUnit.net 00:00:00.20]   Finished:    Macula.Tests
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map value") [6 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Cbor.CborDecodeException)
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 227
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeDirectByRefWithFewArgs(Object obj, Span`1 copyOfArgs, BindingFlags invokeAttr)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "list") [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Cbor.CborDecodeException)
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 227
+   at InvokeStub_CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map key") [< 1 ms]
+  Error Message:
+   Assert.Throws() Failure: No exception was thrown
+Expected: typeof(Macula.Cbor.CborDecodeException)
+  Stack Trace:
+     at Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(String shape) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/CborCodecTests.cs:line 227
+   at InvokeStub_CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(Object, Span`1)
+   at System.Reflection.MethodBaseInvoker.InvokeWithOneArg(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "map key") [2 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "list") [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "map value") [< 1 ms]
+
+Test Run Failed.
+Total tests: 6
+     Passed: 3
+     Failed: 3
+ Total time: 0.5391 Seconds

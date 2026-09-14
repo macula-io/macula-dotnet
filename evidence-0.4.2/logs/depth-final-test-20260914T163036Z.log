@@ -1,0 +1,49 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.13]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 65536, expected: [26, 0, 1, 0, 0]) [3 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 18446744073709551615, expected: [27, 255, 255, 255, 255, ···]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 256, expected: [25, 1, 0]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 65535, expected: [25, 255, 255]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 4294967295, expected: [26, 255, 255, 255, 255]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 4294967296, expected: [27, 0, 0, 0, 1, ···]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 255, expected: [24, 255]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 23, expected: [23]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 1, expected: [1]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 24, expected: [24, 24]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.UInt_uses_minimal_length_encoding(value: 0, expected: [0]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_truncated_input_instead_of_throwing_an_unrelated_exception [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.List_encodes_head_plus_concatenated_items [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Bytes_encodes_as_major_2_raw [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map value") [1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "list") [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_nesting_one_past_the_depth_limit(shape: "map key") [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "map key") [1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "list") [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_nesting_at_the_depth_limit(shape: "map value") [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_trailing_bytes_after_top_level_value [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Negative_int_uses_minimal_length_encoding(value: -24, expected: [55]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Negative_int_uses_minimal_length_encoding(value: -25, expected: [56, 24]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Negative_int_uses_minimal_length_encoding(value: -1, expected: [32]) [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Text_stores_bytes_as_is_with_no_utf8_validation [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_major_type_6_tags [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Null_encodes_as_0xF6 [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_duplicate_map_keys_is_last_write_wins [3 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_extreme_nesting_without_crashing(shape: "list") [1 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_extreme_nesting_without_crashing(shape: "map key") [6 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_rejects_extreme_nesting_without_crashing(shape: "map value") [158 ms]
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_half_precision_float [1 ms]
+  Passed Macula.Tests.CborCodecTests.Float_always_encodes_as_binary64_regardless_of_source_width [1 ms]
+  Passed Macula.Tests.CborCodecTests.Encode_decode_encode_is_idempotent_for_a_nested_structure [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.NegInt_reaches_down_to_negative_two_to_the_64 [< 1 ms]
+  Passed Macula.Tests.CborCodecTests.Map_sorts_keys_by_their_own_encoded_bytes_not_by_value [< 1 ms]
+[xUnit.net 00:00:00.37]   Finished:    Macula.Tests
+  Passed Macula.Tests.CborCodecTests.Decode_accepts_single_precision_float [< 1 ms]
+
+Test Run Successful.
+Total tests: 37
+     Passed: 37
+ Total time: 0.6690 Seconds

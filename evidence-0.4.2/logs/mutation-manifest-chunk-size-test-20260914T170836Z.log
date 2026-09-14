@@ -1,0 +1,52 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.14]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.17]   Starting:    Macula.Tests
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another chunk count", describes: False) [29 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "a name with no UTF-8 form, for its own MCID", describes: False) [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another created time, version and own mcid", describes: True) [22 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another root hash", describes: False) [11 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another name", describes: False) [8 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "an unknown hash algorithm", describes: False) [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_checks_the_fields_macula_checks(edit: "another size", describes: False) [8 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_with_a_chunk_size_of_zero [13 ms]
+  Passed Macula.Tests.ContentAssembleTests.Verify_mcid_refuses_sha256 [8 ms]
+[xUnit.net 00:00:00.38]     Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says [FAIL]
+[xUnit.net 00:00:00.38]       Assert.Throws() Failure: Exception type was not an exact match
+[xUnit.net 00:00:00.38]       Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+[xUnit.net 00:00:00.38]       Actual:   typeof(System.ArgumentException)
+[xUnit.net 00:00:00.38]       ---- System.ArgumentException : Destination array was not long enough. Check the destination index, length, and the array's lower bounds. (Parameter 'destinationArray')
+[xUnit.net 00:00:00.38]       Stack Trace:
+[xUnit.net 00:00:00.39]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs(127,0): at Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says()
+[xUnit.net 00:00:00.39]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:00.39]         ----- Inner Stack Trace -----
+[xUnit.net 00:00:00.39]            at System.Array.CopyImpl(Array sourceArray, Int32 sourceIndex, Array destinationArray, Int32 destinationIndex, Int32 length, Boolean reliable)
+[xUnit.net 00:00:00.39]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(168,0): at Macula.Content.ContentTransfer.Concatenate(List`1 chunks, Int32 size)
+[xUnit.net 00:00:00.39]         /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs(145,0): at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct)
+[xUnit.net 00:00:00.40]   Finished:    Macula.Tests
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_counting_more_chunks_than_it_lists [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_assembles_the_content_a_whole_manifest_for_its_mcid_describes [17 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_claiming_more_bytes_than_its_chunks_hold [9 ms]
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_content_larger_than_one_array_can_hold [10 ms]
+  Failed Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says [19 ms]
+  Error Message:
+   Assert.Throws() Failure: Exception type was not an exact match
+Expected: typeof(Macula.Content.ContentTransfer+ContentTransferException)
+Actual:   typeof(System.ArgumentException)
+---- System.ArgumentException : Destination array was not long enough. Check the destination index, length, and the array's lower bounds. (Parameter 'destinationArray')
+  Stack Trace:
+     at Macula.Tests.ContentAssembleTests.Get_refuses_a_chunk_that_is_not_the_size_its_entry_says() in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/ContentAssembleTests.cs:line 127
+--- End of stack trace from previous location ---
+----- Inner Stack Trace -----
+   at System.Array.CopyImpl(Array sourceArray, Int32 sourceIndex, Array destinationArray, Int32 destinationIndex, Int32 length, Boolean reliable)
+   at Macula.Content.ContentTransfer.Concatenate(List`1 chunks, Int32 size) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 168
+   at Macula.Content.ContentTransfer.AssembleAsync(Byte[] mcid, Manifest manifest, Func`3 fetchBlock, CancellationToken ct) in /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/src/Macula/Content/ContentTransfer.cs:line 145
+  Passed Macula.Tests.ContentAssembleTests.Get_refuses_a_manifest_that_does_not_describe_the_requested_mcid [16 ms]
+
+Test Run Failed.
+Total tests: 15
+     Passed: 14
+     Failed: 1
+ Total time: 0.7116 Seconds

@@ -1,0 +1,41 @@
+Test run for /home/rl/work/worktrees/macula-dotnet/uranus-0.4.2-candidate/tests/Macula.Tests/bin/Release/net10.0/Macula.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.11)
+[xUnit.net 00:00:00.07]   Discovering: Macula.Tests
+[xUnit.net 00:00:00.13]   Discovered:  Macula.Tests
+[xUnit.net 00:00:00.16]   Starting:    Macula.Tests
+  Passed Macula.Tests.FrameGoldenVectorTests.Error_frame_matches_the_reference_byte_for_byte [26 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.PublisherSig_matches_the_erlang_reference [13 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Event_frame_matches_the_reference_byte_for_byte [4 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Result_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_msgpack_frame_matches_the_reference_byte_for_byte [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_end_frame_matches_the_reference_byte_for_byte [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 2147483648) [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(length: 4294967295) [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Verify_rejects_a_tampered_field [3 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Unsubscribe_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_rejects_a_length_over_the_cap [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Verify_rejects_a_missing_signature [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_error_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameStreamTests.Concurrent_sends_all_complete_as_whole_frames [55 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Publish_frame_with_both_signatures_round_trips [13 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_end_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Unadvertise_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Publish_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Parse_stream_open_round_trips_a_well_formed_frame [3 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Advertise_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Connect_frame_matches_the_reference_byte_for_byte [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Call_frame_matches_the_reference_byte_for_byte [1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_reply_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_open_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Subscribe_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Decode_reports_more_for_a_short_buffer [< 1 ms]
+[xUnit.net 00:00:00.26]   Finished:    Macula.Tests
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_error_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_raw_frame_matches_the_reference_byte_for_byte [< 1 ms]
+  Passed Macula.Tests.FrameGoldenVectorTests.Stream_data_with_signer_matches_the_reference_byte_for_byte [< 1 ms]
+
+Test Run Successful.
+Total tests: 29
+     Passed: 29
+ Total time: 0.5618 Seconds
