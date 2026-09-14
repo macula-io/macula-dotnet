@@ -87,8 +87,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
 
     /// <summary>
     /// How long this session's drop warning intervals last. The first inbound
-    /// CALL or reply of an interval this session drops is traced at once with
-    /// the reason; the rest of the same kind
+    /// CALL or reply of an interval this session drops, and the first stream
+    /// it refuses, is traced at once with the reason; the rest of the same kind
     /// in that interval are counted into one closing line when it ends.
     /// Defaults to 60 seconds; a change applies to the intervals that start
     /// after it.
@@ -98,6 +98,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         get => _channel.DropWarnings.Interval;
         set => _channel.DropWarnings.Interval = value;
     }
+
+    internal DropWarnings DropWarnings => _channel.DropWarnings;
 
     /// <summary>Completes with the reason once this session's control stream has ended.</summary>
     internal Task<Exception> Ended => _channel.Ended;
