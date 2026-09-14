@@ -190,4 +190,58 @@ public class CborCodecTests
 
         Assert.Equal(first, second);
     }
+
+    /// <summary>
+    /// A uint 0 nested <paramref name="depth"/> list or map levels below the
+    /// top-level value, one or two bytes per level: a one-element list per
+    /// level, or a one-entry map holding the next level as its value, or as
+    /// its key.
+    /// </summary>
+    private static byte[] NestedPayload(string shape, int depth) => shape switch
+    {
+        "list" => [.. Enumerable.Repeat((byte)0x81, depth), 0x00],
+        "map value" => [.. Enumerable.Repeat(new byte[] { 0xA1, 0x00 }, depth).SelectMany(level => level), 0x00],
+        "map key" => [.. Enumerable.Repeat((byte)0xA1, depth), .. Enumerable.Repeat((byte)0x00, depth + 1)],
+        _ => throw new ArgumentOutOfRangeException(nameof(shape)),
+    };
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_accepts_nesting_at_the_depth_limit(string shape)
+    {
+        var payload = NestedPayload(shape, CborCodec.MaxNestingDepth);
+
+        Assert.Equal(payload, CborCodec.Encode(CborCodec.Decode(payload)));
+    }
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_rejects_nesting_one_past_the_depth_limit(string shape)
+    {
+        var payload = NestedPayload(shape, CborCodec.MaxNestingDepth + 1);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        Assert.Contains("nesting", ex.Message);
+    }
+
+    /// <summary>
+    /// A million levels is at most a 2 MB frame, well under the frame cap. A
+    /// test host that dies here instead of passing or failing means the cap
+    /// has regressed.
+    /// </summary>
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_rejects_extreme_nesting_without_crashing(string shape)
+    {
+        var payload = NestedPayload(shape, 1_000_000);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        Assert.Contains("nesting", ex.Message);
+    }
 }

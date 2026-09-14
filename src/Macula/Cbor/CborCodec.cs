@@ -13,6 +13,14 @@ namespace Macula.Cbor;
 /// </summary>
 public static class CborCodec
 {
+    /// <summary>
+    /// How many list or map levels a decoded value may sit below the
+    /// top-level value: the same cap and the same count as macula's decoder,
+    /// macula-go and macula-rust. Decoding recurses, and a frame can nest one
+    /// level per byte, so this cap is what bounds how deep decoding goes.
+    /// </summary>
+    internal const int MaxNestingDepth = 128;
+
     public static byte[] Encode(Value value)
     {
         var buf = new List<byte>();
@@ -22,7 +30,7 @@ public static class CborCodec
 
     public static Value Decode(ReadOnlySpan<byte> data)
     {
-        var (value, consumed) = DecodeOne(data);
+        var (value, consumed) = DecodeOne(data, 0);
         if (consumed != data.Length)
         {
             throw new CborDecodeException(
@@ -148,8 +156,17 @@ public static class CborCodec
     // network input must produce a CborDecodeException, never an
     // unhandled index-out-of-range from the runtime.
 
-    private static (Value Value, int Consumed) DecodeOne(ReadOnlySpan<byte> data)
+    /// <summary>
+    /// Decodes the value at the start of <paramref name="data"/>, which sits
+    /// <paramref name="depth"/> list or map levels below the top-level value.
+    /// </summary>
+    private static (Value Value, int Consumed) DecodeOne(ReadOnlySpan<byte> data, int depth)
     {
+        if (depth > MaxNestingDepth)
+        {
+            throw new CborDecodeException($"list or map nesting exceeds {MaxNestingDepth} levels");
+        }
+
         if (data.Length < 1)
         {
             throw new CborDecodeException("unexpected end of input");
@@ -192,14 +209,14 @@ public static class CborCodec
                 var items = new Value[count];
                 for (int i = 0; i < count; i++)
                 {
-                    var (item, consumed) = DecodeOne(data.Slice(pos));
+                    var (item, consumed) = DecodeOne(data.Slice(pos), depth + 1);
                     items[i] = item;
                     pos += consumed;
                 }
                 return (Value.List(items), pos);
             }
             case 5:
-                return DecodeMap(data, ai, pos);
+                return DecodeMap(data, ai, pos, depth);
             case 6:
                 throw new CborDecodeException("major type 6 (tags) is not supported");
             case 7:
@@ -213,9 +230,11 @@ public static class CborCodec
     /// Duplicate keys on decode are last-write-wins, not an error. Dedup is
     /// keyed by each key's own raw encoded bytes as they appeared on the
     /// wire -- not by Value equality, which would require a deep-equality
-    /// contract this value model deliberately doesn't carry.
+    /// contract this value model deliberately doesn't carry. The map sits
+    /// <paramref name="depth"/> levels below the top-level value, so its keys
+    /// and values sit one level further down.
     /// </summary>
-    private static (Value, int) DecodeMap(ReadOnlySpan<byte> data, byte ai, int pos)
+    private static (Value, int) DecodeMap(ReadOnlySpan<byte> data, byte ai, int pos, int depth)
     {
         int count = checked((int)ReadArgument(data, ref pos, ai));
         var entries = new List<KeyValuePair<Value, Value>>();
@@ -224,11 +243,11 @@ public static class CborCodec
         for (int i = 0; i < count; i++)
         {
             int keyStart = pos;
-            var (key, keyConsumed) = DecodeOne(data.Slice(pos));
+            var (key, keyConsumed) = DecodeOne(data.Slice(pos), depth + 1);
             pos += keyConsumed;
             var rawKeyBytes = data.Slice(keyStart, keyConsumed);
 
-            var (val, valConsumed) = DecodeOne(data.Slice(pos));
+            var (val, valConsumed) = DecodeOne(data.Slice(pos), depth + 1);
             pos += valConsumed;
 
             var keyId = Convert.ToHexStringLower(rawKeyBytes);
