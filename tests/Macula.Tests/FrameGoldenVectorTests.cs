@@ -107,6 +107,20 @@ public class FrameGoldenVectorTests
         Assert.Throws<FrameTooLargeException>(() => WireCodec.Decode(buf));
     }
 
+    /// <summary>
+    /// A length prefix with its top bit set is over the cap too: the prefix is
+    /// an unsigned 32-bit length, never a negative one.
+    /// </summary>
+    [Theory]
+    [InlineData(0x80000000u)]
+    [InlineData(0xFFFFFFFFu)]
+    public void Decode_rejects_a_length_with_its_top_bit_set_as_over_the_cap(uint length)
+    {
+        var buf = new byte[8];
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(buf, length);
+        Assert.Throws<FrameTooLargeException>(() => WireCodec.Decode(buf));
+    }
+
     [Fact]
     public void Call_frame_matches_the_reference_byte_for_byte()
     {

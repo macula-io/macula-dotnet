@@ -190,4 +190,200 @@ public class CborCodecTests
 
         Assert.Equal(first, second);
     }
+
+    /// <summary>
+    /// A uint 0 nested <paramref name="depth"/> list or map levels below the
+    /// top-level value, one or two bytes per level: a one-element list per
+    /// level, or a one-entry map holding the next level as its value, or as
+    /// its key.
+    /// </summary>
+    private static byte[] NestedPayload(string shape, int depth) => shape switch
+    {
+        "list" => [.. Enumerable.Repeat((byte)0x81, depth), 0x00],
+        "map value" => [.. Enumerable.Repeat(new byte[] { 0xA1, 0x00 }, depth).SelectMany(level => level), 0x00],
+        "map key" => [.. Enumerable.Repeat((byte)0xA1, depth), .. Enumerable.Repeat((byte)0x00, depth + 1)],
+        _ => throw new ArgumentOutOfRangeException(nameof(shape)),
+    };
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_accepts_nesting_at_the_depth_limit(string shape)
+    {
+        var payload = NestedPayload(shape, CborCodec.MaxNestingDepth);
+
+        Assert.Equal(payload, CborCodec.Encode(CborCodec.Decode(payload)));
+    }
+
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_rejects_nesting_one_past_the_depth_limit(string shape)
+    {
+        var payload = NestedPayload(shape, CborCodec.MaxNestingDepth + 1);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        Assert.Contains("nesting", ex.Message);
+    }
+
+    /// <summary>
+    /// A million levels is at most a 2 MB frame, well under the frame cap. A
+    /// test host that dies here instead of passing or failing means the cap
+    /// has regressed.
+    /// </summary>
+    [Theory]
+    [InlineData("list")]
+    [InlineData("map value")]
+    [InlineData("map key")]
+    public void Decode_rejects_extreme_nesting_without_crashing(string shape)
+    {
+        var payload = NestedPayload(shape, 1_000_000);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        Assert.Contains("nesting", ex.Message);
+    }
+
+    /// <summary>
+    /// A length or count arrives before what it describes, so a few bytes can
+    /// claim far more than follows them. Every such claim, whether it fits an
+    /// int or not, is refused as a decode error.
+    /// </summary>
+    [Theory]
+    [InlineData("a map claiming 2^64-1 entries", "BBFFFFFFFFFFFFFFFF")]
+    [InlineData("a list claiming 2^64-1 items", "9BFFFFFFFFFFFFFFFF")]
+    [InlineData("a map claiming 2^31 entries", "BA80000000")]
+    [InlineData("a list claiming 2^31 items", "9A80000000")]
+    [InlineData("a list claiming 2^31-1 items", "9A7FFFFFFF")]
+    [InlineData("bytes claiming 2^64-1 bytes", "5BFFFFFFFFFFFFFFFF")]
+    [InlineData("text claiming 2^32 bytes", "7B0000000100000000")]
+    public void Decode_rejects_huge_claimed_count_without_panicking(string claim, string hex)
+    {
+        var payload = Convert.FromHexString(hex);
+
+        var thrown = Record.Exception(() => CborCodec.Decode(payload));
+
+        Assert.True(thrown is CborDecodeException, $"{claim}: threw {thrown?.GetType().Name ?? "nothing"}, want CborDecodeException");
+    }
+
+    /// <summary>
+    /// 128 nested lists, each claiming 2^18 items, around 2^18 uint 0s: every
+    /// claim fits in the bytes after it, but only the innermost list holds
+    /// its items. Decoding makes room for items as they decode, not as they
+    /// are claimed, so it allocates in proportion to the input rather than to
+    /// the claims times the depth.
+    /// </summary>
+    [Fact]
+    public void Decode_allocates_in_proportion_to_its_input_not_to_the_counts_it_claims()
+    {
+        const int claimed = 1 << 18;
+        var head = new byte[] { 0x9A, 0x00, 0x04, 0x00, 0x00 };
+        byte[] payload = [.. Enumerable.Repeat(head, CborCodec.MaxNestingDepth).SelectMany(level => level), .. new byte[claimed]];
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.True(allocated <= 96L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 96 times the input");
+    }
+
+    /// <summary>
+    /// Duplicate map keys merge exactly when their canonical encodings are
+    /// equal: a nested map's wire order, a non-minimal head and a nested map's
+    /// own duplicates don't make keys differ, while element order, kind and
+    /// type do. The later write wins.
+    /// </summary>
+    [Theory]
+    [InlineData("maps with the same entries in another wire order", "A2A2616101616202 01 A2616202616101 02", 1)]
+    [InlineData("a map whose own duplicate leaves it equal to another", "A2A2616101616102 01 A1616102 02", 1)]
+    [InlineData("the same uint with a non-minimal head", "A2 1801 01 01 02", 1)]
+    [InlineData("lists with their elements in another order", "A2 820102 01 820201 02", 2)]
+    [InlineData("a uint and the equal float", "A2 01 01 FB3FF0000000000000 02", 2)]
+    [InlineData("bytes and text with the same content", "A2 4161 01 6161 02", 2)]
+    public void Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(string keys, string hex, int entries)
+    {
+        var decoded = CborCodec.Decode(Convert.FromHexString(hex.Replace(" ", "")));
+
+        var map = Assert.IsType<Value.MapValue>(decoded);
+        Assert.True(map.Entries.Count == entries, $"{keys}: decoded {map.Entries.Count} entries, want {entries}");
+        Assert.Equal(2UL, Assert.IsType<Value.UIntValue>(map.Entries[^1].Value).Value);
+    }
+
+    /// <summary>
+    /// A chain of 128 one-entry maps, each keyed by the next, around a 512 KiB
+    /// byte-string key: each key's identity is worked out once while it
+    /// decodes, not again at every level above it, so decoding allocates in
+    /// proportion to the input rather than to its depth times its size.
+    /// </summary>
+    [Fact]
+    public void Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth()
+    {
+        const int blobLength = 512 * 1024;
+        var blobHead = new byte[] { 0x5A, 0x00, 0x08, 0x00, 0x00 };
+        byte[] payload =
+        [
+            .. Enumerable.Repeat((byte)0xA1, CborCodec.MaxNestingDepth),
+            .. blobHead,
+            .. Enumerable.Repeat((byte)0x41, blobLength),
+            .. new byte[CborCodec.MaxNestingDepth],
+        ];
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var value = CborCodec.Decode(payload);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        for (var level = 0; level < CborCodec.MaxNestingDepth; level++)
+        {
+            value = Assert.Single(Assert.IsType<Value.MapValue>(value).Entries).Key;
+        }
+        Assert.Equal(blobLength, Assert.IsType<Value.BytesValue>(value).Value.Length);
+        Assert.True(allocated <= 8L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 8 times the input");
+    }
+
+    /// <summary>A list of <paramref name="items"/> one-byte items: that many values, plus the list itself.</summary>
+    private static byte[] ListOfOneByteItems(int items)
+    {
+        var head = new byte[] { 0x9A, 0, 0, 0, 0 };
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(head.AsSpan(1), (uint)items);
+        return [.. head, .. new byte[items]];
+    }
+
+    [Fact]
+    public void Decode_refuses_a_value_of_more_than_max_elements_values()
+    {
+        var payload = ListOfOneByteItems(CborCodec.MaxElements);
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+
+        Assert.Contains($"more than {CborCodec.MaxElements} values", ex.Message);
+    }
+
+    [Fact]
+    public void Decode_accepts_a_value_of_exactly_max_elements_values()
+    {
+        var payload = ListOfOneByteItems(CborCodec.MaxElements - 1);
+
+        var list = Assert.IsType<Value.ListValue>(CborCodec.Decode(payload));
+
+        Assert.Equal(CborCodec.MaxElements - 1, list.Items.Count);
+    }
+
+    /// <summary>
+    /// A map of MaxElements / 2 entries is one value past the budget once the
+    /// map itself counts: each key and each value counts, and so does a key
+    /// that merges into an earlier one.
+    /// </summary>
+    [Fact]
+    public void Decode_counts_a_maps_keys_and_values_against_max_elements()
+    {
+        const int entries = CborCodec.MaxElements / 2;
+        var head = new byte[] { 0xBA, 0, 0, 0, 0 };
+        System.Buffers.Binary.BinaryPrimitives.WriteUInt32BigEndian(head.AsSpan(1), entries);
+        byte[] payload = [.. head, .. new byte[2 * entries]];
+
+        var ex = Assert.Throws<CborDecodeException>(() => CborCodec.Decode(payload));
+
+        Assert.Contains($"more than {CborCodec.MaxElements} values", ex.Message);
+    }
 }

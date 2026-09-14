@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Unicode;
 using Macula.Cbor;
 
 namespace Macula.Content;
@@ -7,6 +8,11 @@ namespace Macula.Content;
 public enum Algorithm
 {
     Blake3,
+    /// <summary>
+    /// No longer accepted in a manifest: a content id carries no algorithm, so
+    /// every macula stack fetches blake3 content only. Kept in 0.4.x so code
+    /// that names it still compiles; removed in 0.5.0.
+    /// </summary>
     Sha256,
 }
 
@@ -103,6 +109,8 @@ public sealed class CreateOptions
 {
     public string Name { get; init; } = "unnamed";
     public int ChunkSize { get; init; } = ManifestBuilder.DefaultChunkSize;
+
+    /// <summary>Must be <see cref="Algorithm.Blake3"/>, the one algorithm every macula stack fetches. Removed in 0.5.0.</summary>
     public Algorithm HashAlgorithm { get; init; } = Algorithm.Blake3;
 }
 
@@ -110,12 +118,20 @@ public enum VerifyError
 {
     SizeMismatch,
     RootHashMismatch,
+    /// <summary>The manifest's chunk size is not positive, so no data can be cut by it.</summary>
+    InvalidManifest,
 }
 
 public enum FromWireError
 {
     MissingField,
     WrongFieldType,
+    /// <summary>
+    /// The field has the right type but a value no manifest can have: a
+    /// number out of range, a name that isn't UTF-8, a hash algorithm other
+    /// than blake3, or chunks that don't describe whole content.
+    /// </summary>
+    InvalidValue,
 }
 
 public sealed class ManifestParseException : Exception
@@ -140,17 +156,29 @@ public static class ManifestBuilder
     /// <summary>256 KiB -- matches `macula_manifest:default_chunk_size/0`.</summary>
     public const int DefaultChunkSize = 262_144;
 
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
+
     /// <summary>
     /// Split <paramref name="data"/> into fixed-size chunks and build its
     /// manifest. Returns the manifest and the chunk bytes in order (index 0
     /// first) -- a caller uploads each chunk (`_content.put_block`) then the
-    /// manifest itself (`_content.put_manifest`).
+    /// manifest itself (`_content.put_manifest`). The chunk size must be
+    /// positive and the hash algorithm blake3.
     /// </summary>
     public static (Manifest Manifest, IReadOnlyList<byte[]> Chunks) Create(byte[] data, CreateOptions opts) =>
         CreateWithCreated(data, opts, (ulong)DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 
     internal static (Manifest, IReadOnlyList<byte[]>) CreateWithCreated(byte[] data, CreateOptions opts, ulong created)
     {
+        if (opts.HashAlgorithm != Algorithm.Blake3)
+        {
+            throw new ArgumentException("content is hashed with blake3 only, the one algorithm every macula stack fetches", nameof(opts));
+        }
+        if (opts.ChunkSize <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(opts), opts.ChunkSize, "the chunk size must be positive");
+        }
+
         var chunks = DoChunk(data, opts.ChunkSize);
         var chunkInfos = ChunkInfos(chunks, opts.HashAlgorithm);
         var rootHash = RootHashFor(chunkInfos, opts.HashAlgorithm);
@@ -183,9 +211,18 @@ public static class ManifestBuilder
     /// </summary>
     public static byte[] BlockMcid(byte[] data) => Content.Mcid.Make(Content.Mcid.CodecRaw, Algorithm.Blake3.Hash(data));
 
-    /// <summary>Verify reassembled <paramref name="data"/> against <paramref name="manifest"/>: size, then a fresh Merkle root over data re-chunked the same way.</summary>
+    /// <summary>
+    /// Verify reassembled <paramref name="data"/> against <paramref name="manifest"/>:
+    /// size, then a fresh Merkle root over data re-chunked the same way. A
+    /// manifest whose chunk size isn't positive is refused with
+    /// <see cref="VerifyError.InvalidManifest"/> instead of cutting data by it.
+    /// </summary>
     public static void Verify(Manifest manifest, byte[] data)
     {
+        if (manifest.ChunkSize <= 0)
+        {
+            throw new InvalidOperationException(VerifyError.InvalidManifest.ToString());
+        }
         if ((ulong)data.Length != manifest.Size)
         {
             throw new InvalidOperationException(VerifyError.SizeMismatch.ToString());
@@ -196,6 +233,76 @@ public static class ManifestBuilder
         if (!actualRoot.AsSpan().SequenceEqual(manifest.RootHash))
         {
             throw new InvalidOperationException(VerifyError.RootHashMismatch.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="manifest"/> describes <paramref name="mcid"/>,
+    /// as macula_manifest's verify_mcid/2 decides it: its hash algorithm is
+    /// blake3, its name has a UTF-8 form, and the MCID recomputed from its
+    /// canonical fields (<see cref="McidFor"/>) equals <paramref name="mcid"/>.
+    /// Its own mcid field, created time, version and chunk list play no part.
+    /// </summary>
+    internal static bool VerifyMcid(Manifest manifest, byte[] mcid) =>
+        manifest.HashAlgorithm == Algorithm.Blake3
+        && HasUtf8Form(manifest.Name)
+        && McidFor(manifest).AsSpan().SequenceEqual(mcid);
+
+    /// <summary>
+    /// Whether <paramref name="manifest"/>'s chunks describe its content whole,
+    /// cut the way <see cref="Create"/> cuts content: a positive chunk size;
+    /// ceil(size / chunk size) chunks, which is the chunk count; chunk i with
+    /// index i at offset i x chunk size and chunk size bytes long, except the
+    /// last, which holds what is left, from 1 up to the chunk size; and every
+    /// hash 32 bytes. Empty content is whole only with no chunks at all.
+    /// </summary>
+    internal static bool CheckWhole(Manifest manifest)
+    {
+        if (manifest.ChunkSize <= 0 || manifest.ChunkCount != manifest.Chunks.Count || manifest.RootHash.Length != 32)
+        {
+            return false;
+        }
+        return (ulong)manifest.ChunkCount == ChunksFor(manifest.Size, manifest.ChunkSize)
+            && manifest.Chunks.Select((chunk, index) => CutAt(chunk, index, manifest)).All(cut => cut);
+    }
+
+    /// <summary>How many chunks of <paramref name="chunkSize"/> bytes <paramref name="size"/> bytes make: ceil(size / chunk size), 0 for no bytes.</summary>
+    private static ulong ChunksFor(ulong size, int chunkSize) =>
+        size / (ulong)chunkSize + Math.Min(size % (ulong)chunkSize, 1UL);
+
+    /// <summary>
+    /// Whether <paramref name="chunk"/> is chunk <paramref name="index"/> of
+    /// <paramref name="manifest"/> as Create cuts it. Relies on the manifest
+    /// already having ceil(size / chunk size) chunks, so the chunk starts
+    /// inside the content.
+    /// </summary>
+    private static bool CutAt(ChunkInfo chunk, int index, Manifest manifest)
+    {
+        var offset = (ulong)index * (ulong)manifest.ChunkSize;
+        var size = Math.Min((ulong)manifest.ChunkSize, manifest.Size - offset);
+        return chunk.Index == index && chunk.Offset >= 0 && (ulong)chunk.Offset == offset
+            && chunk.Size >= 0 && (ulong)chunk.Size == size && chunk.Hash.Length == 32;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="manifest"/>'s chunk hashes combine to its root
+    /// hash, the way Create builds it. The root hash is part of the MCID and
+    /// the chunk hashes are not, so after <see cref="VerifyMcid"/> this is what
+    /// ties each chunk, fetched by its hash, to the MCID asked for.
+    /// </summary>
+    internal static bool CheckChunkHashes(Manifest manifest) =>
+        RootHashFor(manifest.Chunks, manifest.HashAlgorithm).AsSpan().SequenceEqual(manifest.RootHash);
+
+    private static bool HasUtf8Form(string text)
+    {
+        try
+        {
+            StrictUtf8.GetByteCount(text);
+            return true;
+        }
+        catch (EncoderFallbackException)
+        {
+            return false;
         }
     }
 
@@ -223,7 +330,8 @@ public static class ManifestBuilder
         return infos;
     }
 
-    private static byte[] RootHashFor(IReadOnlyList<ChunkInfo> infos, Algorithm algorithm)
+    /// <summary>The Merkle root of <paramref name="infos"/>' hashes, the way Create builds a manifest's root hash.</summary>
+    internal static byte[] RootHashFor(IReadOnlyList<ChunkInfo> infos, Algorithm algorithm)
     {
         if (infos.Count == 0)
         {
@@ -252,6 +360,14 @@ public static class ManifestBuilder
         }
         return result;
     }
+
+    /// <summary>
+    /// The MCID <paramref name="manifest"/>'s canonical fields describe: its
+    /// name, size, chunk_size, chunk_count, hash_algorithm and root_hash. Its
+    /// own mcid field plays no part.
+    /// </summary>
+    internal static byte[] McidFor(Manifest manifest) =>
+        ComputeMcid(manifest.Name, manifest.Size, manifest.ChunkSize, manifest.ChunkCount, manifest.HashAlgorithm, manifest.RootHash);
 
     /// <summary>
     /// The canonical hash input for a manifest's own MCID -- deliberately
@@ -305,7 +421,15 @@ public static class ManifestBuilder
             new KeyValuePair<Value, Value>(Value.Text("hash"), Value.Bytes(info.Hash)),
         });
 
-    /// <summary>Parse a manifest as received from a `_content.get_manifest` RESULT.</summary>
+    /// <summary>
+    /// Parse a manifest as received from a `_content.get_manifest` RESULT.
+    /// A missing hash_algorithm is blake3 and any other algorithm is refused;
+    /// every number is checked against its field's range before it is
+    /// converted; the name must be UTF-8; and the chunks must describe the
+    /// content whole (<see cref="CheckWhole"/>), all before a caller sizes or
+    /// counts anything by them. A value no manifest can have is
+    /// <see cref="FromWireError.InvalidValue"/>.
+    /// </summary>
     public static Manifest FromWire(Value value)
     {
         if (value is not Value.MapValue map)
@@ -314,13 +438,13 @@ public static class ManifestBuilder
         }
 
         var mcid = GetBytesExact(map, "mcid", 34);
-        var version = (uint)GetUInt(map, "version");
-        var name = GetStringBytes(map, "name");
+        var version = GetUInt32(map, "version");
+        var name = GetName(map, "name");
         var size = GetUInt(map, "size");
         var created = GetUInt(map, "created");
-        var chunkSize = (int)GetUInt(map, "chunk_size");
-        var chunkCount = (int)GetUInt(map, "chunk_count");
-        var hashAlgorithm = AlgorithmExtensions.FromName(GetText(map, "hash_algorithm"));
+        var chunkSize = GetInt(map, "chunk_size");
+        var chunkCount = GetInt(map, "chunk_count");
+        var hashAlgorithm = GetHashAlgorithm(map, "hash_algorithm");
         var rootHash = GetBytesExact(map, "root_hash", 32);
 
         var chunks = map.Get("chunks") switch
@@ -330,7 +454,8 @@ public static class ManifestBuilder
             _ => throw new ManifestParseException(FromWireError.WrongFieldType, "chunks"),
         };
 
-        return new Manifest(mcid, version, name, size, created, chunkSize, chunkCount, hashAlgorithm, rootHash, chunks);
+        var manifest = new Manifest(mcid, version, name, size, created, chunkSize, chunkCount, hashAlgorithm, rootHash, chunks);
+        return CheckWhole(manifest) ? manifest : throw new ManifestParseException(FromWireError.InvalidValue, "chunks");
     }
 
     private static ChunkInfo ChunkInfoFromWire(Value value)
@@ -340,9 +465,9 @@ public static class ManifestBuilder
             throw new ManifestParseException(FromWireError.WrongFieldType, "chunks[]");
         }
         return new ChunkInfo(
-            (int)GetUInt(map, "index"),
-            (int)GetUInt(map, "offset"),
-            (int)GetUInt(map, "size"),
+            GetInt(map, "index"),
+            GetInt(map, "offset"),
+            GetInt(map, "size"),
             GetBytesExact(map, "hash", 32));
     }
 
@@ -353,19 +478,48 @@ public static class ManifestBuilder
         _ => throw new ManifestParseException(FromWireError.WrongFieldType, field),
     };
 
-    private static string GetText(Value.MapValue map, string field) => map.Get(field) switch
+    /// <summary>A uint field that must fit an int, checked before it is converted.</summary>
+    private static int GetInt(Value.MapValue map, string field)
     {
-        Value.TextValue t => t.AsText(),
+        var number = GetUInt(map, field);
+        return number <= int.MaxValue ? (int)number : throw new ManifestParseException(FromWireError.InvalidValue, field);
+    }
+
+    /// <summary>A uint field that must fit 32 bits, checked before it is converted.</summary>
+    private static uint GetUInt32(Value.MapValue map, string field)
+    {
+        var number = GetUInt(map, field);
+        return number <= uint.MaxValue ? (uint)number : throw new ManifestParseException(FromWireError.InvalidValue, field);
+    }
+
+    /// <summary>
+    /// The name, sent as bytes, which must be UTF-8: decoding it leniently
+    /// would put another name in the manifest than the one that was sent.
+    /// </summary>
+    private static string GetName(Value.MapValue map, string field) => map.Get(field) switch
+    {
+        Value.BytesValue b when Utf8.IsValid(b.Value) => Encoding.UTF8.GetString(b.Value),
+        Value.BytesValue => throw new ManifestParseException(FromWireError.InvalidValue, field),
         null => throw new ManifestParseException(FromWireError.MissingField, field),
         _ => throw new ManifestParseException(FromWireError.WrongFieldType, field),
     };
 
-    private static string GetStringBytes(Value.MapValue map, string field) => map.Get(field) switch
+    /// <summary>
+    /// The hash algorithm as macula reads it: a missing one is blake3, and
+    /// blake3 is accepted as text or as bytes. Any other name, sha256
+    /// included, is refused, since a content id carries no algorithm and only
+    /// blake3 content is ever fetched.
+    /// </summary>
+    private static Algorithm GetHashAlgorithm(Value.MapValue map, string field) => map.Get(field) switch
     {
-        Value.BytesValue b => Encoding.UTF8.GetString(b.Value),
-        null => throw new ManifestParseException(FromWireError.MissingField, field),
+        null => Algorithm.Blake3,
+        Value.TextValue t when IsBlake3(t.Utf8) => Algorithm.Blake3,
+        Value.BytesValue b when IsBlake3(b.Value) => Algorithm.Blake3,
+        Value.TextValue or Value.BytesValue => throw new ManifestParseException(FromWireError.InvalidValue, field),
         _ => throw new ManifestParseException(FromWireError.WrongFieldType, field),
     };
+
+    private static bool IsBlake3(byte[] name) => name.AsSpan().SequenceEqual("blake3"u8);
 
     private static byte[] GetBytesExact(Value.MapValue map, string field, int length) => map.Get(field) switch
     {

@@ -6,6 +6,9 @@ namespace Macula.Frame;
 public sealed class FrameTooLargeException : Exception
 {
     public FrameTooLargeException(int size)
+        : this((long)size) { }
+
+    internal FrameTooLargeException(long size)
         : base($"frame is {size} bytes, exceeding the {Envelope.MaxFrameBytes}-byte cap") { }
 }
 
@@ -46,11 +49,14 @@ public static class WireCodec
             return new Decoded.More(4 - buf.Length);
         }
 
-        var len = (int)BinaryPrimitives.ReadUInt32BigEndian(buf);
-        if (len > Envelope.MaxFrameBytes)
+        // The prefix is an unsigned length, compared with the cap before it
+        // becomes an int, so a prefix with its top bit set is over the cap.
+        var prefix = BinaryPrimitives.ReadUInt32BigEndian(buf);
+        if (prefix > Envelope.MaxFrameBytes)
         {
-            throw new FrameTooLargeException(len);
+            throw new FrameTooLargeException(prefix);
         }
+        var len = (int)prefix;
         if (buf.Length < 4 + len)
         {
             return new Decoded.More(4 + len - buf.Length);

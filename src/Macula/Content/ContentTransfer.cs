@@ -89,7 +89,11 @@ public static class ContentTransfer
         return manifest.Mcid;
     }
 
-    /// <summary>Fetch and verify the content addressed by <paramref name="mcid"/>.</summary>
+    /// <summary>
+    /// Fetch and verify the content addressed by <paramref name="mcid"/>. For
+    /// chunked content, the fetched manifest must describe
+    /// <paramref name="mcid"/> and its content whole before any of it is used.
+    /// </summary>
     public static async Task<byte[]> GetAsync(Session session, byte[] mcid, KeyPair identity, CancellationToken ct = default)
     {
         var stream = await session.OpenDedicatedStreamAsync(ct).ConfigureAwait(false);
@@ -105,29 +109,83 @@ public static class ContentTransfer
         }
 
         var manifest = await GetManifestAsync(stream, mcid, identity, ct).ConfigureAwait(false);
-        var buffer = new byte[manifest.Size];
-        var offset = 0;
-        for (var index = 0; index < manifest.ChunkCount; index++)
+        return await AssembleAsync(mcid, manifest, (chunkMcid, token) => GetBlockAsync(stream, chunkMcid, identity, token), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The part of a chunked get that runs once <paramref name="manifest"/>,
+    /// fetched for <paramref name="mcid"/>, has arrived. None of the
+    /// manifest's fields is used until it describes <paramref name="mcid"/>,
+    /// as macula_manifest checks it, its chunks describe its content whole, and
+    /// its chunk hashes make its root hash. Each chunk fetched through
+    /// <paramref name="fetchBlock"/> must then be
+    /// the size its entry says and hash to its MCID, and the content is put
+    /// together from the chunks that arrived, never sized from the manifest's
+    /// claim alone.
+    /// </summary>
+    internal static async Task<byte[]> AssembleAsync(byte[] mcid, Manifest manifest, Func<byte[], CancellationToken, Task<byte[]>> fetchBlock, CancellationToken ct)
+    {
+        if (!ManifestBuilder.VerifyMcid(manifest, mcid))
         {
-            var chunkMcid = ManifestBuilder.ChunkMcid(manifest, index)!;
-            var chunk = await GetBlockAsync(stream, chunkMcid, identity, ct).ConfigureAwait(false);
-            if (!ManifestBuilder.BlockMcid(chunk).AsSpan().SequenceEqual(chunkMcid))
-            {
-                throw new ContentTransferException(RemoteReason.HashMismatch, "fetched content does not hash to its MCID");
-            }
-            chunk.CopyTo(buffer, offset);
-            offset += chunk.Length;
+            throw new ContentTransferException(RemoteReason.HashMismatch, "the fetched manifest does not describe the requested MCID");
+        }
+        if (!ManifestBuilder.CheckWhole(manifest))
+        {
+            throw new ContentTransferException(RemoteReason.ManifestDecodeFailed, "the fetched manifest's chunks do not describe its content whole");
+        }
+        if (manifest.Size > (ulong)Array.MaxLength)
+        {
+            throw new ContentTransferException(RemoteReason.ManifestDecodeFailed, $"the fetched manifest describes {manifest.Size} bytes, more than one array can hold");
+        }
+        if (!ManifestBuilder.CheckChunkHashes(manifest))
+        {
+            throw new ContentTransferException(RemoteReason.HashMismatch, "the fetched manifest's chunk hashes do not make its root hash");
         }
 
+        var chunks = new List<byte[]>(manifest.Chunks.Count);
+        foreach (var entry in manifest.Chunks)
+        {
+            chunks.Add(await FetchChunkAsync(entry, fetchBlock, ct).ConfigureAwait(false));
+        }
+        var data = Concatenate(chunks, (int)manifest.Size);
+        VerifyAssembled(manifest, data);
+        return data;
+    }
+
+    /// <summary>Fetches the chunk <paramref name="entry"/> describes and checks it is the size the entry says and hashes to its MCID.</summary>
+    private static async Task<byte[]> FetchChunkAsync(ChunkInfo entry, Func<byte[], CancellationToken, Task<byte[]>> fetchBlock, CancellationToken ct)
+    {
+        var chunkMcid = Mcid.Make(Mcid.CodecRaw, entry.Hash);
+        var chunk = await fetchBlock(chunkMcid, ct).ConfigureAwait(false);
+        if (chunk.Length != entry.Size || !ManifestBuilder.BlockMcid(chunk).AsSpan().SequenceEqual(chunkMcid))
+        {
+            throw new ContentTransferException(RemoteReason.HashMismatch, "a fetched chunk is not the size its entry says or does not hash to its MCID");
+        }
+        return chunk;
+    }
+
+    private static byte[] Concatenate(List<byte[]> chunks, int size)
+    {
+        var data = new byte[size];
+        var offset = 0;
+        foreach (var chunk in chunks)
+        {
+            chunk.CopyTo(data, offset);
+            offset += chunk.Length;
+        }
+        return data;
+    }
+
+    private static void VerifyAssembled(Manifest manifest, byte[] data)
+    {
         try
         {
-            ManifestBuilder.Verify(manifest, buffer);
+            ManifestBuilder.Verify(manifest, data);
         }
         catch (InvalidOperationException e)
         {
             throw new ContentTransferException(RemoteReason.VerifyFailed, $"reassembled content failed verification: {e.Message}");
         }
-        return buffer;
     }
 
     private static async Task PutBlockAsync(FrameStream stream, byte[] mcid, byte[] bytes, KeyPair identity, CancellationToken ct)
