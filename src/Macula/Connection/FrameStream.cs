@@ -16,15 +16,28 @@ public sealed class FrameStream
     private int _len;
     private readonly byte[] _readScratch = new byte[8192];
 
+    // QuicStream fails a write that starts while another is still pending,
+    // so senders sharing this stream take turns here.
+    private readonly SemaphoreSlim _sendGate = new(1, 1);
+
     public FrameStream(Stream stream)
     {
         _stream = stream;
     }
 
+    /// <summary>Writes one frame whole. Safe to call from several tasks at once: their sends take turns.</summary>
     public async Task SendFrameAsync(Value frame, CancellationToken ct = default)
     {
         var bytes = WireCodec.Encode(frame);
-        await _stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+        await _sendGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await _stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _sendGate.Release();
+        }
     }
 
     /// <summary>Blocks for the next complete frame. Throws <see cref="EndOfStreamException"/> if the stream ends first.</summary>

@@ -49,26 +49,32 @@ public static class SupervisedPubSub
     /// wire), so there is no meaningful window in which cancelling can
     /// abort an in-flight wire write. The returned cancellation only
     /// prevents the publish from running at all if triggered before the
-    /// background Task starts it; once started, cancellation is a no-op
-    /// and the real outcome (success or failure) is what gets delivered.
+    /// background Task reaches it, right after sending the started fact;
+    /// once the publish has started, cancellation is a no-op and the real
+    /// outcome (success or failure) is what gets delivered.
     ///
     /// onDone is invoked from a different Task than the caller's -- do not
     /// assume it runs synchronously with this method's return.
     /// </summary>
-    public static CancellationTokenSource RunPublisherAsync(Session session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone)
+    public static CancellationTokenSource RunPublisherAsync(Session session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone) =>
+        RunPublisherOn(session, spec, identity, announce, onDone);
+
+    /// <summary>RunPublisherAsync over any frame sink, so its sends can be observed without a station.</summary>
+    internal static CancellationTokenSource RunPublisherOn(IFrameSink session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone)
     {
         var cts = new CancellationTokenSource();
         var publishId = RandomId();
 
-        AnnounceFact(session, announce, spec.Realm, identity, PublishStartedTopic,
-            Value.Map(new List<KeyValuePair<Value, Value>>
-            {
-                new(Value.Text("publish_id"), Value.Bytes(publishId)),
-                new(Value.Text("topic"), Value.Bytes(System.Text.Encoding.UTF8.GetBytes(spec.Topic))),
-            }));
-
         _ = Task.Run(async () =>
         {
+            // The started fact's send finishes before the publish starts, so
+            // the two never overlap on the session and arrive in order.
+            await AnnounceFact(session, announce, spec.Realm, identity, PublishStartedTopic,
+                Value.Map(new List<KeyValuePair<Value, Value>>
+                {
+                    new(Value.Text("publish_id"), Value.Bytes(publishId)),
+                    new(Value.Text("topic"), Value.Bytes(System.Text.Encoding.UTF8.GetBytes(spec.Topic))),
+                })).ConfigureAwait(false);
             if (cts.IsCancellationRequested)
             {
                 await AnnounceCompletedAsync(session, announce, spec.Realm, identity, publishId, new PublishOutcome(null, true)).ConfigureAwait(false);
@@ -164,7 +170,7 @@ public static class SupervisedPubSub
     // Session; only network-free unit tests exercising pure dispatch logic
     // would pass null, matching the same nil-session-safe design
     // macula-go's own announceFact uses.
-    private static async Task AnnounceFact(Session? session, bool announce, byte[] realm, KeyPair identity, string topic, Value payload)
+    private static async Task AnnounceFact(IFrameSink? session, bool announce, byte[] realm, KeyPair identity, string topic, Value payload)
     {
         if (!announce || session is null)
         {
@@ -190,7 +196,7 @@ public static class SupervisedPubSub
         }
     }
 
-    private static Task AnnounceCompletedAsync(Session? session, bool announce, byte[] realm, KeyPair identity, byte[] publishId, PublishOutcome outcome)
+    private static Task AnnounceCompletedAsync(IFrameSink? session, bool announce, byte[] realm, KeyPair identity, byte[] publishId, PublishOutcome outcome)
     {
         var fields = new List<KeyValuePair<Value, Value>> { new(Value.Text("publish_id"), Value.Bytes(publishId)) };
         if (outcome.Cancelled)
