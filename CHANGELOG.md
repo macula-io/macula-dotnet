@@ -18,8 +18,8 @@ called out below. Releases before 0.4.1 predate this file; see the git tags.
   it.** A byte or text length, list count or map count that the rest of the
   input can't hold throws `CborDecodeException` before anything is sized by
   it. A length beyond the range of an int used to throw `OverflowException`
-  or `OutOfMemoryException` instead. Lists and maps make room for at most
-  1024 items before their items decode.
+  instead. Lists and maps make room for at most 1024 items before their
+  items decode.
 - **One decode produces at most 1,048,576 values.** Every decoded value
   counts, map keys and map values included, and the value past the limit
   throws `CborDecodeException`. The limit and the counting rule are
