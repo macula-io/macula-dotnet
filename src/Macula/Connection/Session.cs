@@ -9,7 +9,7 @@ using Macula.Ucan;
 
 namespace Macula.Connection;
 
-/// <summary>A provider-side handler for one advertised (realm, procedure). Throw <see cref="CallHandlerException"/> for an application-level failure with a message; any other exception is treated as a crash.</summary>
+/// <summary>A provider-side handler for one advertised (realm, procedure). Throw <see cref="CallHandlerException"/> for an application-level failure with a message; any other exception is treated as a crash. A map payload arrives with the caller's 32-byte node id under "caller": the caller the CALL's signature was verified against, replacing any "caller" the sender put in the payload. A payload that isn't a map arrives unchanged and carries no caller.</summary>
 public delegate Task<Value> CallHandler(Value payload);
 
 /// <summary>Resolves an inbound CALL's (realm, procedure) to a handler, or null if nothing is advertised for it.</summary>
@@ -62,18 +62,60 @@ public sealed class HelloSignatureInvalidException : Exception
 public sealed class Session : IAsyncDisposable, IFrameSink
 {
     private readonly QuicConnection _connection;
-    private readonly FrameStream _control;
-    private bool _closed;
+    private readonly ControlChannel _channel;
+    private readonly object _closeGate = new();
+    private Task? _closing;
 
     public KeyPair Identity { get; }
     public HelloInfo RemoteInfo { get; }
 
+    /// <summary>
+    /// Set when direct dial dialed this session: it then closes once no
+    /// direct-dial request still uses it. Null for a session the application
+    /// opened, which direct dial reuses but never closes.
+    /// </summary>
+    internal DialedSession<Session>? DialedBy { get; private set; }
+
+    /// <summary>
+    /// How many frames of each type the station sent that nothing on this
+    /// session was waiting for, such as the station's own advertise
+    /// broadcasts. They are dropped, and at most one trace line per type per
+    /// minute reports them, except a dropped CALL, RESULT or ERROR, which gets
+    /// a drop warning instead (see <see cref="DropWarningInterval"/>).
+    /// </summary>
+    public IReadOnlyDictionary<string, long> UnroutedFrameCounts => _channel.UnroutedFrames;
+
+    /// <summary>
+    /// How long this session's drop warning intervals last. The first inbound
+    /// CALL or reply of an interval this session drops, and the first stream
+    /// it refuses, is traced at once with the reason; the rest of the same kind
+    /// in that interval are counted into one closing line when it ends.
+    /// Defaults to 60 seconds; a change applies to the intervals that start
+    /// after it.
+    /// </summary>
+    public TimeSpan DropWarningInterval
+    {
+        get => _channel.DropWarnings.Interval;
+        set => _channel.DropWarnings.Interval = value;
+    }
+
+    internal DropWarnings DropWarnings => _channel.DropWarnings;
+
+    /// <summary>Completes with the reason once this session's control stream has ended.</summary>
+    internal Task<Exception> Ended => _channel.Ended;
+
     private Session(QuicConnection connection, FrameStream control, KeyPair identity, HelloInfo remoteInfo)
     {
         _connection = connection;
-        _control = control;
         Identity = identity;
         RemoteInfo = remoteInfo;
+        // A session whose control stream ends is no longer offered for reuse,
+        // and closes its connection.
+        _channel = new ControlChannel(control, identity, remoteInfo.NodeId, reason =>
+        {
+            OpenSessions.Live.Unregister(identity.NodeId(), remoteInfo.NodeId, this);
+            _ = Task.Run(() => CloseAsync().AsTask());
+        });
     }
 
     /// <summary>
@@ -86,13 +128,24 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// real-world trigger is a protocol version mismatch, which looks like
     /// a plain timeout, not an explicit error frame).
     /// </summary>
-    public static async Task<Session> ConnectAsync(
+    public static Task<Session> ConnectAsync(
         string host,
         int port,
         KeyPair identity,
         Trust trust,
         TimeSpan? handshakeTimeout = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        ConnectCoreAsync(host, port, identity, trust, handshakeTimeout, dialedByDirectDial: false, ct);
+
+    /// <summary>
+    /// ConnectAsync for direct dial: the session is marked as dialed before it
+    /// becomes findable for reuse, so every request that reuses it takes a
+    /// lease on it.
+    /// </summary>
+    internal static Task<Session> ConnectDialedAsync(string host, int port, KeyPair identity, TimeSpan handshakeTimeout, CancellationToken ct) =>
+        ConnectCoreAsync(host, port, identity, Trust.Unsafe, handshakeTimeout, dialedByDirectDial: true, ct);
+
+    private static async Task<Session> ConnectCoreAsync(string host, int port, KeyPair identity, Trust trust, TimeSpan? handshakeTimeout, bool dialedByDirectDial, CancellationToken ct)
     {
         var clientOptions = new QuicClientConnectionOptions
         {
@@ -163,7 +216,14 @@ public sealed class Session : IAsyncDisposable, IFrameSink
                 throw new ConnectRefusedException(helloInfo.RefusalCode);
             }
 
-            return new Session(connection, control, identity, helloInfo);
+            var session = new Session(connection, control, identity, helloInfo);
+            if (dialedByDirectDial)
+            {
+                session.DialedBy = new DialedSession<Session>(session, s => s.CloseAsync());
+            }
+            OpenSessions.Live.Register(identity.NodeId(), helloInfo.NodeId, session);
+            session._channel.Start();
+            return session;
         }
         catch
         {
@@ -176,33 +236,54 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
     }
 
-    /// <summary>Sends a frame on the control stream, auto-signing it first.</summary>
+    /// <summary>
+    /// Sends a frame on the control stream, auto-signing it first. Safe to call
+    /// from several tasks at once: their writes take turns. Waiting for a turn
+    /// is bounded by a 30 second send timeout, after which this throws
+    /// TimeoutException, the frame was not sent, and the session carries on. A
+    /// write that stalls for more than 30 seconds ends the session with
+    /// <see cref="SendTimeoutException"/>.
+    /// </summary>
     public Task SendAsync(Value.MapValue frame, CancellationToken ct = default) =>
-        _control.SendFrameAsync(Envelope.Sign(frame, Identity), ct);
-
-    /// <summary>Receives the next frame off the control stream.</summary>
-    public Task<Value> RecvAsync(CancellationToken ct = default) => _control.RecvFrameAsync(ct);
+        _channel.SendAsync(frame, ct);
 
     /// <summary>
     /// Send a signed CALL on the control stream and wait for the matching
-    /// RESULT or ERROR, correlated by call_id.
-    ///
-    /// Known v1 limitation (control stream only, matching the sibling
-    /// Go/Rust SDKs): any frame that arrives before the match (e.g. an
-    /// EVENT from an active SUBSCRIBE) is discarded, not queued or
-    /// dispatched elsewhere -- correct for a client doing one thing at a
-    /// time on the control stream, not yet correct for CALL and
-    /// PUBLISH/SUBSCRIBE used concurrently on it.
+    /// RESULT or ERROR, correlated by call_id. Calls, subscriptions and
+    /// serving run concurrently on one session: its reader hands each reply
+    /// to its own call and every other frame to whatever waits for it. The
+    /// timeout covers the whole call, its turn to write included; when it runs
+    /// out the call throws <see cref="CallTimeoutException"/>, and when the
+    /// session ends first, <see cref="SessionEndedException"/>. Both say, in
+    /// WriteStarted, whether the CALL may have reached the station.
     /// </summary>
-    public async Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default)
+    public Task<CallResponse> CallAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, CancellationToken ct = default) =>
+        CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, Array.Empty<byte>()), timeout, ct);
+
+    /// <summary>As <see cref="CallAsync"/>, attaching ucanToken -- for a procedure gated by <see cref="Policy.Required"/> on the provider side.</summary>
+    public Task<CallResponse> CallWithUcanAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default) =>
+        CallAnnouncedAsync(NewCall(procedure, realm, payload, deadlineMs, ucanToken), timeout, ct);
+
+    /// <summary>
+    /// A CALL on this session without RPC telemetry facts, for a pool calling
+    /// on its links, as macula's pool calls through macula_station_link:call.
+    /// </summary>
+    internal Task<CallResponse> LinkCallAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct) =>
+        _channel.CallAsync(spec, timeout, ct);
+
+    /// <summary>
+    /// A CALL on this session with its RPC telemetry facts: rpc.sent_v1 once
+    /// the CALL is written, and rpc.completed_v1 when the call returns. Both go
+    /// to this session's own writer, so they never cost the call time.
+    /// </summary>
+    private async Task<CallResponse> CallAnnouncedAsync(CallSpec spec, TimeSpan timeout, CancellationToken ct)
     {
         var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceSentAsync(this, realm, Identity, requestId, ct).ConfigureAwait(false);
         CallResponse? resp = null;
         Exception? err = null;
         try
         {
-            resp = await _control.CallAsync(procedure, realm, payload, deadlineMs, Identity, timeout, ct).ConfigureAwait(false);
+            resp = await _channel.CallAsync(spec, timeout, ct, PublisherSigned(RpcFacts.Sent(spec.Realm, Identity, requestId))).ConfigureAwait(false);
             return resp;
         }
         catch (Exception e)
@@ -212,31 +293,24 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
         finally
         {
-            await RpcFacts.AnnounceCompletedAsync(this, realm, Identity, requestId, resp, err, ct).ConfigureAwait(false);
+            Announce(RpcFacts.Completed(spec.Realm, Identity, requestId, resp, err));
         }
     }
 
-    /// <summary>As <see cref="CallAsync"/>, attaching ucanToken -- for a procedure gated by <see cref="Policy.Required"/> on the provider side.</summary>
-    public async Task<CallResponse> CallWithUcanAsync(string procedure, byte[] realm, Value payload, long deadlineMs, TimeSpan timeout, byte[] ucanToken, CancellationToken ct = default)
+    private CallSpec NewCall(string procedure, byte[] realm, Value payload, long deadlineMs, byte[] ucanToken)
     {
-        var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceSentAsync(this, realm, Identity, requestId, ct).ConfigureAwait(false);
-        CallResponse? resp = null;
-        Exception? err = null;
-        try
+        var callId = new byte[16];
+        Random.Shared.NextBytes(callId);
+        return new CallSpec
         {
-            resp = await _control.CallAsync(procedure, realm, payload, deadlineMs, Identity, timeout, ucanToken, ct).ConfigureAwait(false);
-            return resp;
-        }
-        catch (Exception e)
-        {
-            err = e;
-            throw;
-        }
-        finally
-        {
-            await RpcFacts.AnnounceCompletedAsync(this, realm, Identity, requestId, resp, err, ct).ConfigureAwait(false);
-        }
+            CallId = callId,
+            Procedure = procedure,
+            Realm = realm,
+            Payload = payload,
+            DeadlineMs = deadlineMs,
+            Caller = Identity.NodeId(),
+            UcanToken = ucanToken,
+        };
     }
 
     /// <summary>
@@ -250,16 +324,31 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// true since macula 4.6.0). Fire-and-forget -- no reply is expected
     /// on the wire; a subscriber (this session included, if subscribed
     /// to the same topic/realm) receives an EVENT asynchronously, read
-    /// via <see cref="RecvAsync"/> / <see cref="RecvEventAsync"/>.
+    /// through its <see cref="Subscription"/>.
     /// </summary>
     public Task PublishAsync(PublishSpec spec, CancellationToken ct = default) =>
-        SendAsync(Envelope.SignPublisher(PublishFrame.Build(spec), Identity), ct);
+        SendAsync(PublisherSigned(spec), ct);
 
-    public Task SubscribeAsync(SubscribeSpec spec, CancellationToken ct = default) =>
-        SendAsync(SubscribeFrame.Build(spec), ct);
+    /// <summary>
+    /// Hands a PUBLISH this session makes on its own account, such as an RPC
+    /// telemetry fact, to its own writer. Never waits and never fails: when 64
+    /// frames already wait there, this one is dropped.
+    /// </summary>
+    internal void Announce(PublishSpec spec) => _channel.HandOff(PublisherSigned(spec));
 
-    public Task UnsubscribeAsync(UnsubscribeSpec spec, CancellationToken ct = default) =>
-        SendAsync(UnsubscribeFrame.Build(spec), ct);
+    private Value.MapValue PublisherSigned(PublishSpec spec) => Envelope.SignPublisher(PublishFrame.Build(spec), Identity);
+
+    /// <summary>
+    /// Starts a subscription with its own queue of 256 events. It receives
+    /// every EVENT whose realm equals spec's realm and whose topic matches
+    /// spec's topic by the station's rule: both split on "/", with equal
+    /// segment counts, and each segment equal or "*", which matches exactly
+    /// one whole segment. SUBSCRIBE goes to the station unless another
+    /// subscription on this session already holds that realm and topic, and
+    /// disposing the last one sends UNSUBSCRIBE.
+    /// </summary>
+    public Task<Subscription> SubscribeAsync(SubscribeSpec spec, CancellationToken ct = default) =>
+        _channel.SubscribeAsync(spec, ct);
 
     /// <summary>
     /// Registers this connection as the handler for `spec`'s
@@ -275,42 +364,16 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         SendAsync(UnadvertiseFrame.Build(spec), ct);
 
     /// <summary>
-    /// Read the next frame and parse it as an EVENT, bounded by
-    /// <paramref name="timeout"/>. Any non-EVENT frame received first is an
-    /// error, not silently skipped -- unlike <see cref="CallAsync"/>'s
-    /// response wait, a caller waiting specifically for a pubsub delivery
-    /// has no reason to expect anything else to legitimately arrive first.
-    /// </summary>
-    public async Task<EventInfo> RecvEventAsync(TimeSpan timeout, CancellationToken ct = default)
-    {
-        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeoutCts.CancelAfter(timeout);
-        Value value;
-        try
-        {
-            value = await RecvAsync(timeoutCts.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new TimeoutException($"no event within {timeout}");
-        }
-        return EventFrameParsing.Parse(value);
-    }
-
-    /// <summary>
     /// The provider role's counterpart to <see cref="CallAsync"/>: block for
     /// the next inbound CALL frame on the control stream, bounded by
     /// <paramref name="timeout"/>, look it up via <paramref name="lookup"/>,
     /// invoke the matching handler, and send the resulting RESULT or ERROR
     /// back over this same connection.
     ///
-    /// Any non-CALL frame that arrives first (e.g. a stray EVENT from an
-    /// active <see cref="SubscribeAsync"/>, or a RESULT/ERROR for some other
-    /// in-flight <see cref="CallAsync"/>) is discarded, not queued -- the
-    /// same "control stream, one thing at a time" limitation
-    /// <see cref="CallAsync"/>'s own doc already carries. A session that
-    /// needs to serve CALLs and also act as a caller/subscriber concurrently
-    /// should use a second <see cref="Session"/>.
+    /// Inbound CALLs wait in this session's queue of 64 until served, while
+    /// calls and subscriptions on the same session carry on. A CALL that
+    /// doesn't fit gets temporary_relay_failure at once, and serving carries
+    /// on with the calls already queued.
     /// </summary>
     public Task ServeOneCallAsync(CallLookup lookup, TimeSpan timeout, CancellationToken ct = default) =>
         ServeOneCallGatedAsync(lookup, OpenPolicy, timeout, ct);
@@ -322,10 +385,15 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// policy (the default, <see cref="Policy.Open"/>) behaves identically
     /// to plain <see cref="ServeOneCallAsync"/>; a <see cref="Policy.Required"/>
     /// policy demands a CALL's UcanToken verify against the required
-    /// issuer, and refuses with BOLT#4 Unauthorized WITHOUT ever invoking
-    /// lookup or a handler if it doesn't -- a CallHandler never sees the
-    /// raw token either way, matching the reference's own handler contract
-    /// (payload only).
+    /// issuer and name the CALL's caller as its audience, and refuses with
+    /// BOLT#4 Unauthorized WITHOUT ever invoking lookup or a handler if it
+    /// doesn't -- a CallHandler never sees the raw token either way,
+    /// matching the reference's own handler contract (payload only).
+    ///
+    /// Before any policy runs, the CALL's signature must verify against the
+    /// caller it names; one that doesn't is dropped with no reply, as
+    /// `macula_station_link.erl`'s `on_inbound_call/3` does, and this keeps
+    /// waiting for the next CALL.
     /// </summary>
     public async Task ServeOneCallGatedAsync(CallLookup lookup, PolicyLookup policy, TimeSpan timeout, CancellationToken ct = default)
     {
@@ -343,26 +411,17 @@ public sealed class Session : IAsyncDisposable, IFrameSink
 
     private static Policy OpenPolicy(byte[] realm, string procedure) => Policy.Open;
 
+    // The reader queues only CALLs signed by the caller they name; see
+    // CallFrameParsing.ParseSignedCall.
     private async Task ServeOneCallInnerAsync(CallLookup lookup, PolicyLookup policy, CancellationToken ct)
     {
-        while (true)
-        {
-            var value = await RecvAsync(ct).ConfigureAwait(false);
-            CallInfo callInfo;
-            try
-            {
-                callInfo = CallFrameParsing.ParseCall(value);
-            }
-            catch (ParseFrameException)
-            {
-                continue; // not ours -- see this method's doc on the limitation
-            }
-
-            var reply = await BuildCallReplyAsync(this, callInfo, lookup, policy, Identity, ct).ConfigureAwait(false);
-            await SendAsync(reply, ct).ConfigureAwait(false);
-            return;
-        }
+        var call = await _channel.NextInboundCallAsync(ct).ConfigureAwait(false);
+        var reply = await BuildCallReplyAsync(this, call, lookup, policy, Identity).ConfigureAwait(false);
+        await SendAsync(reply, ct).ConfigureAwait(false);
     }
+
+    /// <summary>The next inbound CALL signed by its caller, for a pool that dispatches calls itself.</summary>
+    internal Task<CallInfo> NextInboundCallAsync(CancellationToken ct) => _channel.NextInboundCallAsync(ct);
 
     /// <summary>
     /// Mirrors `macula_station_link.erl`'s `handle_inbound_call/2` +
@@ -379,21 +438,19 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// for a handler crash -- the reference's own crash-before-publish
     /// omission, matched not "improved."
     ///
-    /// `internal`, not `private`, and takes <see cref="IFrameSink"/> rather
-    /// than a concrete <see cref="Session"/>: <see cref="StationPool"/>
+    /// `internal`, not `private`, and static: <see cref="StationPool"/>
     /// reuses this exact dispatch logic for an inbound CALL arriving on a
     /// pooled link, rather than forking a second copy of the policy/lookup/
-    /// crash-handling semantics that could drift from this one. The method
-    /// is static and closure-free (only reads its parameters), so widening
-    /// its visibility changes nothing about how it behaves when called
-    /// from here.
+    /// crash-handling semantics that could drift from this one. The facts go
+    /// to session's own writer (<see cref="Announce"/>); a null session, as in
+    /// network-free tests, announces nothing.
     /// </summary>
-    internal static async Task<Value.MapValue> BuildCallReplyAsync(IFrameSink? session, CallInfo callInfo, CallLookup lookup, PolicyLookup policy, KeyPair identity, CancellationToken ct = default)
+    internal static async Task<Value.MapValue> BuildCallReplyAsync(Session? session, CallInfo callInfo, CallLookup lookup, PolicyLookup policy, KeyPair identity)
     {
         var selfPub = identity.NodeId();
         try
         {
-            policy(callInfo.Realm, callInfo.Procedure).Check(callInfo.UcanToken);
+            policy(callInfo.Realm, callInfo.Procedure).Check(callInfo.UcanToken, callInfo.Caller);
         }
         catch (Exception)
         {
@@ -407,17 +464,17 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         }
 
         var requestId = RpcFacts.RandomRequestId();
-        await RpcFacts.AnnounceReceivedAsync(session, callInfo.Realm, identity, requestId, ct).ConfigureAwait(false);
+        session?.Announce(RpcFacts.Received(callInfo.Realm, identity, requestId));
 
         try
         {
-            var value = await handler(callInfo.Payload).ConfigureAwait(false);
-            await RpcFacts.AnnounceRepliedAsync(session, callInfo.Realm, identity, requestId, null, ct).ConfigureAwait(false);
+            var value = await handler(WithCaller(callInfo.Payload, callInfo.Caller)).ConfigureAwait(false);
+            session?.Announce(RpcFacts.Replied(callInfo.Realm, identity, requestId, null));
             return ResultFrame.Build(new ResultSpec { CallId = callInfo.CallId, Payload = value, RespondedBy = selfPub });
         }
         catch (CallHandlerException e)
         {
-            await RpcFacts.AnnounceRepliedAsync(session, callInfo.Realm, identity, requestId, e.Message, ct).ConfigureAwait(false);
+            session?.Announce(RpcFacts.Replied(callInfo.Realm, identity, requestId, e.Message));
             return CallErrorFrame.Build(new CallErrorSpec { CallId = callInfo.CallId, Code = Bolt4Code.UnknownError, ReportedBy = selfPub, Detail = e.Message });
         }
         catch (Exception)
@@ -427,6 +484,28 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             return CallErrorFrame.Build(new CallErrorSpec { CallId = callInfo.CallId, Code = Bolt4Code.TemporaryRelayFailure, ReportedBy = selfPub });
         }
     }
+
+    /// <summary>
+    /// The payload a CALL's handler receives: a map payload with
+    /// <paramref name="caller"/>, the node id the CALL's signature was
+    /// verified against, under "caller", replacing a "caller" the sender put
+    /// there under a text or byte-string key; any other payload unchanged.
+    /// Mirrors macula_station_link:with_caller/2.
+    /// </summary>
+    internal static Value WithCaller(Value payload, byte[] caller) =>
+        payload is Value.MapValue map
+            ? Value.Map(map.Entries
+                .Where(entry => !IsCallerKey(entry.Key))
+                .Append(new KeyValuePair<Value, Value>(Value.Text("caller"), Value.Bytes(caller)))
+                .ToList())
+            : payload;
+
+    private static bool IsCallerKey(Value key) => key switch
+    {
+        Value.TextValue text => text.Utf8.AsSpan().SequenceEqual("caller"u8),
+        Value.BytesValue bytes => bytes.Value.AsSpan().SequenceEqual("caller"u8),
+        _ => false,
+    };
 
     /// <summary>Opens a fresh dedicated QUIC stream (streaming RPC session, content transfer).</summary>
     public async Task<FrameStream> OpenDedicatedStreamAsync(CancellationToken ct = default)
@@ -446,7 +525,11 @@ public sealed class Session : IAsyncDisposable, IFrameSink
         return new FrameStream(stream);
     }
 
-    /// <summary>Sends GOODBYE and closes the connection. Idempotent.</summary>
+    /// <summary>
+    /// Sends GOODBYE and closes the connection. Idempotent: every call shares
+    /// the first close, including the one a session starts itself once its
+    /// control stream ends.
+    /// </summary>
     /// <remarks>
     /// RESOLVED 2026-08-30 (previously flagged as an unverified risk since
     /// 2026-08-29): the Go and Rust ports of this exact method (connect,
@@ -469,13 +552,18 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// without a new reproduction; this finding is based on real live
     /// evidence, not merely "no counter-evidence found."
     /// </remarks>
-    public async ValueTask CloseAsync(string reason = "normal", string? detail = null)
+    public ValueTask CloseAsync(string reason = "normal", string? detail = null)
     {
-        if (_closed)
+        lock (_closeGate)
         {
-            return;
+            _closing ??= CloseOnceAsync(reason, detail);
+            return new ValueTask(_closing);
         }
-        _closed = true;
+    }
+
+    private async Task CloseOnceAsync(string reason, string? detail)
+    {
+        OpenSessions.Live.Unregister(Identity.NodeId(), RemoteInfo.NodeId, this);
 
         try
         {
@@ -487,6 +575,8 @@ public sealed class Session : IAsyncDisposable, IFrameSink
             // we're closing because of a transport-level failure.
         }
 
+        // Waiting calls and consumers end with this before the connection goes.
+        _channel.Stop(new IOException("the session was closed"));
         await _connection.CloseAsync(0).ConfigureAwait(false);
         await _connection.DisposeAsync().ConfigureAwait(false);
     }

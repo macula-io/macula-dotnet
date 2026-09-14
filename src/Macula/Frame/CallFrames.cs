@@ -184,9 +184,36 @@ public static class CallFrameParsing
         // or simply an ungated call from a caller who never attached one --
         // both are the empty-token case a Policy check treats as "no token
         // presented", not a parse error.
-        var ucanToken = map.Get("ucan_token") is { } t && !t.IsNull ? t.AsBytes() : Array.Empty<byte>();
+        var ucanToken = map.Get("ucan_token") switch
+        {
+            null or Value.NullValue => Array.Empty<byte>(),
+            Value.BytesValue b => b.Value,
+            Value.TextValue t => t.Utf8,
+            _ => throw new ParseFrameException(ParseFrameError.WrongFieldType, "ucan_token"),
+        };
 
         return new CallInfo(callId, procedure, realm, payload, deadlineMs, caller, ucanToken);
+    }
+
+    /// <summary>
+    /// Parses frame as a CALL and returns it only when its signature
+    /// verifies against its own caller field; null for anything else.
+    /// Mirrors macula_station_link.erl's on_inbound_call/3: a CALL that
+    /// isn't signed by the caller it names never reaches policy or a
+    /// handler, and gets no reply.
+    /// </summary>
+    internal static CallInfo? ParseSignedCall(Value frame)
+    {
+        CallInfo call;
+        try
+        {
+            call = ParseCall(frame);
+        }
+        catch (ParseFrameException)
+        {
+            return null;
+        }
+        return Envelope.Verify((Value.MapValue)frame, call.Caller) is null ? call : null;
     }
 
     /// <summary>Extract this frame's call_id, regardless of frame type -- 16 bytes, never 32.</summary>

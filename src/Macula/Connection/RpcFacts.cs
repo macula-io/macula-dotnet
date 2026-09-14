@@ -8,10 +8,13 @@ namespace Macula.Connection;
 /// rpc.sent_v1/rpc.completed_v1) and macula_response.erl (provider side:
 /// rpc.received_v1/rpc.replied_v1) exactly -- same topic names, same
 /// request_id field (a fresh 16 random bytes per call, independent of the
-/// wire CALL frame's own CallId), same realm as the call itself,
-/// fire-and-forget (a publish failure here never fails the underlying
-/// call/serve, matching macula_response.erl's own `_ = macula:publish(...),
-/// ok` and macula_request.erl's identical publish/5 helper).
+/// wire CALL frame's own CallId), same realm as the call itself. These build
+/// each fact; a session hands it to its own writer
+/// (<see cref="Session.Announce"/>), so a fact never costs the call or serve
+/// it describes any time and never fails it, matching macula_response.erl's
+/// own `_ = macula:publish(...), ok` and macula_request.erl's identical
+/// publish/5 helper. A fact is dropped when 64 frames already wait for that
+/// writer.
 ///
 /// Always on, matching the reference's own actual reachable behavior:
 /// `Announce` is a config field in both Erlang modules, but every reachable
@@ -27,13 +30,11 @@ internal static class RpcFacts
     private const string RpcReceivedTopic = "rpc.received_v1";
     private const string RpcRepliedTopic = "rpc.replied_v1";
 
-    public static async Task AnnounceSentAsync(IFrameSink? session, byte[] realm, KeyPair identity, byte[] requestId, CancellationToken ct = default)
-    {
-        await AnnounceAsync(session, realm, identity, RpcSentTopic, RequestIdFields(requestId), ct).ConfigureAwait(false);
-    }
+    public static PublishSpec Sent(byte[] realm, KeyPair identity, byte[] requestId) =>
+        Fact(realm, identity, RpcSentTopic, RequestIdFields(requestId));
 
     /// <summary>Matches macula_request.erl's outcome_fields/2: completed (no exception, not a bolt4 ERROR frame) or failed (either).</summary>
-    public static async Task AnnounceCompletedAsync(IFrameSink? session, byte[] realm, KeyPair identity, byte[] requestId, CallResponse? resp, Exception? err, CancellationToken ct = default)
+    public static PublishSpec Completed(byte[] realm, KeyPair identity, byte[] requestId, CallResponse? resp, Exception? err)
     {
         var fields = RequestIdFields(requestId);
         if (err is not null)
@@ -48,13 +49,11 @@ internal static class RpcFacts
         {
             fields.Add(new KeyValuePair<Value, Value>(Value.Text("outcome"), Value.Text("completed")));
         }
-        await AnnounceAsync(session, realm, identity, RpcCompletedTopic, fields, ct).ConfigureAwait(false);
+        return Fact(realm, identity, RpcCompletedTopic, fields);
     }
 
-    public static async Task AnnounceReceivedAsync(IFrameSink? session, byte[] realm, KeyPair identity, byte[] requestId, CancellationToken ct = default)
-    {
-        await AnnounceAsync(session, realm, identity, RpcReceivedTopic, RequestIdFields(requestId), ct).ConfigureAwait(false);
-    }
+    public static PublishSpec Received(byte[] realm, KeyPair identity, byte[] requestId) =>
+        Fact(realm, identity, RpcReceivedTopic, RequestIdFields(requestId));
 
     /// <summary>
     /// Matches macula_response.erl's outcome_fields/2: replied (success) or
@@ -64,7 +63,7 @@ internal static class RpcFacts
     /// before its own publish_replied/2 call is ever reached, so
     /// rpc.replied_v1 is never published for a crash either.
     /// </summary>
-    public static async Task AnnounceRepliedAsync(IFrameSink? session, byte[] realm, KeyPair identity, byte[] requestId, string? handlerErrorMessage, CancellationToken ct = default)
+    public static PublishSpec Replied(byte[] realm, KeyPair identity, byte[] requestId, string? handlerErrorMessage)
     {
         var fields = RequestIdFields(requestId);
         if (handlerErrorMessage is not null)
@@ -75,7 +74,14 @@ internal static class RpcFacts
         {
             fields.Add(new KeyValuePair<Value, Value>(Value.Text("outcome"), Value.Text("replied")));
         }
-        await AnnounceAsync(session, realm, identity, RpcRepliedTopic, fields, ct).ConfigureAwait(false);
+        return Fact(realm, identity, RpcRepliedTopic, fields);
+    }
+
+    public static byte[] RandomRequestId()
+    {
+        var b = new byte[16];
+        System.Security.Cryptography.RandomNumberGenerator.Fill(b);
+        return b;
     }
 
     private static List<KeyValuePair<Value, Value>> RequestIdFields(byte[] requestId) =>
@@ -87,43 +93,13 @@ internal static class RpcFacts
         new KeyValuePair<Value, Value>(Value.Text("reason"), Value.Text(reason)),
     };
 
-    // A no-op if session is null -- only network-free unit tests
-    // exercising pure dispatch logic would pass null.
-    //
-    // `ct` bounds this write against the SAME deadline as whatever it's
-    // describing (a call, a serve dispatch) -- passing `default` here would
-    // make a telemetry publish the one write in a caller's whole operation
-    // with no time bound, able to hang past that operation's own timeout
-    // while a `finally` block waits on it.
-    private static async Task AnnounceAsync(IFrameSink? session, byte[] realm, KeyPair identity, string topic, List<KeyValuePair<Value, Value>> fields, CancellationToken ct)
+    private static PublishSpec Fact(byte[] realm, KeyPair identity, string topic, List<KeyValuePair<Value, Value>> fields) => new()
     {
-        if (session is null)
-        {
-            return;
-        }
-        var spec = new PublishSpec
-        {
-            Topic = topic,
-            Realm = realm,
-            Publisher = identity.NodeId(),
-            Seq = (ulong)Random.Shared.NextInt64(),
-            Payload = Value.Map(fields),
-            PublishedAtMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-        };
-        try
-        {
-            await session.PublishAsync(spec, ct).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            // fire-and-forget telemetry -- never fail the operation it's describing
-        }
-    }
-
-    public static byte[] RandomRequestId()
-    {
-        var b = new byte[16];
-        System.Security.Cryptography.RandomNumberGenerator.Fill(b);
-        return b;
-    }
+        Topic = topic,
+        Realm = realm,
+        Publisher = identity.NodeId(),
+        Seq = (ulong)Random.Shared.NextInt64(),
+        Payload = Value.Map(fields),
+        PublishedAtMs = (ulong)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+    };
 }

@@ -93,19 +93,19 @@ it doesn't.
 |---|---|---|---|
 | Handshake (CONNECT/HELLO) | ✅ | — | Ed25519 identity, S/Kademlia puzzle-hardened; HELLO signature verified; live-verified |
 | Deterministic CBOR codec | ✅ | — | Hand-rolled — see [Codec](#the-cbor-codec-is-hand-rolled-on-purpose) |
-| Unary RPC (CALL/RESULT/ERROR) | ✅ | ✅ | `Session.ServeOneCallAsync`, BOLT#4 error mapping, live-verified |
-| PubSub (PUBLISH/SUBSCRIBE/EVENT) | ✅ | ✅ | A subscriber gets its own publish, verified live |
+| Unary RPC (CALL/RESULT/ERROR) | ✅ | ✅ | `Session.ServeOneCallAsync`, BOLT#4 error mapping, calls and serving share one session at the same time, live-verified |
+| PubSub (PUBLISH/SUBSCRIBE/EVENT) | ✅ | ✅ | `Session.SubscribeAsync` returns a `Subscription` with its own queue, a subscriber gets its own publish, verified live |
 | Content transfer (single-block + chunked) | ✅ | — | Content-addressed, BLAKE3/SHA-256, Merkle-verified |
 | Streaming RPC (STREAM_OPEN/DATA/END/REPLY) | ✅ | ✅ | Both roles live-verified against the real fleet |
 | RPC advertise/unadvertise | ✅ | — | |
 | Pubkey-pinned trust | ✅ | — | `Trust.Pin(nodeId)` — Ed25519 SPKI match, no CA chain needed |
 | Direct-dial (RPC) | ✅ | ✅ | `DirectDial.ResolveAsync`/`CallAsync`/`AdvertiseDirectAsync` — resolve+dial via the mesh DHT, no advertise-gossip propagation needed |
 | Direct-dial, cert-chain-authorized | ✅ | ✅ | `...WithCertChainAsync` variants — opt-in org/realm authorization on top of plain direct-dial |
-| Direct-dial (streaming, content) | ✅ | — | `DirectDial.OpenStreamDirectAsync`/`PutDirectAsync`/`GetDirectAsync` |
+| Direct-dial (streaming, content) | ✅ | — | `DirectDial.OpenStreamDirectAsync`/`PutDirectAsync`/`GetDirectAsync` — runs on a session already open to the same station under the same identity instead of dialing a second one, which the station would answer by closing the first |
 | Periodic re-advertise | — | ✅ | `DirectDial.KeepAdvertisedDirectAsync` — keeps a station-side registration fresh for a long-lived provider |
 | Supervised PubSub pair | ✅ | ✅ | `SupervisedPubSub.RunPublisherAsync`/`RunSubscriberAsync` — callback-driven, auto-publishes `pubsub.publish_started_v1`/`publish_completed_v1` |
 | UCAN (mint/verify/introspect) | ✅ | ✅ | `UcanToken.Create`/`Verify`/`Decode` and friends — no library exists for the exact spec version macula uses, hand-rolled to match the reference exactly |
-| UCAN-gated serving | — | ✅ | `Session.ServeOneCallGatedAsync` + `Policy.Required`/`Open` — a caller with no/invalid token is refused before the handler ever runs |
+| UCAN-gated serving | — | ✅ | `Session.ServeOneCallGatedAsync` + `Policy.Required`/`Open` — a caller with no/invalid token is refused before the handler ever runs; the token's `aud` must be the calling node's id as lowercase hex, and a CALL not signed by its caller is dropped |
 | RPC telemetry auto-facts | ✅ | ✅ | `rpc.sent_v1`/`rpc.completed_v1` (caller), `rpc.received_v1`/`rpc.replied_v1` (provider) — always-on, fire-and-forget, matching the reference exactly |
 
 ## Structure
@@ -287,13 +287,11 @@ neither obvious from the wire-protocol spec alone:
 - **The station periodically sends unprompted `advertise` frames for its
   own built-in `_content.*` procedures over every connected client's
   control stream** — observed directly while testing the PubSub example,
-  not documented anywhere in the wire-protocol spec. `Session.RecvEventAsync`
-  errors on the first non-EVENT frame rather than silently skipping it
-  (matching the Go/Rust/PHP SDKs — a caller waiting specifically for a
-  pubsub delivery has no reason to expect anything else), so a real
-  caller sharing a control stream between PubSub and anything else should
-  loop past frames it doesn't recognize rather than call it exactly once.
-  See `examples/03_PublishSubscribe.cs`'s own `RecvEventSkippingOtherTrafficAsync`.
+  not documented anywhere in the wire-protocol spec. A session's reader
+  drops frames that nothing on the session is waiting for, counts them per
+  frame type in `Session.UnroutedFrameCounts` and reports them through
+  `System.Diagnostics.Trace` at most once a minute, so a `Subscription`
+  only ever sees the events that match it.
 
 ## Status
 
@@ -351,6 +349,15 @@ and an ordinary `Session.AdvertiseAsync` registration — a station still
 needs *something* registered to route an inbound CALL to once dialed;
 direct-dial only changes how the caller *finds* the station, not whether
 a handler is waiting once it gets there.
+
+When several providers advertise the same procedure, `DirectDial` tries
+them in the order the DHT returns them. A provider that can't be reached
+before the request goes out is skipped for the next one, and a request
+that has been sent is never sent again. The `timeout` given to
+`CallAsync` and its siblings bounds the whole call, finding the provider
+included, and must be positive. `ResolveAsync` and
+`ResolveStationEndpointAsync`, which take no timeout, give up after 10
+seconds.
 
 **NuGet publish:** not live yet. `.github/workflows/release.yml` publishes
 via [NuGet Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)

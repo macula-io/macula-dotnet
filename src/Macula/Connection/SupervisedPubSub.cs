@@ -49,26 +49,32 @@ public static class SupervisedPubSub
     /// wire), so there is no meaningful window in which cancelling can
     /// abort an in-flight wire write. The returned cancellation only
     /// prevents the publish from running at all if triggered before the
-    /// background Task starts it; once started, cancellation is a no-op
-    /// and the real outcome (success or failure) is what gets delivered.
+    /// background Task reaches it, right after sending the started fact;
+    /// once the publish has started, cancellation is a no-op and the real
+    /// outcome (success or failure) is what gets delivered.
     ///
     /// onDone is invoked from a different Task than the caller's -- do not
     /// assume it runs synchronously with this method's return.
     /// </summary>
-    public static CancellationTokenSource RunPublisherAsync(Session session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone)
+    public static CancellationTokenSource RunPublisherAsync(Session session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone) =>
+        RunPublisherOn(session, spec, identity, announce, onDone);
+
+    /// <summary>RunPublisherAsync over any frame sink, so its sends can be observed without a station.</summary>
+    internal static CancellationTokenSource RunPublisherOn(IFrameSink session, PublishSpec spec, KeyPair identity, bool announce, Action<PublishOutcome> onDone)
     {
         var cts = new CancellationTokenSource();
         var publishId = RandomId();
 
-        AnnounceFact(session, announce, spec.Realm, identity, PublishStartedTopic,
-            Value.Map(new List<KeyValuePair<Value, Value>>
-            {
-                new(Value.Text("publish_id"), Value.Bytes(publishId)),
-                new(Value.Text("topic"), Value.Bytes(System.Text.Encoding.UTF8.GetBytes(spec.Topic))),
-            }));
-
         _ = Task.Run(async () =>
         {
+            // The started fact's send finishes before the publish starts, so
+            // the two never overlap on the session and arrive in order.
+            await AnnounceFact(session, announce, spec.Realm, identity, PublishStartedTopic,
+                Value.Map(new List<KeyValuePair<Value, Value>>
+                {
+                    new(Value.Text("publish_id"), Value.Bytes(publishId)),
+                    new(Value.Text("topic"), Value.Bytes(System.Text.Encoding.UTF8.GetBytes(spec.Topic))),
+                })).ConfigureAwait(false);
             if (cts.IsCancellationRequested)
             {
                 await AnnounceCompletedAsync(session, announce, spec.Realm, identity, publishId, new PublishOutcome(null, true)).ConfigureAwait(false);
@@ -93,63 +99,37 @@ public static class SupervisedPubSub
     }
 
     /// <summary>
-    /// The supervised counterpart to the bare Subscribe/RecvEvent
-    /// primitives: subscribes once, then dispatches every inbound EVENT to
-    /// handler for as long as this runs, instead of requiring the caller
-    /// to hand-roll a poll loop. Unsubscribes on return, including on
-    /// cancellation.
+    /// The supervised counterpart to a bare <see cref="Subscription"/>:
+    /// subscribes once, then hands every matching EVENT to handler for as
+    /// long as this runs, instead of requiring the caller to hand-roll a
+    /// receive loop. Ends the subscription on return, including on
+    /// cancellation, which sends UNSUBSCRIBE when no other subscription on
+    /// the session holds that realm and topic.
     ///
     /// Blocks the calling Task until ct is cancelled, handler throws
-    /// (propagated here unchanged), or the control stream fails with
-    /// something other than a timeout (also propagated, wrapped).
-    ///
-    /// Mirrors ServeOneCallAsync's own frame loop, not RecvEventAsync: a
-    /// shared control stream can carry other frame types between one EVENT
-    /// and the next, so a wrong-frame-type parse failure is skipped and
-    /// polling continues, exactly like ServeOneCallAsync skips a
-    /// non-"call" frame -- it is NOT treated as fatal the way
-    /// RecvEventAsync's own contract treats any parse failure. Without
-    /// this, a single non-EVENT frame arriving on the control stream would
-    /// abort the whole subscriber loop (the exact bug macula-go's own
-    /// first draft of RunSubscriber hit and had to fix -- avoided here
-    /// from the start).
+    /// (propagated here unchanged), the subscription falls behind
+    /// (<see cref="ConsumerOverflowException"/>), or the session ends
+    /// (<see cref="SessionEndedException"/>). Other frames on the session never reach this
+    /// loop: the session's reader routes each one to whatever waits for it.
     /// </summary>
     public static async Task RunSubscriberAsync(Session session, SubscribeSpec spec, KeyPair identity, EventHandler handler, CancellationToken ct = default)
     {
-        await session.SubscribeAsync(spec, ct).ConfigureAwait(false);
-        try
+        await using var subscription = await session.SubscribeAsync(spec, ct).ConfigureAwait(false);
+        while (true)
         {
-            while (true)
-            {
-                ct.ThrowIfCancellationRequested();
+            ct.ThrowIfCancellationRequested();
 
-                EventInfo evt;
-                try
-                {
-                    evt = await session.RecvEventAsync(SubscriberPollInterval, ct).ConfigureAwait(false);
-                }
-                catch (TimeoutException)
-                {
-                    continue;
-                }
-                catch (ParseFrameException)
-                {
-                    continue; // a non-EVENT or malformed frame -- ignore and keep listening
-                }
-
-                await handler(evt).ConfigureAwait(false);
-            }
-        }
-        finally
-        {
+            EventInfo evt;
             try
             {
-                await session.UnsubscribeAsync(new UnsubscribeSpec { Topic = spec.Topic, Realm = spec.Realm, Subscriber = spec.Subscriber }).ConfigureAwait(false);
+                evt = await subscription.RecvEventAsync(SubscriberPollInterval, ct).ConfigureAwait(false);
             }
-            catch (Exception)
+            catch (TimeoutException)
             {
-                // best-effort -- the connection may already be unusable
+                continue;
             }
+
+            await handler(evt).ConfigureAwait(false);
         }
     }
 
@@ -164,7 +144,7 @@ public static class SupervisedPubSub
     // Session; only network-free unit tests exercising pure dispatch logic
     // would pass null, matching the same nil-session-safe design
     // macula-go's own announceFact uses.
-    private static async Task AnnounceFact(Session? session, bool announce, byte[] realm, KeyPair identity, string topic, Value payload)
+    private static async Task AnnounceFact(IFrameSink? session, bool announce, byte[] realm, KeyPair identity, string topic, Value payload)
     {
         if (!announce || session is null)
         {
@@ -190,7 +170,7 @@ public static class SupervisedPubSub
         }
     }
 
-    private static Task AnnounceCompletedAsync(Session? session, bool announce, byte[] realm, KeyPair identity, byte[] publishId, PublishOutcome outcome)
+    private static Task AnnounceCompletedAsync(IFrameSink? session, bool announce, byte[] realm, KeyPair identity, byte[] publishId, PublishOutcome outcome)
     {
         var fields = new List<KeyValuePair<Value, Value>> { new(Value.Text("publish_id"), Value.Bytes(publishId)) };
         if (outcome.Cancelled)

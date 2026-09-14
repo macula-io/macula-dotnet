@@ -1,3 +1,4 @@
+using System.Net.Quic;
 using Macula.Frame;
 using Macula.Identity;
 
@@ -16,15 +17,76 @@ public sealed class FrameStream
     private int _len;
     private readonly byte[] _readScratch = new byte[8192];
 
+    // QuicStream fails a write that starts while another is still pending,
+    // so senders sharing this stream take turns here.
+    private readonly SemaphoreSlim _sendGate = new(1, 1);
+
+    private readonly StreamEnds _ends;
+
     public FrameStream(Stream stream)
+        : this(stream, QuicEnds(stream))
     {
-        _stream = stream;
     }
 
+    internal FrameStream(Stream stream, StreamEnds ends)
+    {
+        _stream = stream;
+        _ends = ends;
+    }
+
+    /// <summary>
+    /// How a dedicated stream ends short of a normal close, each with a code
+    /// and then freed: both directions aborted, or the send side finished and
+    /// the receive side stopped.
+    /// </summary>
+    internal sealed record StreamEnds(Func<long, ValueTask> AbortBoth, Func<long, ValueTask> FinishAndStopReading);
+
+    /// <summary>
+    /// Aborts both directions with <paramref name="code"/>, writing nothing:
+    /// RESET_STREAM on the send side and STOP_SENDING on the receive side.
+    /// Then frees the stream.
+    /// </summary>
+    internal ValueTask AbortBothAsync(long code) => _ends.AbortBoth(code);
+
+    /// <summary>
+    /// Finishes the send side, so what was written still reaches the peer,
+    /// stops the receive side with <paramref name="code"/>, then frees the
+    /// stream.
+    /// </summary>
+    internal ValueTask FinishAndStopReadingAsync(long code) => _ends.FinishAndStopReading(code);
+
+    private static StreamEnds QuicEnds(Stream stream) => new(
+        async code =>
+        {
+            if (stream is QuicStream quic && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()))
+            {
+                quic.Abort(QuicAbortDirection.Both, code);
+            }
+            await stream.DisposeAsync().ConfigureAwait(false);
+        },
+        async code =>
+        {
+            if (stream is QuicStream quic && (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()))
+            {
+                quic.CompleteWrites();
+                quic.Abort(QuicAbortDirection.Read, code);
+            }
+            await stream.DisposeAsync().ConfigureAwait(false);
+        });
+
+    /// <summary>Writes one frame whole. Safe to call from several tasks at once: their sends take turns.</summary>
     public async Task SendFrameAsync(Value frame, CancellationToken ct = default)
     {
         var bytes = WireCodec.Encode(frame);
-        await _stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+        await _sendGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await _stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _sendGate.Release();
+        }
     }
 
     /// <summary>Blocks for the next complete frame. Throws <see cref="EndOfStreamException"/> if the stream ends first.</summary>
