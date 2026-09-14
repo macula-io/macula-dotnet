@@ -81,7 +81,9 @@ public sealed class Session : IAsyncDisposable, IFrameSink
     /// session was waiting for, such as the station's own advertise
     /// broadcasts. They are dropped, and at most one trace line per type per
     /// minute reports them, except a dropped CALL, RESULT or ERROR, which gets
-    /// a drop warning instead (see <see cref="DropWarningInterval"/>).
+    /// a drop warning instead (see <see cref="DropWarningInterval"/>). A frame
+    /// is counted under its frame type when that is one macula defines, and
+    /// under "unknown" otherwise, so no text a peer sends becomes a key.
     /// </summary>
     public IReadOnlyDictionary<string, long> UnroutedFrameCounts => _channel.UnroutedFrames;
 

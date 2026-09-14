@@ -436,6 +436,53 @@ public class SessionReaderTests
         Assert.Equal(1, channel.UnroutedFrames["result"]);
     }
 
+    /// <summary>An oversize frame_type the control stream doesn't carry is counted under "unknown": nothing the peer chose becomes a count key.</summary>
+    [Fact]
+    public async Task An_oversize_frame_type_is_counted_as_unknown()
+    {
+        var (channel, station, _) = Connect();
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextAsync("call");
+        await station.SendAsync(Envelope.Base(new string('x', 100_000), 0, Envelope.FreshFrameId(), Envelope.CurrentMillis()));
+        await station.ReplyAsync(sent, "echoed");
+        await call.WaitAsync(Wait);
+
+        var counted = Assert.Single(channel.UnroutedFrames);
+        Assert.Equal("unknown", counted.Key);
+        Assert.Equal(1, counted.Value);
+    }
+
+    /// <summary>
+    /// Many distinct frame types no macula frame defines, and a frame_type that
+    /// is missing, not text or empty, leave the counts holding only defined
+    /// names and "unknown".
+    /// </summary>
+    [Fact]
+    public async Task Many_distinct_unknown_frame_types_leave_only_defined_names_and_unknown()
+    {
+        var (channel, station, _) = Connect();
+
+        var call = channel.CallAsync(Call("app/echo"), Wait, CancellationToken.None);
+        var sent = await station.NextAsync("call");
+        for (var i = 0; i < 1000; i++)
+        {
+            await station.SendAsync(Envelope.Base($"not_a_frame_type_{i}", 0, Envelope.FreshFrameId(), Envelope.CurrentMillis()));
+        }
+        var streamData = Envelope.Base("stream_data", 0, Envelope.FreshFrameId(), Envelope.CurrentMillis());
+        await station.SendAsync(streamData);
+        await station.SendAsync(streamData.Without("frame_type"));
+        await station.SendAsync(streamData.WithField("frame_type", Value.Bytes("stream_data"u8.ToArray())));
+        await station.SendAsync(streamData.WithField("frame_type", Value.Text("")));
+        await station.ReplyAsync(sent, "echoed");
+        await call.WaitAsync(Wait);
+
+        var counts = channel.UnroutedFrames;
+        Assert.Equal(2, counts.Count);
+        Assert.Equal(1003, counts["unknown"]);
+        Assert.Equal(1, counts["stream_data"]);
+    }
+
     [Fact]
     public async Task A_session_whose_connection_ends_is_no_longer_found_for_reuse()
     {

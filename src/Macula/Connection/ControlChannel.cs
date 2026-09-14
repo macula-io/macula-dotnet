@@ -617,24 +617,56 @@ internal sealed class ControlChannel
         DropWarnings.Record(DropKind.DroppedReply, reason, callIdField);
     }
 
-    private void Count(string frameType) => _unrouted.AddOrUpdate(frameType, 1, (_, count) => count + 1);
+    /// <summary>
+    /// What a frame of a type macula doesn't define is counted and logged
+    /// under, and so is a frame whose frame_type is missing, empty or not text.
+    /// </summary>
+    internal const string UnknownFrameType = "unknown";
 
-    // Counts a frame nothing routes, with at most one trace line per frame type
-    // a minute.
+    /// <summary>The frame types macula_frame defines, each counted and logged under its own name.</summary>
+    private static readonly HashSet<string> DefinedFrameTypes = new(StringComparer.Ordinal)
+    {
+        "connect", "hello", "goodbye",
+        "swim_ping", "swim_ack", "swim_suspect", "swim_confirm",
+        "ping", "pong", "find_node", "nodes", "find_value", "value",
+        "store", "store_ack", "replicate", "replicate_ack",
+        "call", "result", "error",
+        "hyparview_join", "hyparview_forward_join", "hyparview_neighbor",
+        "hyparview_disconnect", "hyparview_shuffle", "hyparview_shuffle_reply",
+        "plumtree_gossip", "plumtree_ihave", "plumtree_graft", "plumtree_prune",
+        "overlay_relay", "publish", "subscribe", "unsubscribe", "event",
+        "advertise", "unadvertise",
+        "stream_open", "stream_data", "stream_end", "stream_error", "stream_reply",
+        "want", "have", "block", "manifest_req", "manifest_res", "cancel",
+    };
+
+    /// <summary>
+    /// What a frame of <paramref name="frameType"/> is counted and logged under:
+    /// its own name when macula defines it, <see cref="UnknownFrameType"/>
+    /// otherwise, so no text a peer sends becomes a key.
+    /// </summary>
+    private static string CountedFrameType(string frameType) =>
+        DefinedFrameTypes.Contains(frameType) ? frameType : UnknownFrameType;
+
+    private void Count(string frameType) => _unrouted.AddOrUpdate(CountedFrameType(frameType), 1, (_, count) => count + 1);
+
+    // Counts a frame nothing routes, with at most one trace line per counted
+    // frame type a minute.
     private void Drop(string frameType)
     {
-        Count(frameType);
+        var counted = CountedFrameType(frameType);
+        Count(counted);
         lock (_logged)
         {
-            var (dropped, loggedAt) = _logged.GetValueOrDefault(frameType);
+            var (dropped, loggedAt) = _logged.GetValueOrDefault(counted);
             dropped++;
             var now = Stopwatch.GetTimestamp();
             if (loggedAt is not { } last || Stopwatch.GetElapsedTime(last, now) >= LogInterval)
             {
-                Trace.TraceWarning($"macula: dropped {dropped} unrouted {frameType} frame(s) in the last minute (station {Convert.ToHexStringLower(_stationId)})");
+                Trace.TraceWarning($"macula: dropped {dropped} unrouted {counted} frame(s) in the last minute (station {Convert.ToHexStringLower(_stationId)})");
                 (dropped, loggedAt) = (0, now);
             }
-            _logged[frameType] = (dropped, loggedAt);
+            _logged[counted] = (dropped, loggedAt);
         }
     }
 
