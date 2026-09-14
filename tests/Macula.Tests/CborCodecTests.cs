@@ -287,4 +287,57 @@ public class CborCodecTests
 
         Assert.True(allocated <= 96L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 96 times the input");
     }
+
+    /// <summary>
+    /// Duplicate map keys merge exactly when their canonical encodings are
+    /// equal: a nested map's wire order, a non-minimal head and a nested map's
+    /// own duplicates don't make keys differ, while element order, kind and
+    /// type do. The later write wins.
+    /// </summary>
+    [Theory]
+    [InlineData("maps with the same entries in another wire order", "A2A2616101616202 01 A2616202616101 02", 1)]
+    [InlineData("a map whose own duplicate leaves it equal to another", "A2A2616101616102 01 A1616102 02", 1)]
+    [InlineData("the same uint with a non-minimal head", "A2 1801 01 01 02", 1)]
+    [InlineData("lists with their elements in another order", "A2 820102 01 820201 02", 2)]
+    [InlineData("a uint and the equal float", "A2 01 01 FB3FF0000000000000 02", 2)]
+    [InlineData("bytes and text with the same content", "A2 4161 01 6161 02", 2)]
+    public void Decode_merges_duplicate_keys_exactly_when_their_encodings_are_equal(string keys, string hex, int entries)
+    {
+        var decoded = CborCodec.Decode(Convert.FromHexString(hex.Replace(" ", "")));
+
+        var map = Assert.IsType<Value.MapValue>(decoded);
+        Assert.True(map.Entries.Count == entries, $"{keys}: decoded {map.Entries.Count} entries, want {entries}");
+        Assert.Equal(2UL, Assert.IsType<Value.UIntValue>(map.Entries[^1].Value).Value);
+    }
+
+    /// <summary>
+    /// A chain of 128 one-entry maps, each keyed by the next, around a 512 KiB
+    /// byte-string key: each key's identity is worked out once while it
+    /// decodes, not again at every level above it, so decoding allocates in
+    /// proportion to the input rather than to its depth times its size.
+    /// </summary>
+    [Fact]
+    public void Decode_map_with_a_large_deeply_nested_key_is_not_quadratic_in_depth()
+    {
+        const int blobLength = 512 * 1024;
+        var blobHead = new byte[] { 0x5A, 0x00, 0x08, 0x00, 0x00 };
+        byte[] payload =
+        [
+            .. Enumerable.Repeat((byte)0xA1, CborCodec.MaxNestingDepth),
+            .. blobHead,
+            .. Enumerable.Repeat((byte)0x41, blobLength),
+            .. new byte[CborCodec.MaxNestingDepth],
+        ];
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        var value = CborCodec.Decode(payload);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        for (var level = 0; level < CborCodec.MaxNestingDepth; level++)
+        {
+            value = Assert.Single(Assert.IsType<Value.MapValue>(value).Entries).Key;
+        }
+        Assert.Equal(blobLength, Assert.IsType<Value.BytesValue>(value).Value.Length);
+        Assert.True(allocated <= 8L * payload.Length, $"decoding {payload.Length} bytes allocated {allocated >> 20} MiB, want at most 8 times the input");
+    }
 }
