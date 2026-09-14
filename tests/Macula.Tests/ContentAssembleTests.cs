@@ -122,11 +122,31 @@ public class ContentAssembleTests
         blocks[Convert.ToHexString(ManifestBuilder.BlockMcid(oversized))] = oversized;
         var lastIndex = created.Chunks.Count - 1;
         var last = created.Chunks[lastIndex] with { Hash = Algorithm.Blake3.Hash(oversized) };
-        var manifest = WithOwnMcid(created with { Chunks = [.. created.Chunks.Take(lastIndex), last] });
+        IReadOnlyList<ChunkInfo> chunks = [.. created.Chunks.Take(lastIndex), last];
+        var manifest = WithOwnMcid(created with { Chunks = chunks, RootHash = ManifestBuilder.RootHashFor(chunks, Algorithm.Blake3) });
 
         var ex = await RefusedAsync(manifest.Mcid, manifest, new BlockServer(blocks));
 
         Assert.Equal(ContentTransfer.RemoteReason.HashMismatch, ex.Reason);
+    }
+
+    /// <summary>
+    /// A manifest whose chunk hashes don't combine to its root hash is refused
+    /// before any chunk is fetched, even though it describes the MCID asked
+    /// for: the root hash is part of the MCID, and the chunk hashes are not.
+    /// </summary>
+    [Fact]
+    public async Task Get_refuses_a_manifest_whose_chunk_hashes_do_not_make_its_root_hash()
+    {
+        var (created, blocks, _) = ChunkedContent(251);
+        var flipped = created.Chunks[1] with { Hash = created.Chunks[1].Hash.Select((b, i) => i == 0 ? (byte)(b ^ 1) : b).ToArray() };
+        var manifest = created with { Chunks = [created.Chunks[0], flipped, created.Chunks[2]] };
+        var server = new BlockServer(blocks);
+
+        var ex = await RefusedAsync(manifest.Mcid, manifest, server);
+
+        Assert.Equal(ContentTransfer.RemoteReason.HashMismatch, ex.Reason);
+        Assert.Equal(0, server.Fetched);
     }
 
     /// <summary>

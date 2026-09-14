@@ -116,8 +116,9 @@ public static class ContentTransfer
     /// The part of a chunked get that runs once <paramref name="manifest"/>,
     /// fetched for <paramref name="mcid"/>, has arrived. None of the
     /// manifest's fields is used until it describes <paramref name="mcid"/>,
-    /// as macula_manifest checks it, and its chunks describe its content whole.
-    /// Each chunk fetched through <paramref name="fetchBlock"/> must then be
+    /// as macula_manifest checks it, its chunks describe its content whole, and
+    /// its chunk hashes make its root hash. Each chunk fetched through
+    /// <paramref name="fetchBlock"/> must then be
     /// the size its entry says and hash to its MCID, and the content is put
     /// together from the chunks that arrived, never sized from the manifest's
     /// claim alone.
@@ -135,6 +136,10 @@ public static class ContentTransfer
         if (manifest.Size > (ulong)Array.MaxLength)
         {
             throw new ContentTransferException(RemoteReason.ManifestDecodeFailed, $"the fetched manifest describes {manifest.Size} bytes, more than one array can hold");
+        }
+        if (!ManifestBuilder.CheckChunkHashes(manifest))
+        {
+            throw new ContentTransferException(RemoteReason.HashMismatch, "the fetched manifest's chunk hashes do not make its root hash");
         }
 
         var chunks = new List<byte[]>(manifest.Chunks.Count);

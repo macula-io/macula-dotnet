@@ -284,6 +284,15 @@ public static class ManifestBuilder
             && chunk.Size >= 0 && (ulong)chunk.Size == size && chunk.Hash.Length == 32;
     }
 
+    /// <summary>
+    /// Whether <paramref name="manifest"/>'s chunk hashes combine to its root
+    /// hash, the way Create builds it. The root hash is part of the MCID and
+    /// the chunk hashes are not, so after <see cref="VerifyMcid"/> this is what
+    /// ties each chunk, fetched by its hash, to the MCID asked for.
+    /// </summary>
+    internal static bool CheckChunkHashes(Manifest manifest) =>
+        RootHashFor(manifest.Chunks, manifest.HashAlgorithm).AsSpan().SequenceEqual(manifest.RootHash);
+
     private static bool HasUtf8Form(string text)
     {
         try
@@ -321,7 +330,8 @@ public static class ManifestBuilder
         return infos;
     }
 
-    private static byte[] RootHashFor(IReadOnlyList<ChunkInfo> infos, Algorithm algorithm)
+    /// <summary>The Merkle root of <paramref name="infos"/>' hashes, the way Create builds a manifest's root hash.</summary>
+    internal static byte[] RootHashFor(IReadOnlyList<ChunkInfo> infos, Algorithm algorithm)
     {
         if (infos.Count == 0)
         {
