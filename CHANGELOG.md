@@ -27,13 +27,18 @@ On libmacula from macula-go v0.17.0 (was v0.15.0).
   to mcl_om's vector; a payload signed here, delivered through a station, is
   accepted by mcl_om's own verifier and refused changed or replayed
   (`scripts/interop/ownership_proof.sh`).
+- `Ucan.KeyId` refuses a key whose length is not its profile's.
 - The `gated` example, run against the public fleet.
 
-### Changed
+### Breaking
 
-- `OpenStreamAsync`'s `lifetime` is now `deadline`: how far ahead the open's
+- `OpenStreamAsync`: `lifetime` is now `deadline` (how far ahead the open's
   signed deadline lies, which bounds the provider's admission of the open, not
-  the stream's life, as the contract says.
+  the stream's life, as the contract says; the value is passed as before), and
+  a new `ucan` parameter precedes `cancellationToken`. A 0.5.0 caller that
+  passed the token positionally, or named `lifetime:`, no longer compiles.
+
+### Changed
 - Loading a libmacula older than macula-go v0.17.0 fails at once, naming the
   version it needs, instead of at the first call it lacks.
 - A handler's request payload never holds a "caller" its sender wrote: who

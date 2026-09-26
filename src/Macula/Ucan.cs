@@ -123,6 +123,13 @@ public static class Ucan
     /// </summary>
     public static MeshId KeyId(ReadOnlySpan<byte> publicKey, Profile profile)
     {
+        // A key of another length would name an id that no policy ever matches: say so instead.
+        var expected = profile == Profile.PqPure ? 2592 : 3118;
+        if (publicKey.Length != expected)
+        {
+            throw new ArgumentException(
+                $"a {Profiles.Name(profile)} public key as carried is {expected} bytes, not {publicKey.Length}", nameof(publicKey));
+        }
         var name = Encoding.ASCII.GetBytes(Profiles.Name(profile));
         return new MeshId(SHA256.HashData([.. KeyIdLabel, 0, (byte)name.Length, .. name, .. publicKey]));
     }

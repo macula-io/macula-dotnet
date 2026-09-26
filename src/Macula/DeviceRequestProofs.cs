@@ -23,7 +23,10 @@ public static class DeviceRequestProofs
     /// <summary>The procedure of a join session over HTTP.</summary>
     public const string JoinSession = "macula_realm.join_session";
 
-    /// <summary>The procedure of a membership UCAN asked for over the mesh.</summary>
+    /// <summary>
+    /// The procedure label a membership UCAN request's proof is signed for. The mesh procedure the request is
+    /// called on is the realm's <c>identity/issue_membership_ucan</c>.
+    /// </summary>
     public const string MembershipUcan = "macula_realm.membership_ucan";
 
     /// <summary>

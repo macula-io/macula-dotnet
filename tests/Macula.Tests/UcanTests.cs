@@ -87,6 +87,9 @@ public sealed class UcanVectorTests
         var token = key.CreateUcan(audience, [new Capability("mri:realm:x", "invoke")], expires);
         Assert.Equal(96, Ucan.ProofId(token).Length);
         Assert.Throws<ArgumentException>(() => Ucan.ProofId(""));
+        // A key of another length than its profile's would name an id no policy ever matches.
+        Assert.Throws<ArgumentException>(() => Ucan.KeyId(new byte[2592], Profile.PqHybrid));
+        Assert.Throws<ArgumentException>(() => Ucan.KeyId(new byte[3118], Profile.PqPure));
     }
 }
 
@@ -135,6 +138,9 @@ public abstract class GatedServingTests(TestStations stations)
             {
                 return await attempt();
             }
+            // Retried: anything but a provider's own answer, which ends the attempt. unknown_next_peer
+            // comes from a station that has not seen the advertisement yet (a RelayErrorException, retried
+            // with the rest) or from a provider not yet serving (a ProviderErrorException with that code).
             catch (Exception e) when (DateTime.UtcNow < deadline && e is not ProviderErrorException { Code: not "unknown_next_peer" })
             {
                 await Task.Delay(200);

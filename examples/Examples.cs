@@ -84,7 +84,11 @@ internal static class GatedProcedure
                 reply = await caller.CallAsync(realm, gated, new JsonObject(), options, cancellationToken);
                 break;
             }
-            catch (ProviderErrorException e) when (e.Code == "unknown_next_peer" && DateTime.UtcNow < deadline)
+            // unknown_next_peer: the caller's station has not seen the advertisement yet (a relay error), or
+            // the provider is not serving yet (its own answer).
+            catch (MaculaException e) when (e is RelayErrorException { Code: "unknown_next_peer" }
+                                                 or ProviderErrorException { Code: "unknown_next_peer" }
+                                             && DateTime.UtcNow < deadline)
             {
                 await Task.Delay(500, cancellationToken); // the advertisement is still on its way
             }
