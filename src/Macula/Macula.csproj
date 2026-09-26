@@ -1,10 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -12,24 +15,29 @@
     <RootNamespace>Macula</RootNamespace>
     <AssemblyName>Macula</AssemblyName>
     <Version>0.5.0</Version>
-    <Description>Native .NET client for the Macula mesh wire protocol -- QUIC transport, deterministic CBOR, Ed25519 identity, unary RPC, PubSub, content transfer, and streaming RPC (both caller and provider roles), direct-dial (plain and cert-chain-authorized), periodic re-advertise, a supervised pubsub pair, a StationPool connection pool (N concurrently-dialed links, automatic respawn with subscription/advertisement replay, cross-link event dedup, opt-in station discovery via hecate_stations.list_stations, and configurable link-selection ordering), UCAN (mint/verify/introspect and policy-gated serving), and RPC telemetry facts. Written in C#, usable from any .NET language (examples included for both C# and F#). No FFI, no native protocol library.</Description>
+    <Description>.NET client for the Macula mesh on the macula 12 wire: TLS 1.3 with a hybrid post-quantum key exchange, ML-DSA-87 identities, signed calls, replies and publications. Node keys, a pool of station links, calls and streams by direct dial, serving in a node's own namespace or under an org, publish/subscribe, node-served content and the DHT. Built on libmacula, macula-go behind a C ABI, shipped in the package for Linux (x64, arm64), macOS (x64, arm64) and Windows (x64).</Description>
     <Authors>Macula</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/macula-io/macula-dotnet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/macula-io/macula-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageTags>macula;mesh;quic;rpc;pubsub;wire-protocol;dotnet;csharp;fsharp</PackageTags>
+    <PackageTags>macula;mesh;quic;rpc;pubsub;post-quantum;ml-dsa;ml-kem;dotnet;csharp</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blake3" Version="3.0.2" />
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
-    <PackageReference Include="Unofficial.MsQuic" Version="2.4.10" />
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
+  <!--
+    libmacula for each runtime, from native/runtimes/<rid>/native/ (fetched
+    and verified by scripts/fetch_libmacula.sh, or built for this machine by
+    scripts/build_libmacula.sh). Packed at the same path, which NuGet resolves
+    per runtime; copied to this project's output for its own tests.
+  -->
   <ItemGroup>
-    <None Include="../../README.md" Pack="true" PackagePath="\" />
+    <None Include="../../native/runtimes/**/native/*" Pack="true" PackagePath="runtimes" LinkBase="runtimes"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

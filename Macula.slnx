@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Macula/Macula.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Macula.Tests/Macula.Tests.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/Macula.Examples.csproj" />
+  </Folder>
+</Solution>

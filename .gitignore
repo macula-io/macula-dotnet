@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Macula-specific
 *.identity.json
+
+# libmacula, fetched and verified (scripts/fetch_libmacula.sh) or built from
+# macula-go (scripts/build_libmacula.sh); never committed.
+/native/

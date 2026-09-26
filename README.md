@@ -1,9 +1,9 @@
 # macula-dotnet
 
 [![CI](https://img.shields.io/github/actions/workflow/status/macula-io/macula-dotnet/ci.yml?branch=main&label=CI)](https://github.com/macula-io/macula-dotnet/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Macula.svg)](https://www.nuget.org/packages/Macula)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](#license)
-[![.NET](https://img.shields.io/badge/.NET-10.0%2B-512BD4?logo=dotnet)](https://dotnet.microsoft.com)
-[![no FFI](https://img.shields.io/badge/FFI-none-success.svg)](#why-native-not-a-binding)
+[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com)
 [![GitHub Sponsors](https://img.shields.io/badge/GitHub%20Sponsors-support-ea4aaa.svg?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/rgfaber)
 
 <p align="center">
@@ -14,371 +14,216 @@
 </p>
 
 <p align="center">
-  <strong>Native .NET client for the Macula SDK wire protocol</strong><br>
+  <strong>The Macula mesh from .NET, on the macula 12 wire</strong><br>
   written in C#, usable from any .NET language
 </p>
 
 ---
 
-> **Status, 2026-08-30:** the FULL wire protocol is built and
-> **live-verified against the production station fleet**
-> (`station-de-frankfurt.macula.io`) — handshake, unary RPC (both caller
-> AND provider), PubSub, content transfer, and streaming RPC, every
-> primitive in both caller and provider roles where the protocol has
-> one. On top of that: **direct-dial** (resolve a service via the mesh
-> DHT and dial it in one hop, plain and cert-chain-authorized, extended
-> to streaming and content transfer too), **UCAN** capability tokens
-> (mint/verify/introspect, policy-gated serving), a **supervised PubSub
-> pair**, **periodic re-advertise**, and **RPC telemetry auto-facts** —
-> all live-verified the same way. The frame layer is cross-checked
-> byte-for-byte — including the Ed25519 signature itself — against
-> [`macula-rust`](https://github.com/macula-io/macula-rust)'s own
-> fixed reference vectors: 15 golden frames, all matching. See
-> [Status](#status) for the full picture.
+> **Status, 2026-09-26:** on the **macula 12** wire: TLS 1.3 with a hybrid
+> post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
+> RSA-PSS-4096 composite in `pq_hybrid`, the fleet's profile), and signed
+> calls, replies and publications. Every feature is tested on each push
+> against in-process macula 12 stations on Linux, macOS and Windows. Checked
+> on the public fleet with throwaway keys: connecting, the DHT,
+> publish/subscribe, calling `mcl-echo` in io.macula, and serving calls and a
+> stream in a node's own namespace.
 
-## What is this?
+## What it is
 
-A native .NET implementation, written in C#, of the client half of Macula's wire protocol —
-the same protocol [`macula-io/macula`](https://github.com/macula-io/macula)
-(the Erlang/OTP SDK) speaks, and the same protocol
-[`macula-go`](https://github.com/macula-io/macula-go) and
-[`macula-rust`](https://github.com/macula-io/macula-rust) already
-port. Macula is a federated mesh for sovereign, end-to-end-encrypted
-application networks; a **station** is the relay/DHT node, and this
-library is what a **leaf** — anything that isn't itself a station — uses
-to join it.
+A .NET client for the Macula mesh: node keys, a pool of links to stations,
+calls and streams by direct dial, serving (in a node's own namespace or
+under an org), publish/subscribe, node-served content, and the DHT. It is a
+thin, idiomatic C# layer over **libmacula**, macula-go behind a C ABI
+(macula-go's [`cabi`](https://github.com/macula-io/macula-go/tree/master/cabi)).
+The package carries libmacula for every supported platform, so
+`dotnet add package Macula` is all it takes.
 
-## Why native, not a binding
+## Why a binding, not a native port
 
-Unlike [`macula-php`](https://github.com/macula-io/macula-php)
-(a thin FFI binding over the Go SDK's compiled C ABI, the right call for
-PHP), this is a full independent port: its own deterministic CBOR codec,
-its own Ed25519/S/Kademlia identity layer, its own frame construction —
-built the same way the Go and Rust ports were, not wrapped around either
-of them. Two things make that practical for C# where it wasn't for PHP:
-.NET has shipped a real QUIC client (`System.Net.Quic`) since .NET 7, and
-`System.Formats.Cbor` already covers general CBOR mechanics (though not
-this protocol's specific canonicalization rules — see
-[The CBOR codec is hand-rolled on purpose](#the-cbor-codec-is-hand-rolled-on-purpose)).
-No cgo, no native `.so`/`.dll` shipped by this repo, no P/Invoke into
-anything macula-specific — `dotnet add package Macula` is the
-whole install (once published to nuget.org — see [Status](#status)).
+macula-dotnet 0.4 was a native C# implementation on `System.Net.Quic`. It
+cannot reach a macula 12 station, and no .NET release can today:
 
-The one native dependency that's unavoidable regardless of approach is
-QUIC itself: `System.Net.Quic` needs `libmsquic`, which Microsoft doesn't
-publish for Linux on NuGet (only via the `packages.microsoft.com` apt/dnf
-repo). This library depends on the community
-[`Unofficial.MsQuic`](https://www.nuget.org/packages/Unofficial.MsQuic)
-package instead, which ships `libmsquic` for linux-x64/linux-arm64/win-x64
-as ordinary NuGet runtime assets — so `dotnet add package` really is
-still the whole install, no system package manager required.
+- macula 12 stations accept only hybrid post-quantum key exchange
+  (SecP384r1MLKEM1024, SecP256r1MLKEM768) and refuse a classical-only
+  client.
+- On Linux and macOS, MsQuic's OpenSSL backend fixes the groups every
+  connection offers in code: `SSL_set1_groups_list(TlsContext->Ssl,
+  "secp256r1:x25519")` in `src/platform/tls_openssl.c`, still so on MsQuic's
+  main as of 2026-09-25. It is set per connection, so no OpenSSL
+  configuration can change it.
+- MsQuic's `QUIC_TLS_GROUP` enum lists the ML-KEM groups, but only to
+  *report* the negotiated one; there is no setting to choose them, and
+  `QuicConnectionOptions` has none either. On Windows, .NET gives no control
+  over the groups at all.
+- The NuGet `Unofficial.MsQuic` package 0.4 shipped embeds OpenSSL 1.1.1,
+  which has no ML-KEM.
 
-## Why a fourth implementation matters
+So instead of a fifth implementation of QUIC, TLS 1.3 with a hybrid
+post-quantum key exchange, deterministic CBOR and signed frames, .NET uses
+macula-go's, the same choice [macula-php](https://github.com/macula-io/macula-php),
+[macula-ts](https://github.com/macula-io/macula-ts) and macula-py make.
+There is one implementation of the wire to keep correct, and the C ABI is
+the same for every binding.
 
-Four independent implementations (Erlang reference, Rust, Go, now C#)
-producing bit-identical wire bytes for the same input is a much stronger
-correctness claim than any one of them alone. This repo's own
-`FrameGoldenVectorTests` builds the exact same 15 signed frames
-`macula-rust`'s own differential-vector tests build — same identity,
-same fixed `frame_id`/`sent_at_ms`/`call_id`/`stream_id` — and asserts
-the Ed25519 signature, not just the frame shape, matches byte for byte
-against vectors originally captured from a real `rebar3 shell` against
-`macula-io/macula` itself. If this port's canonical CBOR encoder or
-signing domain diverged from the other three anywhere, this would fail;
-it doesn't.
+## Install
 
-## Features
-
-| Primitive | Caller | Provider | Notes |
-|---|---|---|---|
-| Handshake (CONNECT/HELLO) | ✅ | — | Ed25519 identity, S/Kademlia puzzle-hardened; HELLO signature verified; live-verified |
-| Deterministic CBOR codec | ✅ | — | Hand-rolled — see [Codec](#the-cbor-codec-is-hand-rolled-on-purpose) |
-| Unary RPC (CALL/RESULT/ERROR) | ✅ | ✅ | `Session.ServeOneCallAsync`, BOLT#4 error mapping, calls and serving share one session at the same time, live-verified |
-| PubSub (PUBLISH/SUBSCRIBE/EVENT) | ✅ | ✅ | `Session.SubscribeAsync` returns a `Subscription` with its own queue, a subscriber gets its own publish, verified live |
-| Content transfer (single-block + chunked) | ✅ | — | Content-addressed, BLAKE3/SHA-256, Merkle-verified |
-| Streaming RPC (STREAM_OPEN/DATA/END/REPLY) | ✅ | ✅ | Both roles live-verified against the real fleet |
-| RPC advertise/unadvertise | ✅ | — | |
-| Pubkey-pinned trust | ✅ | — | `Trust.Pin(nodeId)` — Ed25519 SPKI match, no CA chain needed |
-| Direct-dial (RPC) | ✅ | ✅ | `DirectDial.ResolveAsync`/`CallAsync`/`AdvertiseDirectAsync` — resolve+dial via the mesh DHT, no advertise-gossip propagation needed |
-| Direct-dial, cert-chain-authorized | ✅ | ✅ | `...WithCertChainAsync` variants — opt-in org/realm authorization on top of plain direct-dial |
-| Direct-dial (streaming, content) | ✅ | — | `DirectDial.OpenStreamDirectAsync`/`PutDirectAsync`/`GetDirectAsync` — runs on a session already open to the same station under the same identity instead of dialing a second one, which the station would answer by closing the first |
-| Periodic re-advertise | — | ✅ | `DirectDial.KeepAdvertisedDirectAsync` — keeps a station-side registration fresh for a long-lived provider |
-| Supervised PubSub pair | ✅ | ✅ | `SupervisedPubSub.RunPublisherAsync`/`RunSubscriberAsync` — callback-driven, auto-publishes `pubsub.publish_started_v1`/`publish_completed_v1` |
-| UCAN (mint/verify/introspect) | ✅ | ✅ | `UcanToken.Create`/`Verify`/`Decode` and friends — no library exists for the exact spec version macula uses, hand-rolled to match the reference exactly |
-| UCAN-gated serving | — | ✅ | `Session.ServeOneCallGatedAsync` + `Policy.Required`/`Open` — a caller with no/invalid token is refused before the handler ever runs; the token's `aud` must be the calling node's id as lowercase hex, and a CALL not signed by its caller is dropped |
-| RPC telemetry auto-facts | ✅ | ✅ | `rpc.sent_v1`/`rpc.completed_v1` (caller), `rpc.received_v1`/`rpc.replied_v1` (provider) — always-on, fire-and-forget, matching the reference exactly |
-
-## Structure
-
+```sh
+dotnet add package Macula
 ```
-src/Macula/
-  Value.cs                 The wire protocol's closed value model
-  Cbor/CborCodec.cs        Deterministic CBOR encode/decode
-  Identity/                Ed25519 keypair, S/Kademlia puzzle
-  Bolt4/                   17-entry BOLT#4 error taxonomy
-  Frame/                   Envelope, signing, wire codec, every frame type
-  Connection/               QUIC transport, handshake, Session (RPC/PubSub/serve)
-  Content/                  Manifest (chunking/Merkle), put/get
-  Streaming/                StreamHandle -- caller and provider roles
-  Dht/                      DirectDial (resolve/call/advertise via the mesh DHT) + CertChain
-  Ucan/                     UcanToken (mint/verify/introspect) + Policy (gated serving)
-examples/                  A quickstart, one example per primitive, plus error handling, a long-running provider, direct-dial, and UCAN (C#)
-examples-fsharp/           The same examples in F#
-tests/Macula.Tests/         Offline unit tests + live station tests
-```
+
+| Runtime | Needs |
+|---|---|
+| `linux-x64`, `linux-arm64` | glibc 2.28 or later |
+| `osx-x64`, `osx-arm64` | macOS 13.0 or later |
+| `win-x64` | Windows x64 |
+
+.NET 10. Each libmacula in the package is the file of a macula-go release,
+checked against its `SHA256SUMS` and its GitHub build provenance attestation
+before it was packed (`scripts/fetch_libmacula.sh`); `libmacula.version`
+names the release.
 
 ## Quick start
 
-Also lives as a runnable example — `dotnet run --project examples --
-quickstart`. Advertises and calls its own trivial echo procedure (two
-identities, a provider and a caller, since a station kicks a connection
-the instant a second one arrives under the same identity) rather than
-depending on any particular procedure already being advertised on the
-fleet:
-
 ```csharp
-using Macula.Connection;
-using Macula.Frame;
-using Macula.Identity;
+using System.Text.Json.Nodes;
+using Macula;
 
-namespace Macula.Examples;
+// A node key: ML-DSA-87 + RSA-PSS-4096 (pq_hybrid), its node id solving the
+// admission puzzle. Saved readable by its owner only, reused next time.
+using var key = await NodeKey.LoadOrCreateAsync("node.key");
 
-/// <summary>
-/// Connects to a real macula-station, advertises a trivial echo
-/// procedure, and calls it. Two <see cref="Session"/>s, two identities
-/// (a provider and a caller) -- a station kicks a connection the instant
-/// a second one arrives under the same identity.
-/// </summary>
-public static class Quickstart
+// Stations are pinned by the node id they must prove, never by name alone.
+var seeds = new[]
 {
-    public static async Task RunAsync()
-    {
-        var providerIdentity = KeyPair.GenerateWithDefaultPuzzle();
-        var callerIdentity = KeyPair.GenerateWithDefaultPuzzle();
+    new Seed("station-de-frankfurt.macula.io", 4433,
+        MeshId.Parse("00cd0008ec2e72b6572b7bf6fc8b048d7fe83993faf1fc544370f2bc1eb71f85")),
+};
+await using var pool = await Pool.ConnectAsync(key, seeds, new PoolOptions
+{
+    RealmTrust = new Dictionary<MeshId, byte[]> { [realm] = realmKey },
+});
 
-        await using var providerSession = await Session.ConnectAsync(Station.Host, Station.Port, providerIdentity, Trust.UseWebPki);
-        await using var callerSession = await Session.ConnectAsync(Station.Host, Station.Port, callerIdentity, Trust.UseWebPki);
+// Serve a procedure in this node's own namespace: only this node can.
+var greet = pool.OwnProcedure("greet");
+await using var served = pool.Serve(realm, greet, (request, cancellationToken) =>
+    ValueTask.FromResult<JsonNode?>(new JsonObject { ["hello"] = request.Caller.ToString() }));
 
-        var realm = new byte[32];
-        // Unique per run -- reusing a fixed procedure name across rapid
-        // repeated runs can hit stale DHT routing state from the prior
-        // run's now-dead advertiser.
-        var procedure = $"macula_dotnet.quickstart_echo.{Guid.NewGuid():N}";
+// Call a service under an org, by direct dial to a provider the realm trusts.
+var reply = await pool.CallAsync(realm, "mcl-echo/echo", new JsonObject { ["message"] = "hi" });
 
-        await providerSession.AdvertiseAsync(new AdvertiseSpec { Realm = realm, Procedure = procedure, Advertiser = providerIdentity.NodeId() });
-        await Task.Delay(500); // ADVERTISE is fire-and-forget; give it a moment to land
-
-        CallLookup lookup = (_, proc) => proc == procedure ? (payload => Task.FromResult(payload)) : null;
-        var serveTask = providerSession.ServeOneCallAsync(lookup, TimeSpan.FromSeconds(15));
-
-        var deadlineMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + 10_000;
-        var callTask = callerSession.CallAsync(procedure, realm, Value.Text("hello"), deadlineMs, TimeSpan.FromSeconds(10));
-
-        await Task.WhenAll(serveTask, callTask);
-
-        var response = callTask.Result;
-        Console.WriteLine(response is CallResponse.Result r
-            ? $"call response: {r.Payload}"
-            : $"call response: {response}");
-    }
+// Publish and subscribe.
+await using var subscription = pool.Subscribe(realm, "news");
+pool.Publish(realm, "news", new JsonObject { ["headline"] = "macula 12" });
+await foreach (var e in subscription.ReadAllAsync(cancellationToken))
+{
+    Console.WriteLine($"{e.Publisher}: {e.Payload}");
 }
 ```
 
+## The API
+
+| Type | What it does |
+|---|---|
+| `NodeKey` | `GenerateAsync`, `Load`, `LoadOrCreateAsync`, `Save`, `NodeId`, `PublicKey`, `Sign`, `Verify` |
+| `Pool` | `ConnectAsync`, `NodeId`, `OwnProcedure`, `Status`, `EventsAsync`, `DisposeAsync` |
+| calls | `Pool.CallAsync`, `Pool.ProvidersAsync` |
+| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose |
+| streams | `Pool.OpenStreamAsync`, and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync` |
+| publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, `Dropped` |
+| content | `Pool.ShareContentAsync`, `UnshareContentAsync`, `GetContentAsync` |
+| the DHT | `Pool.FindRecordAsync`, `FindRecordsAsync`, `FindRecordsByTypeAsync`, `PutRecordAsync` |
+
+Every call that waits takes a `CancellationToken`, and cancelling it ends the
+wait in libmacula itself, not just the `await`. Failures are .NET's own
+where one fits (`OperationCanceledException`, `TimeoutException`,
+`ArgumentException`, `ObjectDisposedException`), and otherwise a
+`MaculaException` with its `Kind`: `ProviderErrorException` (with the
+provider's `Code` and `Detail`), `RelayErrorException`, `NotSharedException`,
+`ContentUnavailableException` (with each sharer's failure).
+
+### Payloads
+
+A payload is a `System.Text.Json.Nodes.JsonNode`, mapped to and from the
+mesh's CBOR:
+
+- **No booleans.** The mesh's CBOR has none: send 0 and 1. A boolean is
+  refused with an `ArgumentException` before anything is sent.
+- **Integers are exact over the int64 range**, the wire's; read them with
+  `GetValue<long>()`. One outside int64 is refused.
+- **Bytes** are `Payload.Bytes(span)` going out and `Payload.TryGetBytes(node,
+  out bytes)` coming back: the object `{"$bytes": "<base64>"}` either way.
+- Map keys come back in the wire's deterministic order.
+
+### Serving
+
+A served procedure's handler gets the `Request` (the verified caller, realm,
+procedure, payload and deadline) and a `CancellationToken` that ends at the
+call's deadline. Its result is the reply; an exception it throws answers the
+caller with a `handler_error` whose detail is the exception's message. Calls
+run concurrently, each on its own task.
+
+A procedure in a node's own namespace (`~<node id>/<name>`,
+`Pool.OwnProcedure`) needs no org or realm to vouch for it. One under an org
+(`<org>/<name>`) needs the org's delegation to this node in the realm, and
+the realm's key in `PoolOptions.RealmTrust`.
+
+### Content
+
+`ShareContentAsync` keeps the bytes in this node, serves them on its own
+`~<node id>/content_v1` and announces them, for as long as the pool is open;
+stations keep no content. `GetContentAsync` fetches an MCID from the nodes
+that share it and checks every block against it, so no sharer is trusted.
+
 ## Examples
 
-Every example exists in both `examples/` (C#) and `examples-fsharp/` (F#)
-with matching numbers and behavior — same station calls, same output shape.
+`examples/` has one short, complete program per feature. They connect fresh
+nodes (throwaway keys) to the public fleet and the io.macula realm, or to
+the stations `MACULA_STATIONS` names (`host:port@<node id hex>`, comma
+separated) and the realm in `MACULA_REALM` and `MACULA_REALM_KEY`:
 
-| # | Run (C#) | Run (F#) | What it shows |
-|---|---|---|---|
-| 00 | `dotnet run --project examples -- 00` | `dotnet run --project examples-fsharp -- 00` | Quickstart: advertise + call its own trivial echo procedure |
-| 01 | `dotnet run --project examples -- 01` | `dotnet run --project examples-fsharp -- 01` | Identity + connect + close |
-| 02 | `dotnet run --project examples -- 02` | `dotnet run --project examples-fsharp -- 02` | Unary RPC caller (CALL/RESULT/ERROR) |
-| 03 | `dotnet run --project examples -- 03` | `dotnet run --project examples-fsharp -- 03` | PubSub (subscribe, publish, receive the EVENT) |
-| 04 | `dotnet run --project examples -- 04` | `dotnet run --project examples-fsharp -- 04` | Content transfer, single-block and chunked |
-| 05 | `dotnet run --project examples -- 05` | `dotnet run --project examples-fsharp -- 05` | Streaming RPC, caller role |
-| 06 | `dotnet run --project examples -- 06` | `dotnet run --project examples-fsharp -- 06` | Unary RPC, provider role (two `Session`s, one process) |
-| 07 | `dotnet run --project examples -- 07` | `dotnet run --project examples-fsharp -- 07` | Streaming RPC, provider role (two `Session`s, one process) |
-| 08 | `dotnet run --project examples -- 08` | `dotnet run --project examples-fsharp -- 08` | Every error shape this SDK produces, handled |
-| 09 | `dotnet run --project examples -- 09` | `dotnet run --project examples-fsharp -- 09` | A provider serving many calls over its lifetime, not just one |
-| 10 | `dotnet run --project examples -- 10` | `dotnet run --project examples-fsharp -- 10` | Direct-dial: advertise via the mesh DHT, resolve, dial, call — no advertise-gossip propagation needed |
-| 11 | `dotnet run --project examples -- 11` | `dotnet run --project examples-fsharp -- 11` | UCAN: mint a token, gate a served procedure by policy, show both the rejected and accepted paths |
-
-Examples 06, 07, and 09 run more than one role in **one process, multiple
-`Session`s** — there's no cgo/fork hazard here the way there was in
-[`macula-php`](https://github.com/macula-io/macula-php)'s
-FFI-over-Go binding, so a provider and a caller can just be concurrent
-tasks in the same async function.
-
-## Using this from F#
-
-Nothing about this library is C#-specific — it's a plain .NET assembly,
-and `examples-fsharp/` is live-verified against the real station exactly
-like its C# counterpart. Two things are worth knowing if you haven't
-mixed F# with a C#-authored async API before:
-
-- **Prefer F#'s `task { }` computation expression over `async { } |>
-  Async.AwaitTask`.** Several methods here (`Session.CloseAsync`,
-  `StreamHandle.AbortAsync`) return `ValueTask`, and `Async.AwaitTask`
-  has no overload for that — it only accepts `Task`/`Task<'T>`, so you'd
-  need an extra `.AsTask()` call on every such site. `task { }` awaits
-  `ValueTask`/`ValueTask<'T>` directly, no conversion needed, confirmed
-  directly rather than assumed (see `examples-fsharp/`, which uses `task { }`
-  throughout).
-- **`required`-property spec types** (`CallSpec`, `PublishSpec`,
-  `SubscribeSpec`, `AdvertiseSpec`, and friends) construct the same way
-  any C# object with settable properties does from F#: parens with named
-  assignments, e.g. `SubscribeSpec(Topic = topic, Realm = realm, Subscriber
-  = identity.NodeId())` — not C#'s `{ }` object-initializer braces.
-
-## Testing
-
-```bash
-dotnet test --filter "Category!=Live"   # offline: pure logic + 15 golden byte-exact frame vectors
-dotnet test --filter "Category=Live"    # dials the real production fleet -- see below
+```sh
+dotnet run --project examples -- quickstart   # a pool and its links
+dotnet run --project examples -- call         # mcl-echo in io.macula, by direct dial
+dotnet run --project examples -- serve        # serve in the own namespace, call it
+dotnet run --project examples -- pubsub       # publish, hear it back
+dotnet run --project examples -- stream       # a server stream
+dotnet run --project examples -- content      # share, fetch verified
+dotnet run --project examples -- dht          # every station's endpoint record
+dotnet run --project examples -- errors       # what each failure looks like
 ```
 
-The offline suite (run in CI on every push) never touches the network:
-CBOR codec edge cases, Ed25519/puzzle vectors captured from a real
-`rebar3 shell`, and all 15 golden frame vectors. The live suite dials
-`station-de-frankfurt.macula.io` — throwaway dev infrastructure with no
-uptime guarantee, so it's excluded from CI and only run manually.
+`content` needs every station a node links to to admit own-namespace
+advertisements (macula-station 0.6.4 or later).
 
-**Running the live suite locally on a distro without `libmsquic`'s
-required OpenSSL version:** `Unofficial.MsQuic`'s Linux build links
-against OpenSSL 1.1, which some distros (Arch among them) no longer ship.
-If `dotnet test --filter Category=Live` fails with `Unable to load MsQuic
-library version '2'`, check `ldd` on the restored
-`runtimes/linux-x64/native/libmsquic.so` for `libcrypto.so.1.1 => not
-found` — if so, either install an OpenSSL 1.1 compatibility package, or
-substitute any locally-built `libmsquic.so` compiled against your
-system's actual OpenSSL (msquic itself has no other requirements).
+The F# examples of 0.4 were retired with its API; F# uses this one as it is.
 
-## The CBOR codec is hand-rolled on purpose
+## Building and testing
 
-Every frame's Ed25519 signature is computed over the *canonical* CBOR
-bytes of the frame, and macula's canonicalization rules diverge from
-RFC 8949's own recommendations in one deliberate way: floats always
-encode as full binary64 (`0xFB` + 8 bytes), never the shortest
-round-tripping width the RFC prefers. `System.Formats.Cbor` (the BCL's
-own CBOR writer) implements the RFC's canonical mode, not this one — so
-using it here would silently produce non-verifying signatures against a
-real station. `Cbor/CborCodec.cs` is a direct, from-scratch
-transcription of the same ~200-line deterministic algorithm the Erlang
-reference (`macula_cbor_nif`'s `deterministic.rs`) and the Rust/Go ports
-already use: minimal-length integers, map keys sorted by their own
-*encoded* bytes (not their logical value), `procedure`/`topic`/`detail`
-as raw byte strings even though most other string-ish fields are text,
-and floats always full-width.
+```sh
+scripts/fetch_libmacula.sh                 # libmacula of libmacula.version, verified
+# or, for an unreleased macula-go revision, for this machine only:
+scripts/build_libmacula.sh <macula-go checkout>
 
-## Real findings from building this against the live fleet
+dotnet test                                # runs macula-go's teststation harness
+MACULA_GO_DIR=<macula-go checkout> dotnet test   # the harness from a checkout
+```
 
-Two things worth knowing if you're integrating against the real station,
-neither obvious from the wire-protocol spec alone:
-
-- **`System.Net.Quic` accepts zero inbound streams by default.** Unlike
-  `quinn` (Rust's QUIC crate), a `QuicConnection` that doesn't set
-  `MaxInboundBidirectionalStreams`/`MaxInboundUnidirectionalStreams`
-  throws `InvalidOperationException` the moment anything calls
-  `AcceptInboundStreamAsync` — including the station routing an inbound
-  STREAM_OPEN to an advertised procedure. `Session.ConnectAsync` sets
-  both to 100 unconditionally, since the decision to advertise happens
-  after the connection already exists.
-- **The station periodically sends unprompted `advertise` frames for its
-  own built-in `_content.*` procedures over every connected client's
-  control stream** — observed directly while testing the PubSub example,
-  not documented anywhere in the wire-protocol spec. A session's reader
-  drops frames that nothing on the session is waiting for, counts them per
-  frame type in `Session.UnroutedFrameCounts` and reports them through
-  `System.Diagnostics.Trace` at most once a minute, so a `Subscription`
-  only ever sees the events that match it.
-
-## Status
-
-Every application primitive the wire protocol defines is built, in both
-roles where the protocol has one, and live-verified against
-`station-de-frankfurt.macula.io`:
-
-- Transport + handshake (CONNECT/HELLO, Ed25519 identity, S/Kademlia
-  puzzle, WebPki and pubkey-pinned trust)
-- Unary RPC, caller and provider (`Session.CallAsync` /
-  `Session.ServeOneCallAsync`)
-- PubSub, caller and provider (a subscriber does receive its own publish)
-- Content transfer, single-block and chunked (sequential v1, matching
-  the Go/Rust SDKs — multi-lane parallelism is a throughput optimization
-  addable later with zero wire change)
-- Streaming RPC, caller and provider (`StreamHandle.OpenAsync` /
-  `StreamHandle.AcceptAsync`)
-- Direct-dial: resolve a service via a signed DHT record and dial it in
-  one hop, plain and cert-chain-authorized, for RPC, streaming, and
-  content transfer (`DirectDial`) — see [Direct-dial and the mesh
-  DHT](#direct-dial-and-the-mesh-dht) for what "DHT" means here
-- UCAN capability tokens: mint/verify/introspect, plus policy-gated
-  serving that refuses an unauthorized caller before a handler ever runs
-  (`UcanToken`, `Policy`, `Session.ServeOneCallGatedAsync`)
-- A supervised PubSub pair (`SupervisedPubSub`) and periodic re-advertise
-  (`DirectDial.KeepAdvertisedDirectAsync`) for long-lived providers
-- RPC telemetry auto-facts, always-on, matching the reference exactly
-
-Not built, matching every sibling SDK's own documented v1 scope: real DHT
-peer participation (Kademlia routing tables, replication) — this library
-only ever asks whichever station it's already connected to look something
-up in or publish to the DHT via ordinary RPC (`_dht.put_record`/
-`_dht.find_record`), the same way `macula-go`/`macula-rust` do.
-HyParView/Plumtree gossip primitives are station-to-station overlay
-concerns, explicitly out of scope for a leaf client by design, not an
-unfinished gap.
-
-## Direct-dial and the mesh DHT
-
-"Direct-dial" doesn't mean this library is a DHT participant — the actual
-Kademlia routing table, replication, and station-to-station gossip stay
-entirely inside `macula-station` (the relay). What `DirectDial` adds is
-much narrower: two RPC calls (`_dht.put_record`/`_dht.find_record`) to
-whichever station this session is already connected to, plus the
-signature verification to trust what comes back. The problem it solves:
-ordinary `Session.AdvertiseAsync`/`CallAsync` only work if the caller's
-station and the provider's station have already exchanged routing gossip
-— best-effort, and on a fleet with more than a couple of stations, often
-incomplete. The DHT is the one directory every station already
-participates in regardless of gossip state, so resolving a
-`procedure_advertisement` record there and dialing the named station
-directly works even when ordinary routing hasn't (yet) propagated a
-route. `DirectDial.AdvertiseDirectAsync` publishes both the DHT record
-and an ordinary `Session.AdvertiseAsync` registration — a station still
-needs *something* registered to route an inbound CALL to once dialed;
-direct-dial only changes how the caller *finds* the station, not whether
-a handler is waiting once it gets there.
-
-When several providers advertise the same procedure, `DirectDial` tries
-them in the order the DHT returns them. A provider that can't be reached
-before the request goes out is skipped for the next one, and a request
-that has been sent is never sent again. The `timeout` given to
-`CallAsync` and its siblings bounds the whole call, finding the provider
-included, and must be positive. `ResolveAsync` and
-`ResolveStationEndpointAsync`, which take no timeout, give up after 10
-seconds.
-
-**NuGet publish:** not live yet. `.github/workflows/release.yml` publishes
-via [NuGet Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing)
-(OIDC, no stored API key) on every `v*` tag push — set up and ready, just
-not fired yet. Until then, consume this library via a project reference,
-a local `dotnet pack`, or a `ProjectReference` to this repo directly.
+The tests run against in-process macula 12 stations (macula-go's
+`teststation/cmd/teststation`, which needs Go). CI runs them on Linux, macOS
+and Windows.
 
 ## License
 
-Licensed under the Apache License, Version 2.0 — see [LICENSE](LICENSE).
+Licensed under the Apache License, Version 2.0: see [LICENSE](LICENSE).
 
 The .NET emblem in this README's header logo is Microsoft's official
 [.NET logo](https://github.com/dotnet/brand/blob/main/logo/dotnet-logo.svg)
 (from the `dotnet/brand` repository), licensed
-[CC0 1.0 Universal](https://github.com/dotnet/brand/blob/main/LICENSE) —
-a public-domain dedication, no attribution legally required, credited
-here anyway as a matter of course. Used here (as part of
-`assets/macula-dotnet-full-{dark,light}.svg`) purely to identify the
-platform this SDK targets, the same way the sibling
-[macula-go](https://github.com/macula-io/macula-go) and
-[macula-rust](https://github.com/macula-io/macula-rust) badges
-use the Go gopher and Rust gear marks, and
-[macula-php](https://github.com/macula-io/macula-php) uses the
-official PHP logo — not an endorsement by Microsoft.
+[CC0 1.0 Universal](https://github.com/dotnet/brand/blob/main/LICENSE), a
+public-domain dedication, credited here anyway. It is used (in
+`assets/macula-dotnet-full-{dark,light}.svg`) only to identify the platform
+this SDK targets, as the sibling [macula-go](https://github.com/macula-io/macula-go)
+and [macula-rust](https://github.com/macula-io/macula-rust) badges use the Go
+gopher and the Rust gear, and [macula-php](https://github.com/macula-io/macula-php)
+the PHP logo. It is not an endorsement by Microsoft.

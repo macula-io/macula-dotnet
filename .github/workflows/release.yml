@@ -7,7 +7,7 @@ on:
 jobs:
   publish:
     name: publish to NuGet
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: release
     permissions:
       id-token: write
@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
 
       - name: Extract version from tag
         id: version
@@ -30,16 +33,21 @@ jobs:
             exit 1
           fi
 
-      # Rebuilds and re-runs the offline suite here rather than trusting
-      # an artifact from the CI workflow -- this workflow triggers off a
-      # tag push, which is a separate event from the branch push CI
-      # already validated, so there's no prior run's output to reuse.
-      - run: dotnet restore
-      - run: dotnet build --no-restore --configuration Release
-      - run: dotnet test --no-build --configuration Release --filter "Category!=Live"
+      # libmacula for every runtime from the macula-go release libmacula.version
+      # names, each file checked against SHA256SUMS and its build provenance
+      # attestation. A file that fails is never packed.
+      - name: Fetch and verify libmacula
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/fetch_libmacula.sh
 
-      - name: Pack
-        run: dotnet pack src/Macula/Macula.csproj -c Release -o ./artifacts
+      # Rebuilt and retested here rather than trusting the CI run: the tag
+      # push is its own event.
+      - run: dotnet build --configuration Release
+      - run: dotnet test --no-build --configuration Release
+
+      - name: Pack, and check the natives are in it
+        run: scripts/check_package.sh ./artifacts
 
       - name: NuGet login (OIDC)
         id: login
@@ -48,4 +56,4 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Push to NuGet
-        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./artifacts/Macula.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

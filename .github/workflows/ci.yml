@@ -5,24 +5,39 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-test:
-    name: build, offline tests
-    runs-on: ubuntu-latest
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-      - run: dotnet restore
-      - run: dotnet build --no-restore --configuration Release
-      # Offline only -- exercises pure logic (CBOR codec, manifest
-      # chunking/Merkle root) and the 15 golden byte-exact frame vectors,
-      # all without touching the network. The live examples and
-      # `Category=Live` tests all dial the real production fleet
-      # (station-de-frankfurt.macula.io), which has no uptime guarantee
-      # and must never block an unrelated PR -- same convention the
-      # sibling Go/Rust/PHP SDKs all use for their own live-tagged tests.
-      # Run those manually:
-      #   dotnet test --filter Category=Live
-      - run: dotnet test --no-build --configuration Release --filter "Category!=Live"
+      # The tests run macula-go's teststation harness at the libmacula.version
+      # release, which needs Go.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.x"
+      # libmacula for every runtime, each file checked against the release's
+      # SHA256SUMS and its build provenance attestation before it is used.
+      - name: Fetch and verify libmacula
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/fetch_libmacula.sh
+      - run: dotnet build --configuration Release
+      - run: dotnet test --no-build --configuration Release
+      # The package must carry libmacula for every runtime it promises.
+      - name: Pack, and check the natives are in it
+        if: matrix.os == 'ubuntu-24.04'
+        run: scripts/check_package.sh
