@@ -34,10 +34,10 @@ the 12 frames and CBOR in C#: a fifth implementation of the wire.
 ## Done
 
 - [x] Delete the 0.4 stack (native QUIC, Ed25519, CBOR, frames, pool, UCAN, examples)
-- [x] The binding, over macula-go v0.13.0 (ABI 1)
+- [x] The binding, over macula-go v0.15.0 (ABI 1)
 - [x] Tests against in-process stations (macula-go's teststation), CI on four runners
 - [x] One live fleet check with throwaway keys: connect, DHT, pubsub, mcl-echo, serve and stream in the own namespace
 - [x] C# examples; README with the MsQuic finding
-- [ ] Content example on the fleet: waits until every station admits own-namespace advertisements (Falkenstein's 0.6.7 roll)
+- [x] Content example on the fleet (every station on 0.6.7)
 - [ ] F# examples on the new API
-- [ ] The `no_provider` error kind and the cabi fixes Neptunus measured, with the next macula-go tag
+- [x] The cabi fixes Neptunus measured, and Windows key files (macula-go v0.15.0)

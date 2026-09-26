@@ -233,6 +233,15 @@ public sealed class PoolTests(TestStations stations)
     }
 
     [Fact]
+    public async Task AProcedureNobodyServesIsNoProvider()
+    {
+        await using var caller = await stations.JoinAsync("lonely caller");
+        var error = await Assert.ThrowsAsync<MaculaException>(() =>
+            caller.CallAsync(stations.Realm, caller.OwnProcedure("nobody"), null, new CallOptions { Timeout = Patience }));
+        Assert.Equal(ErrorKind.NoProvider, error.Kind);
+    }
+
+    [Fact]
     public async Task ADisposedPoolIsRefused()
     {
         var pool = await stations.JoinAsync("gone");

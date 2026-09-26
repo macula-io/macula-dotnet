@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking
 
 - **On the macula 12 wire, over libmacula.** Macula is now a C# layer over
-  libmacula, macula-go v0.13.0 behind its C ABI (cabi, ABI 1), shipped in the
+  libmacula, macula-go v0.15.0 behind its C ABI (cabi, ABI 1), shipped in the
   package for linux-x64, linux-arm64, osx-x64, osx-arm64 and win-x64. The 0.4
   native stack is gone: its QUIC transport, Ed25519 identity, CBOR codec,
   frames, station pool, UCANs and examples. No .NET QUIC stack can reach a

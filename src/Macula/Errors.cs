@@ -19,6 +19,8 @@ public enum ErrorKind
     RelayError,
     /// <summary>No DHT record under that key.</summary>
     NotFound,
+    /// <summary>No provider the realm trusts advertises the procedure.</summary>
+    NoProvider,
     /// <summary>No node shares that content in that realm.</summary>
     NotShared,
     /// <summary>Every sharer failed to give the content.</summary>
@@ -98,6 +100,7 @@ internal static class Errors
             "unavailable" => new ContentUnavailableException(message,
                 [.. root.GetProperty("failures").EnumerateArray().Select(f => f.GetString()!)]),
             "not_found" => new MaculaException(ErrorKind.NotFound, message),
+            "no_provider" => new MaculaException(ErrorKind.NoProvider, message),
             "answered" => new MaculaException(ErrorKind.Answered, message),
             "closed" => new MaculaException(ErrorKind.Closed, message),
             "refused" => new MaculaException(ErrorKind.Refused, message),
