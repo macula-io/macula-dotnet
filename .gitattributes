@@ -1,0 +1,2 @@
+# The test vectors are pinned by sha256, byte for byte: never convert their line endings.
+tests/Macula.Tests/fixtures/** -text
