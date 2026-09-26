@@ -9,7 +9,9 @@ namespace Macula.Native;
 // and every char** err_out starts at 0.
 internal static unsafe partial class Libmacula
 {
-    internal const string Library = "macula";
+    // libmacula, not macula: Windows names are case-insensitive, and a native
+    // macula.dll would be the managed Macula.dll beside it.
+    internal const string Library = "libmacula";
 
     // The ABI this binding is written against: MACULA_ABI_VERSION.
     internal const int AbiVersion = 1;

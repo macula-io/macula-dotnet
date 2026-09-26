@@ -41,7 +41,7 @@ internal static class NativeCall
         {
             return loaded;
         }
-        var file = OperatingSystem.IsWindows() ? "macula.dll"
+        var file = OperatingSystem.IsWindows() ? "libmacula.dll"
             : OperatingSystem.IsMacOS() ? "libmacula.dylib"
             : "libmacula.so";
         var path = Path.Combine(AppContext.BaseDirectory, "runtimes", RuntimeInformation.RuntimeIdentifier, "native", file);

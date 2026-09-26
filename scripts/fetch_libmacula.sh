@@ -42,5 +42,5 @@ libmacula-linux-x64.so linux-x64 libmacula.so
 libmacula-linux-arm64.so linux-arm64 libmacula.so
 libmacula-macos-x64.dylib osx-x64 libmacula.dylib
 libmacula-macos-arm64.dylib osx-arm64 libmacula.dylib
-macula-windows-x64.dll win-x64 macula.dll
+macula-windows-x64.dll win-x64 libmacula.dll
 EOF

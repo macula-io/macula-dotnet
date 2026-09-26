@@ -21,7 +21,7 @@ listing=$(unzip -Z1 "$package")
 status=0
 for path in runtimes/linux-x64/native/libmacula.so runtimes/linux-arm64/native/libmacula.so \
   runtimes/osx-x64/native/libmacula.dylib runtimes/osx-arm64/native/libmacula.dylib \
-  runtimes/win-x64/native/macula.dll; do
+  runtimes/win-x64/native/libmacula.dll; do
   if ! grep -qx "$path" <<<"$listing"; then
     echo "check_package.sh: $package lacks $path" >&2
     status=1
