@@ -8,13 +8,28 @@ namespace Macula.Tests;
 /// teststation harness (cabi/CONTRACT.md "Test harness"). With MACULA_GO_DIR set, the harness runs from
 /// that checkout; otherwise from the macula-go version in libmacula.version.
 /// </summary>
-public sealed class TestStations : IAsyncLifetime
+public class TestStations : IAsyncLifetime
 {
     private Process? _harness;
+    private readonly string _profileName;
+
+    public TestStations() : this(Profile.PqPure)
+    {
+    }
+
+    protected TestStations(Profile profile)
+    {
+        Profile = profile;
+        _profileName = profile == Profile.PqPure ? "pq_pure" : "pq_hybrid";
+    }
+
+    public Profile Profile { get; }
     private readonly SemaphoreSlim _commands = new(1, 1);
 
     public IReadOnlyList<Seed> Seeds { get; private set; } = [];
     public MeshId Realm { get; private set; }
+    // The realm's name: its id is the name's SHA-256, so a UCAN grants in it by name.
+    public string RealmName { get; private set; } = "";
     public byte[] RealmKey { get; private set; } = [];
     public string Org { get; private set; } = "";
     public string KeyDirectory { get; } = Directory.CreateTempSubdirectory("macula-dotnet-keys-").FullName;
@@ -41,7 +56,7 @@ public sealed class TestStations : IAsyncLifetime
             start.ArgumentList.Add("run");
             start.ArgumentList.Add($"github.com/macula-io/macula-go/teststation/cmd/teststation@{version}");
         }
-        start.ArgumentList.Add("pq_pure");
+        start.ArgumentList.Add(_profileName);
         _harness = Process.Start(start) ?? throw new InvalidOperationException("the teststation harness did not start");
         // Its stderr (go's own output, a harness failure) is kept, to say why
         // it printed nothing when it does not start.
@@ -57,6 +72,7 @@ public sealed class TestStations : IAsyncLifetime
             s.GetProperty("host").GetString()!, s.GetProperty("port").GetUInt16(),
             MeshId.Parse(s.GetProperty("node_id").GetString()!)))];
         Realm = MeshId.Parse(root.GetProperty("realm_id").GetString()!);
+        RealmName = root.GetProperty("realm_name").GetString()!;
         RealmKey = Convert.FromHexString(root.GetProperty("realm_key").GetString()!);
         Org = root.GetProperty("org").GetString()!;
     }
@@ -91,7 +107,7 @@ public sealed class TestStations : IAsyncLifetime
     /// <summary>A pool of a node named <paramref name="name"/>, trusting the test realm, linked to one station.</summary>
     public async Task<Pool> JoinAsync(string name, int station = 0)
     {
-        using var key = await NodeKey.LoadOrCreateAsync(Path.Combine(KeyDirectory, name + ".key"), Profile.PqPure);
+        using var key = await NodeKey.LoadOrCreateAsync(Path.Combine(KeyDirectory, name + ".key"), Profile);
         return await Pool.ConnectAsync(key, [Seeds[station]], new PoolOptions
         {
             RealmTrust = new Dictionary<MeshId, byte[]> { [Realm] = RealmKey },
@@ -120,4 +136,18 @@ public sealed class TestStations : IAsyncLifetime
 public sealed class StationsCollection : ICollectionFixture<TestStations>
 {
     public const string Name = "stations";
+}
+
+/// <summary>The same harness in pq_hybrid, the fleet's profile.</summary>
+public sealed class HybridTestStations : TestStations
+{
+    public HybridTestStations() : base(Profile.PqHybrid)
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class HybridStationsCollection : ICollectionFixture<HybridTestStations>
+{
+    public const string Name = "hybrid stations";
 }

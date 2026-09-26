@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Macula.Native;
 
 namespace Macula;
@@ -133,6 +134,92 @@ public sealed class NodeKey : IDisposable
         }
         NativeCall.Check(err);
         return valid == 1;
+    }
+
+    /// <summary>
+    /// A UCAN (macula 12, D7) from this identity key for the node <paramref name="audience"/>, which alone can
+    /// present it, granting <paramref name="capabilities"/> until <paramref name="expires"/> (whole seconds).
+    /// Signing runs on the calling thread. See <see cref="Ucan"/>.
+    /// </summary>
+    public unsafe string CreateUcan(MeshId audience, IEnumerable<Capability> capabilities, DateTimeOffset expires,
+        UcanOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(capabilities);
+        var caps = new JsonArray([.. capabilities.Select(c => (JsonNode)new JsonObject { ["with"] = c.With, ["can"] = c.Can })]);
+        string? optionsJson = null;
+        if (options is not null)
+        {
+            var o = new JsonObject();
+            if (options.NotBefore is { } nbf) o["nbf"] = nbf.ToUnixTimeSeconds();
+            if (options.Nonce is { } nnc) o["nnc"] = nnc;
+            if (options.Facts is { } fct) o["fct"] = fct.DeepClone();
+            if (options.Parent is { } parent) o["prf"] = new JsonArray(parent);
+            optionsJson = o.ToJsonString();
+        }
+        nint err = 0;
+        nint token;
+        fixed (byte* a = audience.Bytes)
+        {
+            token = Libmacula.macula_ucan_create(Handle, a, caps.ToJsonString(), expires.ToUnixTimeSeconds(), optionsJson,
+                ref err);
+        }
+        NativeCall.Check(err);
+        return NativeCall.TakeString(token) ?? throw new MaculaException(ErrorKind.Failed, "libmacula returned no token");
+    }
+
+    /// <summary>
+    /// A realm proof v2 that this key made <paramref name="request"/> for <paramref name="procedure"/> in
+    /// <paramref name="realm"/>, now, with a fresh nonce: <c>{"v": 2, "timestamp", "nonce", "signature"}</c>,
+    /// sent beside the request's <c>public_key</c>. A request with a <c>"caller"</c> field is refused. Signing
+    /// runs on the calling thread. See <see cref="DeviceRequestProofs"/>.
+    /// </summary>
+    public JsonObject DeviceRequestProof(MeshId realm, string procedure, JsonObject request, DeviceRequestRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return DeviceRequestProofOf(realm, procedure, DeviceRequestProofs.RequestJson(request, rule), rule);
+    }
+
+    /// <summary>A realm proof v2 over a join session's <paramref name="body"/>, exactly as it will be sent.</summary>
+    public JsonObject DeviceRequestProof(MeshId realm, string procedure, string body)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        return DeviceRequestProofOf(realm, procedure, body, DeviceRequestRule.Http);
+    }
+
+    private unsafe JsonObject DeviceRequestProofOf(MeshId realm, string procedure, string requestJson,
+        DeviceRequestRule rule)
+    {
+        ArgumentNullException.ThrowIfNull(procedure);
+        nint err = 0;
+        nint proof;
+        fixed (byte* r = realm.Bytes)
+        {
+            proof = Libmacula.macula_key_device_request_proof(Handle, r, procedure, requestJson, (int)rule, ref err);
+        }
+        NativeCall.Check(err);
+        var text = NativeCall.TakeString(proof) ?? throw new MaculaException(ErrorKind.Failed, "libmacula returned no proof");
+        return JsonNode.Parse(text)!.AsObject();
+    }
+
+    /// <summary>
+    /// <paramref name="payload"/> with an <c>asserted_by</c> block by which this key's node authorises its
+    /// other fields for <paramref name="procedure"/> in <paramref name="realm"/>, now, with a fresh nonce; an
+    /// earlier block is replaced. Send the result as the payload. A payload carrying <c>"caller"</c> is
+    /// refused. Signing runs on the calling thread. See <see cref="OwnershipProofs"/>.
+    /// </summary>
+    public unsafe JsonObject OwnershipProof(MeshId realm, string procedure, JsonObject payload)
+    {
+        ArgumentNullException.ThrowIfNull(procedure);
+        ArgumentNullException.ThrowIfNull(payload);
+        nint err = 0;
+        nint signed;
+        fixed (byte* r = realm.Bytes)
+        {
+            signed = Libmacula.macula_key_ownership_proof(Handle, r, procedure, Payload.ToJson(payload), ref err);
+        }
+        NativeCall.Check(err);
+        var text = NativeCall.TakeString(signed) ?? throw new MaculaException(ErrorKind.Failed, "libmacula returned no payload");
+        return JsonNode.Parse(text)!.AsObject();
     }
 
     /// <summary>Frees the key. A pool connected with it keeps what it needs.</summary>

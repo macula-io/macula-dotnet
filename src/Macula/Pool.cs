@@ -56,6 +56,12 @@ public sealed class CallOptions
 
     /// <summary>The call's deadline on the wire, and how long it is waited for: macula's default when null.</summary>
     public TimeSpan? Timeout { get; init; }
+
+    /// <summary>
+    /// A UCAN and its chain's proofs, for a gated procedure (<see cref="Macula.Ucan"/>); a provider that
+    /// refuses it answers a <see cref="ProviderErrorException"/> of code <c>unauthorized</c>.
+    /// </summary>
+    public UcanPresentation? Ucan { get; init; }
 }
 
 /// <summary>A DHT record type.</summary>
@@ -214,14 +220,19 @@ public sealed partial class Pool : IAsyncDisposable
         var payloadJson = Payload.ToJson(payload);
         var provider = options?.Provider;
         var timeoutMs = Milliseconds(options?.Timeout);
+        var ucan = options?.Ucan;
+        var (ucanToken, proofsJson) = PresentationJson(ucan);
         return NativeCall.RunAsync(token =>
         {
             nint err = 0;
             nint result;
             fixed (byte* r = realm.Bytes, p = provider is { } id ? id.Bytes : default)
             {
-                result = Libmacula.macula_pool_call(_handle, r, procedure, payloadJson, provider is null ? null : p,
-                    timeoutMs, token, ref err);
+                result = ucan is null
+                    ? Libmacula.macula_pool_call(_handle, r, procedure, payloadJson, provider is null ? null : p,
+                        timeoutMs, token, ref err)
+                    : Libmacula.macula_pool_call_with(_handle, r, procedure, payloadJson, provider is null ? null : p,
+                        ucanToken, proofsJson, timeoutMs, token, ref err);
             }
             NativeCall.Check(err, cancellationToken);
             return Payload.FromJson(NativeCall.TakeString(result)!);
@@ -276,6 +287,18 @@ public sealed partial class Pool : IAsyncDisposable
         }
         NativeCall.Check(err);
         return new Subscription(handle);
+    }
+
+    // A presentation as the ABI takes it: the token, and the proofs as a JSON list (null for none).
+    internal static (string? Token, string? ProofsJson) PresentationJson(UcanPresentation? ucan)
+    {
+        if (ucan is null)
+        {
+            return (null, null);
+        }
+        ArgumentException.ThrowIfNullOrEmpty(ucan.Token, nameof(ucan));
+        var proofs = ucan.Proofs is { Count: > 0 } list ? new JsonArray([.. list.Select(p => (JsonNode?)p)]).ToJsonString() : null;
+        return (ucan.Token, proofs);
     }
 
     internal static long Milliseconds(TimeSpan? span)

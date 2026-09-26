@@ -26,8 +26,11 @@
 > calls, replies and publications. Every feature is tested on each push
 > against in-process macula 12 stations on Linux, macOS and Windows. Checked
 > on the public fleet with throwaway keys: connecting, the DHT,
-> publish/subscribe, calling `mcl-echo` in io.macula, and serving calls and a
-> stream in a node's own namespace.
+> publish/subscribe, calling `mcl-echo` in io.macula, serving calls and a
+> stream in a node's own namespace, and serving a procedure gated on a
+> post-quantum UCAN. Device request proofs (realm join) and ownership proofs
+> are held to their verifiers' vectors, and checked through the realm's and
+> mcl_om's own verifiers.
 
 ## What it is
 
@@ -125,11 +128,13 @@ await foreach (var e in subscription.ReadAllAsync(cancellationToken))
 
 | Type | What it does |
 |---|---|
-| `NodeKey` | `GenerateAsync`, `Load`, `LoadOrCreateAsync`, `Save`, `NodeId`, `PublicKey`, `Sign`, `Verify` |
+| `NodeKey` | `GenerateAsync`, `Load`, `LoadOrCreateAsync`, `Save`, `NodeId`, `PublicKey`, `Sign`, `Verify`; `CreateUcan`, `DeviceRequestProof`, `OwnershipProof` (below) |
 | `Pool` | `ConnectAsync`, `NodeId`, `OwnProcedure`, `Status`, `EventsAsync`, `DisposeAsync` |
-| calls | `Pool.CallAsync`, `Pool.ProvidersAsync` |
-| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose |
-| streams | `Pool.OpenStreamAsync`, and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync` |
+| calls | `Pool.CallAsync` (`CallOptions.Ucan` presents a UCAN), `Pool.ProvidersAsync` |
+| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose, each optionally gated on an `AuthPolicy` |
+| streams | `Pool.OpenStreamAsync` (its `ucan` presents one), and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync` |
+| UCANs | `Ucan.ProofId`, `Ucan.KeyId`, `Capability`, `UcanOptions`, `UcanPresentation`, `UcanRequired`, `RealmMemberRequired` |
+| proofs | `DeviceRequestProofs.Message`, `OwnershipProofs.Message`: the exact bytes each signs |
 | publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, `Dropped` |
 | content | `Pool.ShareContentAsync`, `UnshareContentAsync`, `GetContentAsync` |
 | the DHT | `Pool.FindRecordAsync`, `FindRecordsAsync`, `FindRecordsByTypeAsync`, `PutRecordAsync` |
@@ -168,6 +173,42 @@ A procedure in a node's own namespace (`~<node id>/<name>`,
 (`<org>/<name>`) needs the org's delegation to this node in the realm, and
 the realm's key in `PoolOptions.RealmTrust`.
 
+### UCANs
+
+A procedure served with an `AuthPolicy` answers only callers presenting a
+UCAN (macula 12's post-quantum capability token) the policy accepts. The
+provider checks each call and stream open before the handler sees it, as
+macula does, and answers the rest `unauthorized` (or `malformed_frame` for a
+proof no token in the chain names):
+
+```csharp
+await using var served = provider.Serve(realm, procedure, handler, new UcanRequired(root.NodeId));
+
+var token = root.CreateUcan(caller.NodeId, [new Capability("mri:org:io.macula/acme", "invoke")],
+    DateTimeOffset.UtcNow.AddHours(1));
+await caller.CallAsync(realm, procedure, payload, new CallOptions { Ucan = new UcanPresentation(token) });
+
+// Delegated: alice hands the caller one procedure, naming her grant as its parent.
+var sub = alice.CreateUcan(caller.NodeId, [new Capability("mri:proc:io.macula/acme/count_v1", "invoke")],
+    DateTimeOffset.UtcNow.AddMinutes(10), new UcanOptions { Parent = Ucan.ProofId(toAlice) });
+await caller.CallAsync(realm, procedure, payload, new CallOptions { Ucan = new UcanPresentation(sub, [toAlice]) });
+```
+
+A token is minted for the node that will present it. `RealmMemberRequired(keyId, can)`
+gates on a realm key instead, named by `Ucan.KeyId(realmPublicKey, profile)`.
+macula's `test/vectors/UCAN_V1.md` is the contract.
+
+### Proofs for a realm and for a service
+
+`NodeKey.DeviceRequestProof` signs a device's request to a realm (realm
+proof v2): a join session's body (the body text exactly as sent, or a
+`JsonObject` under the HTTP rule) or a membership UCAN request over the mesh
+(`DeviceRequestRule.Mesh`). `NodeKey.OwnershipProof` returns a payload with
+the `asserted_by` block that authorises its fields to a service such as
+mcl_om; send it as the payload. Neither signs a `"caller"`: the caller is the
+verified signer, so a request or payload carrying one is refused. Signing
+runs on the calling thread.
+
 ### Content
 
 `ShareContentAsync` keeps the bytes in this node, serves them on its own
@@ -186,6 +227,7 @@ separated) and the realm in `MACULA_REALM` and `MACULA_REALM_KEY`:
 dotnet run --project examples -- quickstart   # a pool and its links
 dotnet run --project examples -- call         # mcl-echo in io.macula, by direct dial
 dotnet run --project examples -- serve        # serve in the own namespace, call it
+dotnet run --project examples -- gated        # serve gated on a UCAN, call it with and without one
 dotnet run --project examples -- pubsub       # publish, hear it back
 dotnet run --project examples -- stream       # a server stream
 dotnet run --project examples -- content      # share, fetch verified
@@ -210,8 +252,13 @@ MACULA_GO_DIR=<macula-go checkout> dotnet test   # the harness from a checkout
 ```
 
 The tests run against in-process macula 12 stations (macula-go's
-`teststation/cmd/teststation`, which needs Go). CI runs them on Linux, macOS
-and Windows.
+`teststation/cmd/teststation`, which needs Go), in both profiles for UCANs.
+CI runs them on Linux, macOS and Windows.
+
+`scripts/interop/ownership_proof.sh` and `scripts/interop/device_request.sh`
+check proofs this package signs against the verifiers themselves: mcl_om's
+(in macula's pinned CI image), after the payload has crossed a station as a
+provider receives it, and the realm's. See `scripts/interop/README.md`.
 
 ## License
 

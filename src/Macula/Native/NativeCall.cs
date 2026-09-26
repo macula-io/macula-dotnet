@@ -22,6 +22,14 @@ internal static class NativeCall
             throw new MaculaException(ErrorKind.Failed,
                 $"libmacula is ABI {version}, and this Macula package is written against ABI {Libmacula.AbiVersion}");
         }
+        // The library the call above bound, found the way every call finds it (the resolver, not
+        // NativeLibrary.Load, which does not consult it).
+        var library = Resolve(Libmacula.Library, typeof(NativeCall).Assembly, null);
+        if (library == 0 || !NativeLibrary.TryGetExport(library, "macula_ucan_create", out _))
+        {
+            throw new MaculaException(ErrorKind.Failed,
+                $"libmacula lacks functions this Macula package calls: it needs macula-go {Libmacula.LibraryFloor}'s library or later");
+        }
     }
 
     // Loads the ABI check on first use.

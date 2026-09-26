@@ -192,16 +192,24 @@ public sealed partial class Pool
     /// <param name="mode">The stream's mode, which must be the procedure's.</param>
     /// <param name="payload">The opening arguments.</param>
     /// <param name="provider">The provider to open it at; any the realm trusts when null.</param>
-    /// <param name="lifetime">How long the stream may live: macula's default when null.</param>
+    /// <param name="deadline">
+    /// How far ahead the open's signed deadline lies (30 s when null). It bounds the provider's admission of
+    /// the open, not the stream's life (cabi/CONTRACT.md "Serving and streams").
+    /// </param>
     /// <param name="timeout">How long opening it may take.</param>
+    /// <param name="ucan">
+    /// A UCAN and its chain's proofs, for a gated procedure (<see cref="Ucan"/>); a provider that refuses it
+    /// ends the stream with a <see cref="StreamFailed"/> of code <c>unauthorized</c>.
+    /// </param>
     /// <param name="cancellationToken">Cancels the opening.</param>
     public async Task<MeshStream> OpenStreamAsync(MeshId realm, string procedure, StreamMode mode,
-        JsonNode? payload = null, MeshId? provider = null, TimeSpan? lifetime = null, TimeSpan? timeout = null,
-        CancellationToken cancellationToken = default)
+        JsonNode? payload = null, MeshId? provider = null, TimeSpan? deadline = null, TimeSpan? timeout = null,
+        UcanPresentation? ucan = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         var payloadJson = Payload.ToJson(payload);
-        var lifetimeMs = Milliseconds(lifetime);
+        var deadlineMs = Milliseconds(deadline);
+        var (ucanToken, proofsJson) = Pool.PresentationJson(ucan);
         var timeoutMs = Milliseconds(timeout);
         var handle = await NativeCall.RunAsync(token =>
         {
@@ -211,8 +219,11 @@ public sealed partial class Pool
             {
                 fixed (byte* r = realm.Bytes, p = provider is { } id ? id.Bytes : default)
                 {
-                    h = Libmacula.macula_pool_open_stream(Handle, r, procedure, (int)mode, payloadJson,
-                        provider is null ? null : p, lifetimeMs, timeoutMs, token, ref err);
+                    h = ucan is null
+                        ? Libmacula.macula_pool_open_stream(Handle, r, procedure, (int)mode, payloadJson,
+                            provider is null ? null : p, deadlineMs, timeoutMs, token, ref err)
+                        : Libmacula.macula_pool_open_stream_with(Handle, r, procedure, (int)mode, payloadJson,
+                            provider is null ? null : p, ucanToken, proofsJson, deadlineMs, timeoutMs, token, ref err);
                 }
             }
             NativeCall.Check(err, cancellationToken);

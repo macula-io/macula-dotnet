@@ -55,6 +55,54 @@ internal static class ServeAndCall
     }
 }
 
+/// <summary>
+/// Serves a procedure gated on a UCAN, in the node's own namespace under a throwaway realm named for the run
+/// (a realm's id is its name's SHA-256, so a grant names it), and calls it without a token (refused
+/// <c>unauthorized</c>) and with the grant a root key made for the caller.
+/// </summary>
+internal static class GatedProcedure
+{
+    public static async Task RunAsync(CancellationToken cancellationToken)
+    {
+        var realmName = $"macula-dotnet-example-{Guid.NewGuid():N}"[..34];
+        var realm = new MeshId(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(realmName)));
+        using var root = await NodeKey.GenerateAsync(Profile.PqHybrid, cancellationToken);
+        await using var provider = await Mesh.JoinAsync(cancellationToken);
+        await using var caller = await Mesh.JoinAsync(cancellationToken);
+        var gated = provider.OwnProcedure("gated");
+        await using var served = provider.Serve(realm, gated, (_, _) => ValueTask.FromResult<JsonNode?>("served"),
+            new UcanRequired(root.NodeId));
+        var grant = root.CreateUcan(caller.NodeId, [new Capability($"mri:realm:{realmName}", "invoke")],
+            DateTimeOffset.UtcNow.AddMinutes(5));
+        var options = new CallOptions { Timeout = TimeSpan.FromSeconds(15), Ucan = new UcanPresentation(grant) };
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        JsonNode? reply;
+        while (true)
+        {
+            try
+            {
+                reply = await caller.CallAsync(realm, gated, new JsonObject(), options, cancellationToken);
+                break;
+            }
+            catch (ProviderErrorException e) when (e.Code == "unknown_next_peer" && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(500, cancellationToken); // the advertisement is still on its way
+            }
+        }
+        Console.WriteLine($"{gated} with the root's grant: {reply?.ToJsonString()}");
+        try
+        {
+            await caller.CallAsync(realm, gated, new JsonObject(), new CallOptions { Timeout = TimeSpan.FromSeconds(15) },
+                cancellationToken);
+            throw new InvalidOperationException("a call without a token was served");
+        }
+        catch (ProviderErrorException e) when (e.Code == "unauthorized")
+        {
+            Console.WriteLine($"{gated} without a token: {e.Code}");
+        }
+    }
+}
+
 /// <summary>Publishes on a topic and hears it back through a subscription.</summary>
 internal static class PublishSubscribe
 {

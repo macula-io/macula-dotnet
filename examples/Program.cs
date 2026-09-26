@@ -6,6 +6,7 @@ var examples = new Dictionary<string, Func<CancellationToken, Task>>
     ["quickstart"] = Quickstart.RunAsync,
     ["call"] = CallAService.RunAsync,
     ["serve"] = ServeAndCall.RunAsync,
+    ["gated"] = GatedProcedure.RunAsync,
     ["pubsub"] = PublishSubscribe.RunAsync,
     ["stream"] = Streams.RunAsync,
     ["content"] = ShareContent.RunAsync,

@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-27
+
+On libmacula from macula-go v0.17.0 (was v0.15.0).
+
+### Added
+
+- UCANs (macula 12, D7): `NodeKey.CreateUcan` mints a token for the node that
+  will present it; `CallOptions.Ucan` and `OpenStreamAsync`'s `ucan` present
+  one and its chain's proofs (`UcanPresentation`); `Pool.Serve` and
+  `Pool.ServeStream` take an `AuthPolicy` (`UcanRequired`,
+  `RealmMemberRequired`), and the provider refuses what it does not accept
+  with `unauthorized` (or `malformed_frame` for a proof no token names).
+  `Ucan.ProofId` and `Ucan.KeyId`, held to macula's UCAN vectors.
+- `NodeKey.DeviceRequestProof` (realm proof v2, macula-realm#29) and
+  `DeviceRequestProofs.Message`, held to the realm's vector; a proof made here
+  is accepted by the realm's own verifier (`scripts/interop/device_request.sh`).
+- `NodeKey.OwnershipProof` (v2, mcl-om#7) and `OwnershipProofs.Message`, held
+  to mcl_om's vector; a payload signed here, delivered through a station, is
+  accepted by mcl_om's own verifier and refused changed or replayed
+  (`scripts/interop/ownership_proof.sh`).
+- The `gated` example, run against the public fleet.
+
+### Changed
+
+- `OpenStreamAsync`'s `lifetime` is now `deadline`: how far ahead the open's
+  signed deadline lies, which bounds the provider's admission of the open, not
+  the stream's life, as the contract says.
+- Loading a libmacula older than macula-go v0.17.0 fails at once, naming the
+  version it needs, instead of at the first call it lacks.
+- A handler's request payload never holds a "caller" its sender wrote: who
+  called is `Request.Caller`, the verified signer.
+- A device request or ownership-proven payload carrying a "caller" is refused
+  (`ArgumentException`).
+
 ## [0.5.0] - 2026-09-26
 
 ### Breaking

@@ -142,17 +142,22 @@ public sealed partial class Pool
     /// (<see cref="OwnProcedure"/>), or under an org that delegated it to this node. Each call runs
     /// <paramref name="handler"/>, whose cancellation token ends at the call's deadline; its result is
     /// the reply, and an exception it throws answers the caller with a <c>handler_error</c> carrying the
-    /// exception's message.
+    /// exception's message. With a <paramref name="policy"/>, only calls whose UCAN it accepts reach the
+    /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>).
     /// </summary>
-    public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler)
+    public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler,
+        AuthPolicy? policy = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         ArgumentNullException.ThrowIfNull(handler);
+        var policyJson = policy?.ToJson().ToJsonString();
         nint err = 0;
         ServedHandle handle;
         fixed (byte* r = realm.Bytes)
         {
-            handle = Libmacula.macula_pool_serve(Handle, r, procedure, ref err);
+            handle = policyJson is null
+                ? Libmacula.macula_pool_serve(Handle, r, procedure, ref err)
+                : Libmacula.macula_pool_serve_gated(Handle, r, procedure, policyJson, ref err);
         }
         NativeCall.Check(err);
         return Served.Unary(handle, handler);
@@ -161,18 +166,23 @@ public sealed partial class Pool
     /// <summary>
     /// Serves <paramref name="procedure"/> in <paramref name="realm"/> as a stream of
     /// <paramref name="mode"/>. Each session runs <paramref name="handler"/> with its stream, which ends
-    /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>.
+    /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>. With a
+    /// <paramref name="policy"/>, only opens whose UCAN it accepts start a session; the rest are refused with
+    /// a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>).
     /// </summary>
     public unsafe Served ServeStream(MeshId realm, string procedure, StreamMode mode,
-        Func<MeshStream, CancellationToken, Task> handler)
+        Func<MeshStream, CancellationToken, Task> handler, AuthPolicy? policy = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         ArgumentNullException.ThrowIfNull(handler);
+        var policyJson = policy?.ToJson().ToJsonString();
         nint err = 0;
         ServedHandle handle;
         fixed (byte* r = realm.Bytes)
         {
-            handle = Libmacula.macula_pool_serve_stream(Handle, r, procedure, (int)mode, ref err);
+            handle = policyJson is null
+                ? Libmacula.macula_pool_serve_stream(Handle, r, procedure, (int)mode, ref err)
+                : Libmacula.macula_pool_serve_stream_gated(Handle, r, procedure, (int)mode, policyJson, ref err);
         }
         NativeCall.Check(err);
         return Served.Streaming(handle, handler);

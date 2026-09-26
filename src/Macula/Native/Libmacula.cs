@@ -16,6 +16,10 @@ internal static unsafe partial class Libmacula
     // The ABI this binding is written against: MACULA_ABI_VERSION.
     internal const int AbiVersion = 1;
 
+    // The oldest macula-go release whose libmacula exports every function below; a new function keeps the
+    // ABI version, so an older library passes that check without them.
+    internal const string LibraryFloor = "v0.17.0";
+
     // ---- The library ----
 
     [LibraryImport(Library)]
@@ -72,6 +76,35 @@ internal static unsafe partial class Libmacula
     [LibraryImport(Library)]
     internal static partial void macula_key_free(nuint key);
 
+    // ---- Device request proofs (realm proof v2), since macula-go v0.14.0 ----
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_key_device_request_proof(KeyHandle key, byte* realm, string procedure,
+        string requestJson, int rule, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_device_request_message(byte* publicKey, nuint publicKeyLen, byte* realm,
+        string procedure, long timestampMs, byte* nonce, string requestJson, int rule, out nuint outLen, ref nint err);
+
+    // ---- Ownership proofs (v2), since macula-go v0.16.0 ----
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_key_ownership_proof(KeyHandle key, byte* realm, string procedure,
+        string payloadJson, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_ownership_proof_message(byte* identity, byte* realm, string procedure,
+        long timestampMs, byte* nonce, string fieldsJson, out nuint outLen, ref nint err);
+
+    // ---- UCANs, since macula-go v0.17.0 ----
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_ucan_create(KeyHandle key, byte* audienceNodeId, string capsJson, long expS,
+        string? optionsJson, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_ucan_proof_id(string token, ref nint err);
+
     // ---- Pool ----
 
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
@@ -96,6 +129,11 @@ internal static unsafe partial class Libmacula
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial nint macula_pool_call(PoolHandle pool, byte* realm, string procedure, string payloadJson,
         byte* providerNodeId, long timeoutMs, nuint cancel, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial nint macula_pool_call_with(PoolHandle pool, byte* realm, string procedure,
+        string payloadJson, byte* providerNodeId, string? ucan, string? proofsJson, long timeoutMs, nuint cancel,
+        ref nint err);
 
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial nint macula_pool_providers(PoolHandle pool, byte* realm, string procedure, long timeoutMs,
@@ -130,6 +168,14 @@ internal static unsafe partial class Libmacula
     internal static partial ServedHandle macula_pool_serve_stream(PoolHandle pool, byte* realm, string procedure,
         int mode, ref nint err);
 
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial ServedHandle macula_pool_serve_gated(PoolHandle pool, byte* realm, string procedure,
+        string policyJson, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial ServedHandle macula_pool_serve_stream_gated(PoolHandle pool, byte* realm, string procedure,
+        int mode, string policyJson, ref nint err);
+
     [LibraryImport(Library)]
     internal static partial nint macula_served_next(ServedHandle served, long timeoutMs, nuint cancel,
         out nuint outItem, out int closed, ref nint err);
@@ -149,6 +195,11 @@ internal static unsafe partial class Libmacula
     internal static partial StreamHandle macula_pool_open_stream(PoolHandle pool, byte* realm, string procedure,
         int mode, string payloadJson, byte* providerNodeId, long deadlineMs, long timeoutMs, nuint cancel,
         ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial StreamHandle macula_pool_open_stream_with(PoolHandle pool, byte* realm, string procedure,
+        int mode, string payloadJson, byte* providerNodeId, string? ucan, string? proofsJson, long deadlineMs,
+        long timeoutMs, nuint cancel, ref nint err);
 
     [LibraryImport(Library)]
     internal static partial nint macula_stream_request(StreamHandle stream, ref nint err);
