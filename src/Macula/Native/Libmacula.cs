@@ -16,9 +16,10 @@ internal static unsafe partial class Libmacula
     // The ABI this binding is written against: MACULA_ABI_VERSION.
     internal const int AbiVersion = 1;
 
-    // The oldest macula-go release whose libmacula exports every function below; a new function keeps the
-    // ABI version, so an older library passes that check without them.
-    internal const string LibraryFloor = "v0.17.0";
+    // The oldest macula-go release this binding supports: its libmacula exports every function below (a new function
+    // keeps the ABI version, so an older library passes that check without them), and it carries at-most-once delivery
+    // (macula-go#8, v0.18.1) and the deadline fix (macula-go#12, v0.18.2), which an older library would silently lack.
+    internal const string LibraryFloor = "v0.18.2";
 
     // ---- The library ----
 

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-29
+
+On libmacula from macula-go v0.18.2 (was v0.17.0), for two fixes a .NET caller gets from the library.
+
+### Fixed
+
+- **A call enters a provider's handler at most once** (macula-go#8, fixed in v0.18.1). A call used to move to the
+  next provider after any failure but a provider's answer, a timeout included, and a provider slower than one
+  candidate's share of the deadline was called again elsewhere: **a handler that is not idempotent could run
+  twice**. Now the call moves on only when a provider's station cannot be reached, before anything is sent; once the
+  call has gone out, its outcome is returned as it is. A reply that is lost ends in a timeout, and the handler ran
+  once or not at all.
+- **No call goes out with a provider deadline past its caller's** (macula-go#12, v0.18.2).
+
+### Changed
+
+- The library floor is macula-go v0.18.2: an older libmacula lacks these fixes. Nothing in the .NET API changes:
+  sealed calls and streams, and the seal report, come in the release on macula-go v0.19.0.
+
 ## [0.6.0] - 2026-09-27
 
 On libmacula from macula-go v0.17.0 (was v0.15.0).

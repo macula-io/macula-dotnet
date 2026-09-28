@@ -111,6 +111,41 @@ public sealed class PoolTests(TestStations stations)
         release.SetResult();
     }
 
+    // macula-go#8, fixed in libmacula v0.18.1: a call moves to the next provider only when it cannot reach a station,
+    // never after its CALL went out. Two providers serve one procedure from the two stations and answer slower than a
+    // call's share of its deadline: the call is answered and exactly one handler is entered. On v0.17.0 the call timed
+    // out at the first, was sent again to the second, and both handlers ran.
+    [Fact]
+    public async Task ACallEntersAProvidersHandlerAtMostOnce()
+    {
+        await using var first = await stations.JoinAsync("once first");
+        await using var second = await stations.JoinAsync("once second", station: 1);
+        await using var caller = await stations.JoinAsync("once caller", station: 1);
+        await stations.AdmitAsync(first.NodeId);
+        await stations.AdmitAsync(second.NodeId);
+        var procedure = stations.Org + "/once";
+        var entered = 0;
+        Func<Request, CancellationToken, ValueTask<JsonNode?>> slow = async (_, token) =>
+        {
+            Interlocked.Increment(ref entered);
+            await Task.Delay(TimeSpan.FromSeconds(2.5), token);
+            return "answered";
+        };
+        await using var servedFirst = first.Serve(stations.Realm, procedure, slow);
+        await using var servedSecond = second.Serve(stations.Realm, procedure, slow);
+        using var patience = new CancellationTokenSource(Patience);
+        while ((await caller.ProvidersAsync(stations.Realm, procedure, Patience)).Count < 2)
+        {
+            await Task.Delay(200, patience.Token);
+        }
+
+        var result = await caller.CallAsync(stations.Realm, procedure, null,
+            new CallOptions { Timeout = TimeSpan.FromSeconds(4) });
+        Assert.Equal("answered", result!.GetValue<string>());
+        await Task.Delay(TimeSpan.FromSeconds(1));
+        Assert.Equal(1, Volatile.Read(ref entered));
+    }
+
     [Fact]
     public async Task AnOrgProcedureIsCalledOnceTheOrgDelegatesIt()
     {
