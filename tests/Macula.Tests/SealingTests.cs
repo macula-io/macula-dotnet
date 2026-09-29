@@ -29,7 +29,7 @@ public sealed partial class SealingTests(TestStations stations)
     public async Task KemAdvertiseIsOffByDefaultAndServingRequiredNeedsIt()
     {
         Assert.False(new PoolOptions().KemAdvertise);
-        await using var provider = await stations.JoinAsync("sealing: no kem");
+        await using var provider = await stations.JoinAsync("sealing no kem");
         var refused = Assert.Throws<ConfidentialityException>(() =>
             provider.Serve(stations.Realm, provider.OwnProcedure("x"), SealedFlag, confidential: ServedConfidential.Required));
         Assert.Equal("kem_advertise_disabled", refused.Reason);
@@ -42,8 +42,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task AProviderThatNamesItsKeyIsCalledSealedByDefaultAndRequired()
     {
-        await using var provider = await stations.JoinAsync("sealing: keyed provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("sealing: keyed caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing keyed provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("sealing keyed caller", station: 1);
         var procedure = provider.OwnProcedure("sealed_echo");
         await using var served = provider.Serve(stations.Realm, procedure, (r, _) =>
             ValueTask.FromResult<JsonNode?>(new JsonObject { ["echoed"] = r.Payload?.DeepClone(), ["sealed"] = r.Sealed ? 1 : 0 }),
@@ -60,9 +60,9 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task APinnedProviderIsCalledSealedAndNoOther()
     {
-        await using var provider = await stations.JoinAsync("sealing: pinned provider", kemAdvertise: true);
-        await using var other = await stations.JoinAsync("sealing: other provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("sealing: pinning caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing pinned provider", kemAdvertise: true);
+        await using var other = await stations.JoinAsync("sealing other provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("sealing pinning caller", station: 1);
         var procedure = provider.OwnProcedure("pinned");
         await using var served = provider.Serve(stations.Realm, procedure,
             (_, _) => ValueTask.FromResult<JsonNode?>(provider.NodeId.ToString()));
@@ -76,8 +76,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task AProviderThatNamesNoKeyIsCalledClearAndRequiredRefusesIt()
     {
-        await using var provider = await stations.JoinAsync("sealing: keyless provider");
-        await using var caller = await stations.JoinAsync("sealing: keyless caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing keyless provider");
+        await using var caller = await stations.JoinAsync("sealing keyless caller", station: 1);
         var procedure = provider.OwnProcedure("clear_echo");
         await using var served = provider.Serve(stations.Realm, procedure, SealedFlag);
         var clear = await caller.CallAsync(stations.Realm, procedure, null, new CallOptions { Timeout = Patience });
@@ -91,7 +91,7 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task AConfidentialityOutsideItsEnumIsRefusedBeforeSending()
     {
-        await using var caller = await stations.JoinAsync("sealing: odd caller");
+        await using var caller = await stations.JoinAsync("sealing odd caller");
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             caller.CallAsync(stations.Realm, caller.OwnProcedure("x"), null, Sealed((Confidential)7)));
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
@@ -103,8 +103,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task OffServesClearEvenFromANodeThatNamesItsKey()
     {
-        await using var provider = await stations.JoinAsync("sealing: off provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("sealing: off caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing off provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("sealing off caller", station: 1);
         var procedure = provider.OwnProcedure("off_echo");
         await using var served = provider.Serve(stations.Realm, procedure, SealedFlag, confidential: ServedConfidential.Off);
         var result = await caller.CallAsync(stations.Realm, procedure, null, new CallOptions { Timeout = Patience });
@@ -115,9 +115,9 @@ public sealed partial class SealingTests(TestStations stations)
     public async Task AGatedProcedureIsCalledSealedWithItsUcan()
     {
         // The presentation and the confidentiality travel in one options set.
-        await using var provider = await stations.JoinAsync("sealing: gated provider", kemAdvertise: true);
+        await using var provider = await stations.JoinAsync("sealing gated provider", kemAdvertise: true);
         await stations.AdmitAsync(provider.NodeId);
-        await using var caller = await stations.JoinAsync("sealing: gated caller", station: 1);
+        await using var caller = await stations.JoinAsync("sealing gated caller", station: 1);
         using var root = await NodeKey.GenerateAsync(stations.Profile);
         var procedure = $"{stations.Org}/sealed_gated";
         var token = root.CreateUcan(caller.NodeId,
@@ -133,8 +133,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task AStreamOpensSealedToAProviderThatNamesItsKeyAndItsSessionSaysSo()
     {
-        await using var provider = await stations.JoinAsync("sealing: stream provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("sealing: stream caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing stream provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("sealing stream caller", station: 1);
         var procedure = provider.OwnProcedure("sealed_count");
         await using var served = provider.ServeStream(stations.Realm, procedure, StreamMode.Client, async (s, ct) =>
         {
@@ -170,8 +170,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task RequiredWillNotOpenAStreamToAProviderThatNamesNoKey()
     {
-        await using var provider = await stations.JoinAsync("sealing: keyless stream provider");
-        await using var caller = await stations.JoinAsync("sealing: keyless stream caller", station: 1);
+        await using var provider = await stations.JoinAsync("sealing keyless stream provider");
+        await using var caller = await stations.JoinAsync("sealing keyless stream caller", station: 1);
         var procedure = provider.OwnProcedure("clear_watch");
         await using var served = provider.ServeStream(stations.Realm, procedure, StreamMode.Server, Nothing);
         var refused = await Assert.ThrowsAsync<ConfidentialityException>(() =>
@@ -183,8 +183,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task ACallToAProviderThatNamesItsKeyReportsSealedToThatProviderAndKey()
     {
-        await using var provider = await stations.JoinAsync("report: keyed provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("report: keyed caller", station: 1);
+        await using var provider = await stations.JoinAsync("report keyed provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("report keyed caller", station: 1);
         var procedure = provider.OwnProcedure("reported");
         await using var served = provider.Serve(stations.Realm, procedure,
             (r, _) => ValueTask.FromResult<JsonNode?>(new JsonObject { ["echoed"] = r.Payload?.DeepClone() }));
@@ -199,9 +199,9 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task APinnedCallReportsTheProviderPinned()
     {
-        await using var provider = await stations.JoinAsync("report: pinned provider", kemAdvertise: true);
-        await using var other = await stations.JoinAsync("report: other provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("report: pinning caller", station: 1);
+        await using var provider = await stations.JoinAsync("report pinned provider", kemAdvertise: true);
+        await using var other = await stations.JoinAsync("report other provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("report pinning caller", station: 1);
         var procedure = provider.OwnProcedure("reported_pinned");
         await using var served = provider.Serve(stations.Realm, procedure, (_, _) => ValueTask.FromResult<JsonNode?>(1));
         var (result, report) = await caller.CallReportAsync(stations.Realm, procedure, null,
@@ -216,8 +216,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task ACallToAProviderThatNamesNoKeyReportsClearWithNoKeyId()
     {
-        await using var provider = await stations.JoinAsync("report: keyless provider");
-        await using var caller = await stations.JoinAsync("report: keyless caller", station: 1);
+        await using var provider = await stations.JoinAsync("report keyless provider");
+        await using var caller = await stations.JoinAsync("report keyless caller", station: 1);
         var procedure = provider.OwnProcedure("reported_clear");
         await using var served = provider.Serve(stations.Realm, procedure, (_, _) => ValueTask.FromResult<JsonNode?>(1));
         var reported = await caller.CallReportAsync(stations.Realm, procedure, null, new CallOptions { Timeout = Patience });
@@ -228,8 +228,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task AStreamsReportSettlesOnTheFirstChunkStaysAfterTheEndAndTheProviderHasNone()
     {
-        await using var provider = await stations.JoinAsync("report: stream provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("report: stream caller", station: 1);
+        await using var provider = await stations.JoinAsync("report stream provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("report stream caller", station: 1);
         var procedure = provider.OwnProcedure("reported_watch");
         Exception? providerSide = null;
         // The provider holds its chunk until the caller has seen the report unsettled, so the order is by
@@ -274,8 +274,8 @@ public sealed partial class SealingTests(TestStations stations)
     [Fact]
     public async Task ASealedStreamTheProviderEndsBeforeAnyChunkHasNoReport()
     {
-        await using var provider = await stations.JoinAsync("report: ending provider", kemAdvertise: true);
-        await using var caller = await stations.JoinAsync("report: ending caller", station: 1);
+        await using var provider = await stations.JoinAsync("report ending provider", kemAdvertise: true);
+        await using var caller = await stations.JoinAsync("report ending caller", station: 1);
         var procedure = provider.OwnProcedure("ended_unsettled");
         await using var served = provider.ServeStream(stations.Realm, procedure, StreamMode.Server, Nothing,
             confidential: ServedConfidential.Required);
