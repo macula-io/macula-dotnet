@@ -59,6 +59,22 @@ public sealed class MeshStream : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// This caller's seal report for the stream (<see cref="SealReport"/>). It settles on the provider's first data or
+    /// reply opened under the stream's key, after which no reseal can happen, or on a clear stream on its first data,
+    /// reply or end; a stream that settled keeps it after it ends. Before it settles, and on a stream that ended
+    /// first, it throws a <see cref="MaculaException"/> of kind <see cref="ErrorKind.NotSettled"/>; on a served stream,
+    /// of kind <see cref="ErrorKind.NotACaller"/>.
+    /// </summary>
+    public SealReport Report()
+    {
+        nint err = 0;
+        var text = NativeCall.TakeString(Libmacula.macula_stream_report(_handle, ref err));
+        NativeCall.Check(err);
+        using var json = JsonDocument.Parse(text!);
+        return SealReport.FromElement(json.RootElement);
+    }
+
     /// <summary>Sends a chunk of bytes.</summary>
     public unsafe void Send(ReadOnlySpan<byte> data)
     {
@@ -110,6 +126,17 @@ public sealed class MeshStream : IAsyncDisposable
         nint err = 0;
         Libmacula.macula_stream_abort(_handle, code, message, ref err);
         NativeCall.Check(err);
+    }
+
+    // Close, where a stream the handler already ended needs nothing more.
+    internal void TryClose()
+    {
+        nint err = 0;
+        Libmacula.macula_stream_close(_handle, ref err);
+        if (err != 0)
+        {
+            Libmacula.macula_free_string(err);
+        }
     }
 
     internal void TryAbort(string code, string message)
@@ -201,15 +228,19 @@ public sealed partial class Pool
     /// A UCAN and its chain's proofs, for a gated procedure (<see cref="Ucan"/>); a provider that refuses it
     /// ends the stream with a <see cref="StreamFailed"/> of code <c>unauthorized</c>.
     /// </param>
+    /// <param name="confidential">
+    /// Whether the stream is sealed, as <see cref="CallOptions.Confidential"/>; one that could not be kept confidential
+    /// throws a <see cref="ConfidentialityException"/> here. Its seal report is <see cref="MeshStream.Report"/>.
+    /// </param>
     /// <param name="cancellationToken">Cancels the opening.</param>
     public async Task<MeshStream> OpenStreamAsync(MeshId realm, string procedure, StreamMode mode,
         JsonNode? payload = null, MeshId? provider = null, TimeSpan? deadline = null, TimeSpan? timeout = null,
-        UcanPresentation? ucan = null, CancellationToken cancellationToken = default)
+        UcanPresentation? ucan = null, Confidential? confidential = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         var payloadJson = Payload.ToJson(payload);
         var deadlineMs = Milliseconds(deadline);
-        var (ucanToken, proofsJson) = Pool.PresentationJson(ucan);
+        var optionsJson = Sealing.CallOptionsJson(provider, ucan, confidential, report: false);
         var timeoutMs = Milliseconds(timeout);
         var handle = await NativeCall.RunAsync(token =>
         {
@@ -217,13 +248,10 @@ public sealed partial class Pool
             StreamHandle h;
             unsafe
             {
-                fixed (byte* r = realm.Bytes, p = provider is { } id ? id.Bytes : default)
+                fixed (byte* r = realm.Bytes)
                 {
-                    h = ucan is null
-                        ? Libmacula.macula_pool_open_stream(Handle, r, procedure, (int)mode, payloadJson,
-                            provider is null ? null : p, deadlineMs, timeoutMs, token, ref err)
-                        : Libmacula.macula_pool_open_stream_with(Handle, r, procedure, (int)mode, payloadJson,
-                            provider is null ? null : p, ucanToken, proofsJson, deadlineMs, timeoutMs, token, ref err);
+                    h = Libmacula.macula_pool_open_stream_opts(Handle, r, procedure, (int)mode, payloadJson, optionsJson,
+                        deadlineMs, timeoutMs, token, ref err);
                 }
             }
             NativeCall.Check(err, cancellationToken);

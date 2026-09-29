@@ -104,8 +104,11 @@ public class TestStations : IAsyncLifetime
         }
     }
 
-    /// <summary>A pool of a node named <paramref name="name"/>, trusting the test realm, linked to one station.</summary>
-    public async Task<Pool> JoinAsync(string name, int station = 0)
+    /// <summary>
+    /// A pool of a node named <paramref name="name"/>, trusting the test realm, linked to one station, naming its
+    /// KEM key in what it serves confidentially when <paramref name="kemAdvertise"/>.
+    /// </summary>
+    public async Task<Pool> JoinAsync(string name, int station = 0, bool kemAdvertise = false)
     {
         using var key = await NodeKey.LoadOrCreateAsync(Path.Combine(KeyDirectory, name + ".key"), Profile);
         return await Pool.ConnectAsync(key, [Seeds[station]], new PoolOptions
@@ -113,6 +116,7 @@ public class TestStations : IAsyncLifetime
             RealmTrust = new Dictionary<MeshId, byte[]> { [Realm] = RealmKey },
             RespawnDelay = TimeSpan.FromMilliseconds(100),
             ConnectTimeout = TimeSpan.FromSeconds(20),
+            KemAdvertise = kemAdvertise,
         });
     }
 

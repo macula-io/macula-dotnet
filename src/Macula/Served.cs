@@ -10,7 +10,9 @@ namespace Macula;
 /// <param name="Procedure">The procedure called.</param>
 /// <param name="Payload">The call's arguments.</param>
 /// <param name="Deadline">When the caller stops waiting.</param>
-public sealed record Request(MeshId Caller, MeshId Realm, string Procedure, JsonNode? Payload, DateTimeOffset Deadline)
+/// <param name="Sealed">Whether the call came sealed; <paramref name="Payload"/> is the opened plaintext either way.</param>
+public sealed record Request(MeshId Caller, MeshId Realm, string Procedure, JsonNode? Payload, DateTimeOffset Deadline,
+    bool Sealed)
 {
     internal static Request FromJson(string text)
     {
@@ -19,7 +21,8 @@ public sealed record Request(MeshId Caller, MeshId Realm, string Procedure, Json
         return new Request(MeshId.Parse(r.GetProperty("caller").GetString()!),
             MeshId.Parse(r.GetProperty("realm").GetString()!), r.GetProperty("procedure").GetString()!,
             Macula.Payload.FromElement(r.GetProperty("payload")),
-            DateTimeOffset.FromUnixTimeMilliseconds(r.GetProperty("deadline_ms").GetInt64()));
+            DateTimeOffset.FromUnixTimeMilliseconds(r.GetProperty("deadline_ms").GetInt64()),
+            r.GetProperty("sealed").GetInt32() == 1);
     }
 }
 
@@ -117,6 +120,9 @@ public sealed class Served : IAsyncDisposable
             try
             {
                 await handler(stream, stopping).ConfigureAwait(false);
+                // A handler that returns has finished its session: end it normally (a no-op when the handler
+                // ended it itself), rather than leave it to the free's abort.
+                stream.TryClose();
             }
             catch (Exception e)
             {
@@ -143,21 +149,21 @@ public sealed partial class Pool
     /// <paramref name="handler"/>, whose cancellation token ends at the call's deadline; its result is
     /// the reply, and an exception it throws answers the caller with a <c>handler_error</c> carrying the
     /// exception's message. With a <paramref name="policy"/>, only calls whose UCAN it accepts reach the
-    /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>).
+    /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/>
+    /// says whether it is sealed (<see cref="ServedConfidential"/>; the library's default, Preferred, when null), and
+    /// <see cref="Request.Sealed"/> whether a call came sealed.
     /// </summary>
     public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler,
-        AuthPolicy? policy = null)
+        AuthPolicy? policy = null, ServedConfidential? confidential = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         ArgumentNullException.ThrowIfNull(handler);
-        var policyJson = policy?.ToJson().ToJsonString();
+        var optionsJson = Sealing.ServeOptionsJson(policy, confidential);
         nint err = 0;
         ServedHandle handle;
         fixed (byte* r = realm.Bytes)
         {
-            handle = policyJson is null
-                ? Libmacula.macula_pool_serve(Handle, r, procedure, ref err)
-                : Libmacula.macula_pool_serve_gated(Handle, r, procedure, policyJson, ref err);
+            handle = Libmacula.macula_pool_serve_opts(Handle, r, procedure, optionsJson, ref err);
         }
         NativeCall.Check(err);
         return Served.Unary(handle, handler);
@@ -165,24 +171,24 @@ public sealed partial class Pool
 
     /// <summary>
     /// Serves <paramref name="procedure"/> in <paramref name="realm"/> as a stream of
-    /// <paramref name="mode"/>. Each session runs <paramref name="handler"/> with its stream, which ends
+    /// <paramref name="mode"/>. Each session runs <paramref name="handler"/> with its stream, which is closed
     /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>. With a
     /// <paramref name="policy"/>, only opens whose UCAN it accepts start a session; the rest are refused with
-    /// a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>).
+    /// a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/> as
+    /// <see cref="Serve"/>'s.
     /// </summary>
     public unsafe Served ServeStream(MeshId realm, string procedure, StreamMode mode,
-        Func<MeshStream, CancellationToken, Task> handler, AuthPolicy? policy = null)
+        Func<MeshStream, CancellationToken, Task> handler, AuthPolicy? policy = null,
+        ServedConfidential? confidential = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         ArgumentNullException.ThrowIfNull(handler);
-        var policyJson = policy?.ToJson().ToJsonString();
+        var optionsJson = Sealing.ServeOptionsJson(policy, confidential);
         nint err = 0;
         ServedHandle handle;
         fixed (byte* r = realm.Bytes)
         {
-            handle = policyJson is null
-                ? Libmacula.macula_pool_serve_stream(Handle, r, procedure, (int)mode, ref err)
-                : Libmacula.macula_pool_serve_stream_gated(Handle, r, procedure, (int)mode, policyJson, ref err);
+            handle = Libmacula.macula_pool_serve_stream_opts(Handle, r, procedure, (int)mode, optionsJson, ref err);
         }
         NativeCall.Check(err);
         return Served.Streaming(handle, handler);

@@ -208,6 +208,30 @@ public sealed class PoolTests(TestStations stations)
     }
 
     [Fact]
+    public async Task AStreamHandlerThatReturnsEndsItsStreamNormally()
+    {
+        await using var provider = await stations.JoinAsync("returning stream provider");
+        await using var caller = await stations.JoinAsync("returning stream caller", station: 1);
+        var procedure = provider.OwnProcedure("one_then_done");
+        await using var served = provider.ServeStream(stations.Realm, procedure, StreamMode.Server, (stream, _) =>
+        {
+            stream.Send("one"u8);
+            return Task.CompletedTask;
+        });
+        await using var opened = await caller.OpenStreamAsync(stations.Realm, procedure, StreamMode.Server, timeout: Patience);
+        var frames = new List<StreamFrame>();
+        using var patience = new CancellationTokenSource(Patience);
+        await foreach (var frame in opened.ReadAllAsync(patience.Token))
+        {
+            frames.Add(frame);
+        }
+        // Not aborted: a handler that returns has finished its session, as a Python or TypeScript one has.
+        Assert.DoesNotContain(frames, f => f is StreamFailed);
+        Assert.IsType<StreamData>(frames[0]);
+        Assert.IsType<StreamEof>(frames[^1]);
+    }
+
+    [Fact]
     public async Task AServerStreamCarriesValuesBytesAndAReply()
     {
         await using var provider = await stations.JoinAsync("stream provider");

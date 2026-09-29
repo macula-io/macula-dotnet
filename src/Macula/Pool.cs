@@ -31,6 +31,14 @@ public sealed class PoolOptions
 
     /// <summary>How long connecting may take before it fails: 30 s when zero.</summary>
     public TimeSpan ConnectTimeout { get; init; }
+
+    /// <summary>
+    /// Gives the node a KEM keyring, in memory only, and names its current key in the advertisements of the procedures
+    /// it serves confidentially, so callers seal to it (macula 13's E2E seal scheme 1). Off by default. Enable it only
+    /// once every station runs macula 12.11 or later and every caller can seal (macula 13, macula-go 0.18, Macula .NET
+    /// 0.7 or later).
+    /// </summary>
+    public bool KemAdvertise { get; init; }
 }
 
 /// <summary>One of a pool's station links.</summary>
@@ -62,6 +70,14 @@ public sealed class CallOptions
     /// refuses it answers a <see cref="ProviderErrorException"/> of code <c>unauthorized</c>.
     /// </summary>
     public UcanPresentation? Ucan { get; init; }
+
+    /// <summary>
+    /// Whether the call is sealed to the provider's KEM key: <see cref="Macula.Confidential.Preferred"/> (the library's
+    /// default, when null) whenever its advertisement names one, <see cref="Macula.Confidential.Required"/> never calls a
+    /// provider that names none. A call that could not be kept confidential throws a
+    /// <see cref="ConfidentialityException"/>.
+    /// </summary>
+    public Confidential? Confidential { get; init; }
 }
 
 /// <summary>A DHT record type.</summary>
@@ -137,6 +153,7 @@ public sealed partial class Pool : IAsyncDisposable
         if (o.MaxDirectLinks != 0) json["max_direct_links"] = o.MaxDirectLinks;
         if (o.RespawnDelay != TimeSpan.Zero) json["respawn_delay_ms"] = (long)o.RespawnDelay.TotalMilliseconds;
         if (o.ConnectTimeout != TimeSpan.Zero) json["timeout_ms"] = (long)o.ConnectTimeout.TotalMilliseconds;
+        json["kem_advertise"] = o.KemAdvertise ? 1 : 0;
         return json.ToJsonString();
     }
 
@@ -212,30 +229,49 @@ public sealed partial class Pool : IAsyncDisposable
         };
     }
 
-    /// <summary>Calls <paramref name="procedure"/> in <paramref name="realm"/> by direct dial, and returns its result.</summary>
-    public unsafe Task<JsonNode?> CallAsync(MeshId realm, string procedure, JsonNode? payload = null,
+    /// <summary>
+    /// Calls <paramref name="procedure"/> in <paramref name="realm"/> by direct dial, and returns its result, sealed as
+    /// <see cref="CallOptions.Confidential"/> says.
+    /// </summary>
+    public async Task<JsonNode?> CallAsync(MeshId realm, string procedure, JsonNode? payload = null,
         CallOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        var reply = await CallTextAsync(realm, procedure, payload, options, false, cancellationToken).ConfigureAwait(false);
+        return Payload.FromJson(reply);
+    }
+
+    /// <summary>
+    /// <see cref="CallAsync"/>, returning its result with its seal report: whether the exchange behind the result was
+    /// sealed, to which provider and key (<see cref="SealReport"/>). After a <c>sealed_refused</c> and one reseal, the
+    /// report names the reseal's key. An error is thrown as <see cref="CallAsync"/> throws it, with no report.
+    /// </summary>
+    public async Task<Reported> CallReportAsync(MeshId realm, string procedure, JsonNode? payload = null,
+        CallOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        var reply = await CallTextAsync(realm, procedure, payload, options, true, cancellationToken).ConfigureAwait(false);
+        using var json = JsonDocument.Parse(reply);
+        var root = json.RootElement;
+        return new Reported(Payload.FromElement(root.GetProperty("result")), SealReport.FromElement(root));
+    }
+
+    private unsafe Task<string> CallTextAsync(MeshId realm, string procedure, JsonNode? payload, CallOptions? options,
+        bool report, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         var payloadJson = Payload.ToJson(payload);
-        var provider = options?.Provider;
         var timeoutMs = Milliseconds(options?.Timeout);
-        var ucan = options?.Ucan;
-        var (ucanToken, proofsJson) = PresentationJson(ucan);
+        var optionsJson = Sealing.CallOptionsJson(options?.Provider, options?.Ucan, options?.Confidential, report);
         return NativeCall.RunAsync(token =>
         {
             nint err = 0;
             nint result;
-            fixed (byte* r = realm.Bytes, p = provider is { } id ? id.Bytes : default)
+            fixed (byte* r = realm.Bytes)
             {
-                result = ucan is null
-                    ? Libmacula.macula_pool_call(_handle, r, procedure, payloadJson, provider is null ? null : p,
-                        timeoutMs, token, ref err)
-                    : Libmacula.macula_pool_call_with(_handle, r, procedure, payloadJson, provider is null ? null : p,
-                        ucanToken, proofsJson, timeoutMs, token, ref err);
+                result = Libmacula.macula_pool_call_opts(_handle, r, procedure, payloadJson, optionsJson, timeoutMs, token,
+                    ref err);
             }
             NativeCall.Check(err, cancellationToken);
-            return Payload.FromJson(NativeCall.TakeString(result)!);
+            return NativeCall.TakeString(result)!;
         }, cancellationToken);
     }
 
@@ -287,18 +323,6 @@ public sealed partial class Pool : IAsyncDisposable
         }
         NativeCall.Check(err);
         return new Subscription(handle);
-    }
-
-    // A presentation as the ABI takes it: the token, and the proofs as a JSON list (null for none).
-    internal static (string? Token, string? ProofsJson) PresentationJson(UcanPresentation? ucan)
-    {
-        if (ucan is null)
-        {
-            return (null, null);
-        }
-        ArgumentException.ThrowIfNullOrEmpty(ucan.Token, nameof(ucan));
-        var proofs = ucan.Proofs is { Count: > 0 } list ? new JsonArray([.. list.Select(p => (JsonNode?)p)]).ToJsonString() : null;
-        return (ucan.Token, proofs);
     }
 
     internal static long Milliseconds(TimeSpan? span)

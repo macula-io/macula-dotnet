@@ -31,6 +31,12 @@ public enum ErrorKind
     Closed,
     /// <summary>The network refused it.</summary>
     Refused,
+    /// <summary>A call, stream or served procedure that could not be kept confidential (<see cref="ConfidentialityException"/>).</summary>
+    Confidentiality,
+    /// <summary>A stream's seal report asked for before it settled, or of a stream that ended before it did.</summary>
+    NotSettled,
+    /// <summary>A seal report asked of a served stream: only the caller has one.</summary>
+    NotACaller,
     /// <summary>Anything else.</summary>
     Failed,
 }
@@ -78,6 +84,28 @@ public sealed class ContentUnavailableException(string message, IReadOnlyList<st
     public IReadOnlyList<string> Failures { get; } = failures;
 }
 
+/// <summary>
+/// A call, stream or served procedure that could not be kept confidential (macula 13's E2E seal scheme 1;
+/// cabi/CONTRACT.md "Confidentiality"). <see cref="Reason"/>: <c>no_kem_key</c> (the provider names no key
+/// where one is required, or one this node cannot seal to), <c>key_mismatch</c> (the provider's advertisement
+/// names another key than its refusal did: <see cref="Named"/> and <see cref="Found"/>), <c>reply_not_opened</c>
+/// (a sealed answer that does not open), <c>clear_answer_to_sealed</c> (a clear answer that nothing clear may
+/// give) or <c>kem_advertise_disabled</c> (serving <see cref="ServedConfidential.Required"/> on a pool without
+/// <see cref="PoolOptions.KemAdvertise"/>).
+/// </summary>
+public sealed class ConfidentialityException(string message, string reason, string? named, string? found)
+    : MaculaException(ErrorKind.Confidentiality, message)
+{
+    /// <summary>Why it could not be kept confidential.</summary>
+    public string Reason { get; } = reason;
+
+    /// <summary>The key id the provider's refusal named, as hex, when one did.</summary>
+    public string? Named { get; } = named;
+
+    /// <summary>The key id the provider's advertisement names, as hex, when one does.</summary>
+    public string? Found { get; } = found;
+}
+
 internal static class Errors
 {
     // The exception an err_out's JSON stands for.
@@ -104,7 +132,15 @@ internal static class Errors
             "answered" => new MaculaException(ErrorKind.Answered, message),
             "closed" => new MaculaException(ErrorKind.Closed, message),
             "refused" => new MaculaException(ErrorKind.Refused, message),
+            "confidentiality" => new ConfidentialityException(message, root.GetProperty("reason").GetString()!,
+                KeyIdOf(root, "named"), KeyIdOf(root, "found")),
+            "not_settled" => new MaculaException(ErrorKind.NotSettled, message),
+            "not_a_caller" => new MaculaException(ErrorKind.NotACaller, message),
             _ => new MaculaException(ErrorKind.Failed, message),
         };
     }
+
+    // A key id field: hex, or null when it is null or absent.
+    private static string? KeyIdOf(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

@@ -17,9 +17,10 @@ internal static unsafe partial class Libmacula
     internal const int AbiVersion = 1;
 
     // The oldest macula-go release this binding supports: its libmacula exports every function below (a new function
-    // keeps the ABI version, so an older library passes that check without them), and it carries at-most-once delivery
-    // (macula-go#8, v0.18.1) and the deadline fix (macula-go#12, v0.18.2), which an older library would silently lack.
-    internal const string LibraryFloor = "v0.18.2";
+    // keeps the ABI version, so an older library passes that check without them), the newest being the seal report's
+    // macula_stream_report (v0.19.0), and it speaks handshake v5 (the channel binding, v0.20.0), which an older
+    // library would silently lack.
+    internal const string LibraryFloor = "v0.20.0";
 
     // ---- The library ----
 
@@ -127,14 +128,11 @@ internal static unsafe partial class Libmacula
 
     // ---- Calls ----
 
+    // A call's options (provider, UCAN, proofs, confidentiality, report) as JSON, since macula-go v0.18.0: the one way
+    // this binding calls.
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint macula_pool_call(PoolHandle pool, byte* realm, string procedure, string payloadJson,
-        byte* providerNodeId, long timeoutMs, nuint cancel, ref nint err);
-
-    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial nint macula_pool_call_with(PoolHandle pool, byte* realm, string procedure,
-        string payloadJson, byte* providerNodeId, string? ucan, string? proofsJson, long timeoutMs, nuint cancel,
-        ref nint err);
+    internal static partial nint macula_pool_call_opts(PoolHandle pool, byte* realm, string procedure,
+        string payloadJson, string? optionsJson, long timeoutMs, nuint cancel, ref nint err);
 
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
     internal static partial nint macula_pool_providers(PoolHandle pool, byte* realm, string procedure, long timeoutMs,
@@ -162,20 +160,15 @@ internal static unsafe partial class Libmacula
 
     // ---- Serving ----
 
+    // A served procedure's options (policy, confidentiality) as JSON, since macula-go v0.18.0: the one way this
+    // binding serves.
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ServedHandle macula_pool_serve(PoolHandle pool, byte* realm, string procedure, ref nint err);
+    internal static partial ServedHandle macula_pool_serve_opts(PoolHandle pool, byte* realm, string procedure,
+        string? optionsJson, ref nint err);
 
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ServedHandle macula_pool_serve_stream(PoolHandle pool, byte* realm, string procedure,
-        int mode, ref nint err);
-
-    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ServedHandle macula_pool_serve_gated(PoolHandle pool, byte* realm, string procedure,
-        string policyJson, ref nint err);
-
-    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial ServedHandle macula_pool_serve_stream_gated(PoolHandle pool, byte* realm, string procedure,
-        int mode, string policyJson, ref nint err);
+    internal static partial ServedHandle macula_pool_serve_stream_opts(PoolHandle pool, byte* realm, string procedure,
+        int mode, string? optionsJson, ref nint err);
 
     [LibraryImport(Library)]
     internal static partial nint macula_served_next(ServedHandle served, long timeoutMs, nuint cancel,
@@ -192,18 +185,18 @@ internal static unsafe partial class Libmacula
 
     // ---- Streams ----
 
+    // An open's options (a call's, without report) as JSON, since macula-go v0.18.0: the one way this binding opens.
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial StreamHandle macula_pool_open_stream(PoolHandle pool, byte* realm, string procedure,
-        int mode, string payloadJson, byte* providerNodeId, long deadlineMs, long timeoutMs, nuint cancel,
+    internal static partial StreamHandle macula_pool_open_stream_opts(PoolHandle pool, byte* realm, string procedure,
+        int mode, string payloadJson, string? optionsJson, long deadlineMs, long timeoutMs, nuint cancel,
         ref nint err);
-
-    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
-    internal static partial StreamHandle macula_pool_open_stream_with(PoolHandle pool, byte* realm, string procedure,
-        int mode, string payloadJson, byte* providerNodeId, string? ucan, string? proofsJson, long deadlineMs,
-        long timeoutMs, nuint cancel, ref nint err);
 
     [LibraryImport(Library)]
     internal static partial nint macula_stream_request(StreamHandle stream, ref nint err);
+
+    // A caller stream's seal report, since macula-go v0.19.0.
+    [LibraryImport(Library)]
+    internal static partial nint macula_stream_report(StreamHandle stream, ref nint err);
 
     [LibraryImport(Library)]
     internal static partial void macula_stream_send_bytes(StreamHandle stream, byte* data, nuint dataLen, ref nint err);
