@@ -30,10 +30,15 @@ handshake v5.
 
 ### Changed
 
-- **Handshake v5** (macula-go v0.20.0): every link binds its session to its TLS channel and carries no per-frame
-  neighbour signature after HELLO. It comes with the library; nothing in the .NET API changes.
+- **Handshake v5** (macula-go v0.20.0): a link binds its session to its TLS channel instead of a composite signature
+  on every control frame in pq_hybrid; libmacula dials v4 once when a station refuses v5. It comes with the library;
+  nothing in the .NET API changes.
 - The library floor is macula-go v0.20.0. Calls, serving and opens go through libmacula's `*_opts` functions, whose
   one options set carries a UCAN, its proofs and the confidentiality.
+- Recompile against 0.7.0: `OpenStreamAsync` gains `confidential` before `cancellationToken`, `Serve` and
+  `ServeStream` gain a trailing `confidential`, and `Request` gains `Sealed` as its sixth member. A call that names
+  its optional arguments compiles unchanged; one that passes `cancellationToken` to `OpenStreamAsync` by position, or
+  constructs or deconstructs a `Request`, needs editing.
 
 ### Fixed
 

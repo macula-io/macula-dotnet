@@ -289,6 +289,8 @@ public sealed partial class SealingTests(TestStations stations)
         }
         var none = Assert.Throws<MaculaException>(() => stream.Report());
         Assert.Equal(ErrorKind.NotSettled, none.Kind);
+        await stream.DisposeAsync();
+        Assert.Throws<ObjectDisposedException>(() => stream.Report());
     }
 
     // attempt until the provider, not the DHT's reach, answers.

@@ -64,7 +64,8 @@ the other way round (`Peer serve`), where the Erlang caller also calls the .NET
 provider clear and must be refused `sealed_required`. Every seal report, the
 .NET caller's and the Erlang caller's, must say sealed, the provider called
 and a key id. Both take the escripts and the teststation from macula-go at
-`libmacula.version`; `PEER` names the command that runs `Peer`.
+`libmacula.version` (needs Go, the .NET SDK, podman and, for `sealed.sh`,
+python3); `PEER` names the command that runs `Peer`.
 
 ## Last run, 0.7.0 (2026-09-29)
 

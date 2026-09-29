@@ -232,6 +232,37 @@ public sealed class PoolTests(TestStations stations)
     }
 
     [Fact]
+    public async Task AClientStreamHandlerThatReturnsWhileTheCallerSendsEndsItNormally()
+    {
+        await using var provider = await stations.JoinAsync("returning client stream provider");
+        await using var caller = await stations.JoinAsync("still sending caller", station: 1);
+        var procedure = provider.OwnProcedure("first_only");
+        var took = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var served = provider.ServeStream(stations.Realm, procedure, StreamMode.Client, async (stream, ct) =>
+        {
+            await foreach (var frame in stream.ReadAllAsync(ct))
+            {
+                if (frame is StreamData)
+                {
+                    took.SetResult();
+                    return;
+                }
+            }
+        });
+        await using var opened = await caller.OpenStreamAsync(stations.Realm, procedure, StreamMode.Client, timeout: Patience);
+        opened.Send("first"u8);
+        await took.Task.WaitAsync(Patience);
+        var frames = new List<StreamFrame>();
+        using var patience = new CancellationTokenSource(Patience);
+        await foreach (var frame in opened.ReadAllAsync(patience.Token))
+        {
+            frames.Add(frame);
+        }
+        Assert.DoesNotContain(frames, f => f is StreamFailed);
+        Assert.IsType<StreamEof>(frames[^1]);
+    }
+
+    [Fact]
     public async Task AServerStreamCarriesValuesBytesAndAReply()
     {
         await using var provider = await stations.JoinAsync("stream provider");
