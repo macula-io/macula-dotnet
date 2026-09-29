@@ -73,8 +73,16 @@ internal sealed class NativePump<T> : IAsyncDisposable
         }
     }
 
+    private int _disposed;
+
+    // Idempotent, as a dispose must be: the owner disposing twice (an explicit DisposeAsync inside an await using)
+    // stops the pump once.
     public async ValueTask DisposeAsync()
     {
+        if (Interlocked.Exchange(ref _disposed, 1) == 1)
+        {
+            return;
+        }
         await _stop.CancelAsync().ConfigureAwait(false);
         await Task.Run(_thread.Join).ConfigureAwait(false);
         _stop.Dispose();
