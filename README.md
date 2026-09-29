@@ -20,10 +20,12 @@
 
 ---
 
-> **Status, 2026-09-26:** on the **macula 12** wire: TLS 1.3 with a hybrid
+> **Status, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
 > RSA-PSS-4096 composite in `pq_hybrid`, the fleet's profile), and signed
-> calls, replies and publications. Every feature is tested on each push
+> calls, replies and publications. Since 0.7.0, handshake v5 (the session
+> bound to its TLS channel) and macula 13's end-to-end sealing with the
+> caller's seal report, checked live against macula 13.2.2 both ways. Every feature is tested on each push
 > against in-process macula 12 stations on Linux, macOS and Windows. Checked
 > on the public fleet with throwaway keys: connecting, the DHT,
 > publish/subscribe, calling `mcl-echo` in io.macula, serving calls and a
@@ -129,10 +131,10 @@ await foreach (var e in subscription.ReadAllAsync(cancellationToken))
 | Type | What it does |
 |---|---|
 | `NodeKey` | `GenerateAsync`, `Load`, `LoadOrCreateAsync`, `Save`, `NodeId`, `PublicKey`, `Sign`, `Verify`; `CreateUcan`, `DeviceRequestProof`, `OwnershipProof` (below) |
-| `Pool` | `ConnectAsync`, `NodeId`, `OwnProcedure`, `Status`, `EventsAsync`, `DisposeAsync` |
-| calls | `Pool.CallAsync` (`CallOptions.Ucan` presents a UCAN), `Pool.ProvidersAsync` |
-| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose, each optionally gated on an `AuthPolicy` |
-| streams | `Pool.OpenStreamAsync` (its `ucan` presents one), and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync` |
+| `Pool` | `ConnectAsync` (`PoolOptions.KemAdvertise`, below), `NodeId`, `OwnProcedure`, `Status`, `EventsAsync`, `DisposeAsync` |
+| calls | `Pool.CallAsync` (`CallOptions.Ucan` presents a UCAN, `CallOptions.Confidential` seals it), `Pool.CallReportAsync`, `Pool.ProvidersAsync` |
+| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose, each optionally gated on an `AuthPolicy` and sealed (`ServedConfidential`) |
+| streams | `Pool.OpenStreamAsync` (its `ucan` presents one, its `confidential` seals it), and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync`, `Report` |
 | UCANs | `Ucan.ProofId`, `Ucan.KeyId`, `Capability`, `UcanOptions`, `UcanPresentation`, `UcanRequired`, `RealmMemberRequired` |
 | proofs | `DeviceRequestProofs.Message`, `OwnershipProofs.Message`: the exact bytes each signs |
 | publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, `Dropped` |
@@ -145,7 +147,8 @@ where one fits (`OperationCanceledException`, `TimeoutException`,
 `ArgumentException`, `ObjectDisposedException`), and otherwise a
 `MaculaException` with its `Kind`: `ProviderErrorException` (with the
 provider's `Code` and `Detail`), `RelayErrorException`, `NotSharedException`,
-`ContentUnavailableException` (with each sharer's failure).
+`ContentUnavailableException` (with each sharer's failure),
+`ConfidentialityException` (with its `Reason`, `Named` and `Found`).
 
 ### Payloads
 
@@ -163,10 +166,12 @@ mesh's CBOR:
 ### Serving
 
 A served procedure's handler gets the `Request` (the verified caller, realm,
-procedure, payload and deadline) and a `CancellationToken` that ends at the
-call's deadline. Its result is the reply; an exception it throws answers the
-caller with a `handler_error` whose detail is the exception's message. Calls
-run concurrently, each on its own task.
+procedure, payload, deadline, and whether it came sealed) and a
+`CancellationToken` that ends at the call's deadline. Its result is the reply;
+an exception it throws answers the caller with a `handler_error` whose detail
+is the exception's message. Calls run concurrently, each on its own task. A
+streaming handler's stream is closed when the handler returns, and aborted
+with `handler_error` when it throws.
 
 A procedure in a node's own namespace (`~<node id>/<name>`,
 `Pool.OwnProcedure`) needs no org or realm to vouch for it. One under an org
@@ -197,6 +202,48 @@ await caller.CallAsync(realm, procedure, payload, new CallOptions { Ucan = new U
 A token is minted for the node that will present it. `RealmMemberRequired(keyId, can)`
 gates on a realm key instead, named by `Ucan.KeyId(realmPublicKey, profile)`.
 macula's `test/vectors/UCAN_V1.md` is the contract.
+
+### Sealing
+
+macula 13 seals a call's or a stream's payload end to end to the provider's
+KEM key (E2E seal scheme 1): stations route what they cannot read. It is off
+until a provider opts in, and a caller seals whenever it can:
+
+```csharp
+// The provider names its KEM key in its advertisements.
+await using var provider = await Pool.ConnectAsync(key, seeds, new PoolOptions { RealmTrust = trust, KemAdvertise = true });
+await using var served = provider.Serve(realm, procedure, handler, confidential: ServedConfidential.Required);
+
+// The caller seals to it: Preferred (the default) whenever the provider's advertisement names a key,
+// Required never calls one that names none.
+var (result, report) = await caller.CallReportAsync(realm, procedure, payload,
+    new CallOptions { Confidential = Confidential.Required });
+// report.Sealed, report.Provider, report.SealKeyId (the key, 16 hex)
+```
+
+- `KemAdvertise` is off by default. Enable it only once every station runs
+  macula 12.11 or later and every caller can seal (macula 13, macula-go 0.18,
+  Macula .NET 0.7 or later).
+- A served procedure is `ServedConfidential.Preferred` by default: it names
+  the key when the pool advertises one, and still takes a clear call while its
+  last keyless advertisement could be served. `Required` refuses every clear
+  call (`sealed_required`) and needs `KemAdvertise`; `Off` serves in the clear.
+  `Request.Sealed` says whether a call came sealed; its payload is the opened
+  plaintext either way.
+- A caller has no `Off`: only an advertisement naming no key is called in the
+  clear, and a sealed call never falls back to the clear. What could not be
+  kept confidential throws a `ConfidentialityException`, its `Reason` one of
+  `no_kem_key`, `key_mismatch`, `reply_not_opened`, `clear_answer_to_sealed`,
+  `kem_advertise_disabled`.
+- The seal report states that sealing ran on the exchange behind a result,
+  nothing more. A stream's, `MeshStream.Report()`, settles on the provider's
+  first chunk or reply; before that it throws a `MaculaException` of kind
+  `NotSettled`, and on a served stream of kind `NotACaller`.
+
+What stays visible: a request's UCAN and proofs, sizes, timing and routing.
+Content (`ShareContentAsync`) is public by design and travels in the clear.
+macula-go's `cabi/CONTRACT.md` ("Confidentiality", "The seal report") is the
+contract.
 
 ### Proofs for a realm and for a service
 
@@ -258,7 +305,10 @@ CI runs them on Linux, macOS and Windows.
 `scripts/interop/ownership_proof.sh` and `scripts/interop/device_request.sh`
 check proofs this package signs against the verifiers themselves: mcl_om's
 (in macula's pinned CI image), after the payload has crossed a station as a
-provider receives it, and the realm's. See `scripts/interop/README.md`.
+provider receives it, and the realm's. `scripts/interop/v5.sh` and
+`scripts/interop/sealed.sh` run handshake v5 against a macula station, and
+sealed calls and streams with their seal reports both ways against a macula
+node. See `scripts/interop/README.md`.
 
 ## License
 

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-29
+
+On libmacula from macula-go v0.20.0 (was v0.18.2): macula 13's end-to-end sealing, the caller's seal report, and
+handshake v5.
+
+### Added
+
+- **Sealed calls and streams** (macula 13's E2E seal scheme 1, macula-go v0.18.0). `PoolOptions.KemAdvertise` names
+  the node's KEM key in the advertisements of what it serves confidentially; it is off by default. `Pool.Serve` and
+  `Pool.ServeStream` take `confidential:` (`ServedConfidential.Preferred`, the default, `Required` or `Off`), and
+  `Request.Sealed` says whether a call came sealed. `CallOptions.Confidential` and `OpenStreamAsync`'s `confidential:`
+  take `Confidential.Preferred` (the default: sealed whenever the provider's advertisement names a key) or `Required`
+  (never calls one that names none). What could not be kept confidential throws a `ConfidentialityException`
+  (`Reason`, `Named`, `Found`).
+- **The seal report** (macula's DESIGN_E2E_SEAL_REPORT, macula-go v0.19.0): `Pool.CallReportAsync` returns
+  `Reported(Result, Report)`, and `MeshStream.Report()` a caller stream's; a `SealReport` has `Sealed`, `Provider` and
+  `SealKeyId`. A stream's throws a `MaculaException` of kind `NotSettled` before it settles and `NotACaller` on a
+  served stream.
+- `scripts/interop/v5.sh` and `scripts/interop/sealed.sh`, with `scripts/interop/Peer`: handshake v5 against a macula
+  station, and sealed calls and streams with their seal reports both ways against a macula node.
+
+### Changed
+
+- **Handshake v5** (macula-go v0.20.0): every link binds its session to its TLS channel and carries no per-frame
+  neighbour signature after HELLO. It comes with the library; nothing in the .NET API changes.
+- The library floor is macula-go v0.20.0. Calls, serving and opens go through libmacula's `*_opts` functions, whose
+  one options set carries a UCAN, its proofs and the confidentiality.
+
+### Fixed
+
+- **A streaming handler that returns now closes its stream**; it used to be aborted when the stream was freed, so the
+  caller saw a stream error instead of the stream's end, unlike a Python or TypeScript provider.
+
 ## [0.6.1] - 2026-09-29
 
 On libmacula from macula-go v0.18.2 (was v0.17.0), for two fixes a .NET caller gets from the library.
