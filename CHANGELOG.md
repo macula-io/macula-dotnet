@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-06
+
+On libmacula from macula-go v0.23.0 (was v0.20.0).
+
+### Changed
+
+- Every connection to a station now negotiates SecP384r1MLKEM1024, the hybrid group that meets both CNSA 2.0
+  (ML-KEM-1024 with P-384) and BSI TR-02102 (hybrid only). On v0.20.0 it landed on SecP256r1MLKEM768 with every
+  station: Go's crypto/tls ignores the order of its group preferences and offered SecP256r1MLKEM768 first, and a
+  station takes the client's first group. A station that accepts only SecP256r1MLKEM768 now fails in the TLS
+  handshake. Every macula 12 station accepts SecP384r1MLKEM1024
+  ([macula-go#20](https://github.com/macula-io/macula-go/issues/20), closes #8).
+- Also in libmacula since v0.20.0: a station endpoint read from the DHT carries the release its station says it runs
+  (macula-go v0.21.0), and the C ABI can verify a signed object (`macula_signed_object_verify`, v0.22.0). This
+  package does not expose either yet.
+- The library floor this package names is now macula-go v0.23.0 (was v0.20.0), since an older libmacula lands on
+  SecP256r1MLKEM768. The floor is named in the error for a library that lacks a function; the check cannot tell
+  v0.20.0 to v0.22.0 from v0.23.0, as no function was added.
+
 ## [0.7.0] - 2026-09-29
 
 On libmacula from macula-go v0.20.0 (was v0.18.2): macula 13's end-to-end sealing, the caller's seal report, and

@@ -18,9 +18,10 @@ internal static unsafe partial class Libmacula
 
     // The oldest macula-go release this binding supports: its libmacula exports every function below (a new function
     // keeps the ABI version, so an older library passes that check without them), the newest being the seal report's
-    // macula_stream_report (v0.19.0), and it speaks handshake v5 (the channel binding, v0.20.0), which an older
-    // library would silently lack.
-    internal const string LibraryFloor = "v0.20.0";
+    // macula_stream_report (v0.19.0), and it speaks handshake v5 (the channel binding, v0.20.0) and offers
+    // SecP384r1MLKEM1024 alone (v0.23.0, macula-go#20), which an older library would silently lack: it would land on
+    // SecP256r1MLKEM768 with every station.
+    internal const string LibraryFloor = "v0.23.0";
 
     // ---- The library ----
 
