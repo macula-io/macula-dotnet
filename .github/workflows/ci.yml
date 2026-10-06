@@ -36,7 +36,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: scripts/fetch_libmacula.sh
       - run: dotnet build --configuration Release
-      - run: dotnet test --no-build --configuration Release
+      # A test host that crashes leaves a minidump, kept for a week, so the
+      # crash seen twice on a saturated box (macula-dotnet#7) can be read
+      # the next time it happens instead of guessed at.
+      - name: Test
+        run: >-
+          dotnet test --no-build --configuration Release --results-directory TestResults
+          --blame-crash --blame-crash-dump-type mini
+      - name: Keep the crash dump of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-crash-${{ matrix.os }}
+          path: TestResults/**/*.dmp
+          if-no-files-found: ignore
+          retention-days: 7
       # The package must carry libmacula for every runtime it promises.
       - name: Pack, and check the natives are in it
         if: matrix.os == 'ubuntu-24.04'

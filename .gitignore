@@ -487,3 +487,4 @@ $RECYCLE.BIN/
 # libmacula, fetched and verified (scripts/fetch_libmacula.sh) or built from
 # macula-go (scripts/build_libmacula.sh); never committed.
 /native/
+TestResults/
