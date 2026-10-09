@@ -16,7 +16,11 @@ internal static class NativeCall
     static NativeCall()
     {
         NativeLibrary.SetDllImportResolver(typeof(NativeCall).Assembly, Resolve);
+        // libmacula's Go runtime starts with its first call; it must leave the
+        // runtime's suspension signal as it found it (SuspensionSignal).
+        var suspension = SuspensionSignal.Save();
         var version = Libmacula.macula_abi_version();
+        suspension?.Restore();
         if (version != Libmacula.AbiVersion)
         {
             throw new MaculaException(ErrorKind.Failed,

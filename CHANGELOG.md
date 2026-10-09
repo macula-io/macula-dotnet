@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A process that loads libmacula no longer crashes under garbage-collection
+  load on Linux** (GHSA-49xj-cmc6-whqc, #7). libmacula is Go, and Go's runtime,
+  started inside a process that is not Go, adds `SA_ONSTACK` to the signal
+  handlers it does not own, among them the runtime's own thread-suspension
+  signal (`SIGRTMIN`). That handler then ran on a thread's small alternate
+  signal stack, and under collection load a suspended thread could resume with
+  corrupted registers: the process died with a segmentation fault in whatever
+  managed code was running. The binding now keeps the runtime's registration
+  of that one signal as the runtime made it, around libmacula's first load;
+  every other signal keeps Go's `SA_ONSTACK`.
+
 ## [0.7.1] - 2026-10-06
 
 On libmacula from macula-go v0.23.0 (was v0.20.0).
