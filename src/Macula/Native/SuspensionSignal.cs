@@ -13,9 +13,13 @@ namespace Macula.Native;
 // with corrupted registers: the process dies with a general-protection fault
 // in whatever managed code was running (GHSA-49xj-cmc6-whqc, macula-dotnet#7).
 //
-// The runtime sends SIGRTMIN only to a managed thread it is suspending, which
-// runs on its own thread stack, never on a goroutine stack, so the alternate
-// stack buys nothing there. Around libmacula's first load, this keeps the
+// The runtime sends SIGRTMIN to a thread it has observed running managed code
+// in cooperative mode (SuspendAllThreads, thread hijacking), which runs on its
+// own thread stack. Observing and signalling are not atomic: a thread can enter
+// a P/Invoke into libmacula in between, and Go then runs the export on a small
+// goroutine stack, where the handler's frame could overrun it. That window is
+// microseconds wide and is the residual risk; keeping SA_ONSTACK instead is a
+// crash under every collection load. Around libmacula's load, this keeps the
 // runtime's registration of that one signal as the runtime made it: the whole
 // sigaction is saved before, and put back after, unless another handler has
 // replaced it meanwhile. Every other signal keeps Go's SA_ONSTACK.

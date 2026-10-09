@@ -30,8 +30,11 @@ On libmacula from macula-go v0.26.0 (was v0.23.0).
   signal stack, and under collection load a suspended thread could resume with
   corrupted registers: the process died with a segmentation fault in whatever
   managed code was running. The binding now keeps the runtime's registration
-  of that one signal as the runtime made it, around libmacula's first load;
-  every other signal keeps Go's `SA_ONSTACK`.
+  of that one signal as the runtime made it, around libmacula's load; every
+  other signal keeps Go's `SA_ONSTACK`. A residual remains: the runtime
+  signals a thread it saw running managed code, and if that thread enters a
+  call into libmacula in the microseconds between, the handler runs on a
+  small Go stack and could overrun it. Linux only; macOS is unmeasured.
 
 ### Tests
 

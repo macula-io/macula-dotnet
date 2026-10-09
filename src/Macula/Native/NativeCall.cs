@@ -16,19 +16,21 @@ internal static class NativeCall
     static NativeCall()
     {
         NativeLibrary.SetDllImportResolver(typeof(NativeCall).Assembly, Resolve);
-        // libmacula's Go runtime starts with its first call; it must leave the
-        // runtime's suspension signal as it found it (SuspensionSignal).
+        // libmacula's Go runtime sets its signal handlers while the library
+        // loads (its constructor, inside dlopen); the load must leave the
+        // runtime's suspension signal as it found it (SuspensionSignal). The
+        // library is loaded here, the way every call finds it (the resolver, not
+        // NativeLibrary.Load, which does not consult it), so the registration is
+        // put back before anything else can fail or run.
         var suspension = SuspensionSignal.Save();
-        var version = Libmacula.macula_abi_version();
+        var library = Resolve(Libmacula.Library, typeof(NativeCall).Assembly, null);
         suspension?.Restore();
+        var version = Libmacula.macula_abi_version();
         if (version != Libmacula.AbiVersion)
         {
             throw new MaculaException(ErrorKind.Failed,
                 $"libmacula is ABI {version}, and this Macula package is written against ABI {Libmacula.AbiVersion}");
         }
-        // The library the call above bound, found the way every call finds it (the resolver, not
-        // NativeLibrary.Load, which does not consult it).
-        var library = Resolve(Libmacula.Library, typeof(NativeCall).Assembly, null);
         if (library == 0 || !NativeLibrary.TryGetExport(library, "macula_stream_report", out _))
         {
             throw new MaculaException(ErrorKind.Failed,
