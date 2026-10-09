@@ -20,8 +20,9 @@ internal static unsafe partial class Libmacula
     // keeps the ABI version, so an older library passes that check without them), the newest being the seal report's
     // macula_stream_report (v0.19.0), and it speaks handshake v5 (the channel binding, v0.20.0) and offers
     // SecP384r1MLKEM1024 alone (v0.23.0, macula-go#20), which an older library would silently lack: it would land on
-    // SecP256r1MLKEM768 with every station.
-    internal const string LibraryFloor = "v0.23.0";
+    // SecP256r1MLKEM768 with every station. It refuses a UCAN whose issuer did:key is over 4,400 characters before
+    // decoding it (v0.26.0, macula#87): an older library spends CPU a caller chooses on one.
+    internal const string LibraryFloor = "v0.26.0";
 
     // ---- The library ----
 

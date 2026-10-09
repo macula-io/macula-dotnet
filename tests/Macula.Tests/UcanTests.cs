@@ -13,7 +13,7 @@ namespace Macula.Tests;
 /// </summary>
 public sealed class UcanVectorTests
 {
-    private const string VectorsSha256 = "b64cb27aa639ea7ec103523b808e766c656220610f9a26a7801af31fe7c3b296";
+    private const string VectorsSha256 = "530d4960a881df161dca5a8a850829a1d162e0819d59f2faf079b6ab9d7f00bf";
 
     internal static JsonDocument Vectors()
     {
@@ -73,6 +73,18 @@ public sealed class UcanVectorTests
             i++;
         }
         return raw[(i + 1)..];
+    }
+
+    // macula#87: the vectors pin the longest did:key text every SDK decodes (did_key_length), and one past it,
+    // which is malformed.
+    [Fact]
+    public void TheDidKeyLengthBoundIsMaculas()
+    {
+        using var v = Vectors();
+        var bound = v.RootElement.GetProperty("did_key_length");
+        Assert.Equal(4400, bound.GetProperty("max_encoded_chars").GetInt32());
+        Assert.Equal("malformed", bound.GetProperty("verdict").GetString());
+        Assert.Equal("did:key:z".Length + 4400 + 1, bound.GetProperty("over_bound").GetString()!.Length);
     }
 
     [Fact]
@@ -172,6 +184,50 @@ public abstract class GatedServingTests(TestStations stations)
                 Assert.True(e.Code == refused, $"{name}: {e.Code}");
             }
         }
+    }
+
+    // macula#87: a token's issuer did:key is decoded before its signature is checked, in time quadratic in its
+    // length. libmacula refuses one over 4,400 characters before decoding (macula-go v0.26.0), so the call is
+    // refused unauthorized at once and never reaches the handler.
+    [Fact]
+    public async Task AnOverlongIssuerDidKeyIsRefusedAtOnce()
+    {
+        var (provider, caller, root, alice) = await WorldAsync("long issuer");
+        await using var p = provider;
+        await using var c = caller;
+        using var r = root;
+        using var a = alice;
+        var procedure = $"{stations.Org}/count_long_issuer";
+        var entered = 0;
+        await using var served = provider.Serve(stations.Realm, procedure, (_, _) =>
+        {
+            Interlocked.Increment(ref entered);
+            return ValueTask.FromResult<JsonNode?>("served");
+        }, new UcanRequired(root.NodeId));
+        var org = new Capability($"mri:org:{stations.RealmName}/{stations.Org}", "invoke");
+        var granted = root.CreateUcan(caller.NodeId, [org], DateTimeOffset.UtcNow.AddMinutes(5));
+        await UntilServed(() => caller.CallAsync(stations.Realm, procedure, new JsonObject(),
+            new CallOptions { Timeout = Patience, Ucan = new UcanPresentation(granted) }));
+
+        var parts = granted.Split('.');
+        var claims = JsonNode.Parse(Base64Url.Decode(parts[1]))!.AsObject();
+        claims["iss"] = "did:key:z" + new string('2', 300_000);
+        var forged = $"{parts[0]}.{Base64Url.Encode(System.Text.Encoding.UTF8.GetBytes(claims.ToJsonString()))}.{parts[2]}";
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        var refused = await Assert.ThrowsAsync<ProviderErrorException>(() => caller.CallAsync(stations.Realm, procedure,
+            new JsonObject(), new CallOptions { Timeout = TimeSpan.FromSeconds(5), Ucan = new UcanPresentation(forged) }));
+        Assert.Equal("unauthorized", refused.Code);
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(5), $"refused after {started.Elapsed}");
+        Assert.Equal(1, entered);
+    }
+
+    private static class Base64Url
+    {
+        public static byte[] Decode(string text) =>
+            Convert.FromBase64String(text.Replace('-', '+').Replace('_', '/').PadRight(text.Length + (4 - text.Length % 4) % 4, '='));
+
+        public static string Encode(byte[] bytes) =>
+            Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
     }
 
     [Fact]
