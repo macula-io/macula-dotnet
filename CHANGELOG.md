@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0-rc.1] - 2026-10-13
+
+Wire 1.0, a release candidate on NuGet. NuGet has no dist-tag: the pre-release
+is opt-in by version, so a plain `dotnet add package Macula` still resolves
+0.8.0, on the macula 12 wire, until wire 1.0 ships to the fleet.
+
+### Changed
+
+- **The packaged libmacula is macula-go v0.27.0-rc.1** (was v0.26.0), which
+  speaks wire 1.0 (macula 15) and nothing older (macula-go#30). Wire 1.0 is a
+  new station contract: frames carry version 5 and the wire 1.0 envelope (an
+  `ext` extension map, an unknown critical extension refused and an unknown
+  non-critical one read past), an unknown frame type no longer costs a link, an
+  unknown enum value never closes one, the handshake is version 5 alone (the
+  client proof is V3, over SHA-384 of the CONNECT tbs; the station's session
+  proof is V2), records carry `schema` and a lifetime class, and the DHT
+  procedures are the versioned `_dht.*` ones. A station before wire 1.0 does
+  not accept it, and it does not accept one. The in-process test stations are
+  wire 1.0 too, and all 64 tests pass on them, in both profiles.
+- The package description says wire 1.0, and the README names the candidate
+  and how to install it. Nothing else in the API changed: this package's
+  surface is the same on either wire, and 0.8.0 remains the release for the
+  macula 12 fleet.
+
 ## [0.8.0] - 2026-10-09
 
 On libmacula from macula-go v0.26.0 (was v0.23.0).

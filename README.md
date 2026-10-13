@@ -20,6 +20,14 @@
 
 ---
 
+> **Wire 1.0, 0.9.0-rc.1 (a NuGet pre-release):** built on libmacula from
+> macula-go v0.27.0-rc.1, it speaks wire 1.0 (macula 15) and nothing older, so
+> it reaches only a wire 1.0 station. NuGet has no dist-tag: the pre-release is
+> opt-in by version, and a plain `dotnet add package Macula` still resolves
+> 0.8.0, on the macula 12 wire, for the live fleet until wire 1.0 ships
+> there. Take the candidate with
+> `dotnet add package Macula --version 0.9.0-rc.1`.
+
 > **Status, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
 > RSA-PSS-4096 composite in `pq_hybrid`, the fleet's profile), and signed
@@ -298,9 +306,9 @@ dotnet test                                # runs macula-go's teststation harnes
 MACULA_GO_DIR=<macula-go checkout> dotnet test   # the harness from a checkout
 ```
 
-The tests run against in-process macula 12 stations (macula-go's
-`teststation/cmd/teststation`, which needs Go), in both profiles for UCANs.
-CI runs them on Linux, macOS and Windows.
+The tests run against in-process wire 1.0 stations (macula-go's
+`teststation/cmd/teststation`, at `libmacula.version`, which needs Go), in
+both profiles for UCANs. CI runs them on Linux, macOS and Windows.
 
 `scripts/interop/ownership_proof.sh` and `scripts/interop/device_request.sh`
 check proofs this package signs against the verifiers themselves: mcl_om's
