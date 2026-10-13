@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Macula.Tests;
 
 /// <summary>
-/// Two in-process macula 12 stations sharing one DHT, and a test realm with one org, run by macula-go's
+/// Two in-process wire 1.0 stations sharing one DHT, and a test realm with one org, run by macula-go's
 /// teststation harness (cabi/CONTRACT.md "Test harness"). With MACULA_GO_DIR set, the harness runs from
 /// that checkout; otherwise from the macula-go version in libmacula.version.
 /// </summary>

@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <strong>The Macula mesh from .NET, on the macula 12 wire</strong><br>
+  <strong>The Macula mesh from .NET</strong><br>
   written in C#, usable from any .NET language
 </p>
 
