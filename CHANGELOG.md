@@ -39,9 +39,11 @@ is opt-in by version, so a plain `dotnet add package Macula` still resolves
   proof is V2), records carry `schema` and a lifetime class, and the DHT
   procedures are the versioned `_dht.*` ones. A station before wire 1.0 does
   not accept it, and it does not accept one. The in-process test stations are
-  wire 1.0 too, and all 64 tests pass on them, in both profiles.
-- The package description says wire 1.0, and the README names the candidate
-  and how to install it. Nothing else in the API changed: this package's
+  wire 1.0 too, and the whole suite passes on them, in both profiles.
+- The README names the candidate and how to install it. The package
+  description names no wire, as the other bindings' shared metadata does: it is
+  packed into each version and cannot be revised afterwards, so a wire named
+  there outlives the release that speaks it. Nothing else in the API changed: this package's
   surface is the same on either wire, and 0.8.0 remains the release for the
   macula 12 fleet.
 
