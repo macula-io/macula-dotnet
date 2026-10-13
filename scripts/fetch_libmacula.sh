@@ -29,7 +29,16 @@ if [ "$header_abi" != "$binding_abi" ]; then
   echo "fetch_libmacula.sh: $tag's macula.h is ABI $header_abi, the binding is ABI $binding_abi" >&2
   exit 1
 fi
-echo "verified macula.h ($tag): ABI $header_abi"
+# The wire the release speaks, against the one the binding is written for:
+# the load path refuses another, so a pin that drifted from it would ship a
+# package that refuses its own library.
+header_wire=$(awk '$1 == "#define" && $2 == "MACULA_WIRE_VERSION" { gsub(/"/, "", $3); print $3 }' "$download/macula.h")
+binding_wire=$(awk -F'"' '/internal const string WireVersion/ { print $2 }' "$root/src/Macula/Native/Libmacula.cs")
+if [ "$header_wire" != "$binding_wire" ]; then
+  echo "fetch_libmacula.sh: $tag's macula.h is wire $header_wire, the binding is wire $binding_wire" >&2
+  exit 1
+fi
+echo "verified macula.h ($tag): ABI $header_abi, wire $header_wire"
 
 # release file, runtime id, the name .NET loads
 while read -r file rid name; do

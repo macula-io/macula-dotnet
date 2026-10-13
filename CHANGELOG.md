@@ -13,6 +13,18 @@ Wire 1.0, a release candidate on NuGet. NuGet has no dist-tag: the pre-release
 is opt-in by version, so a plain `dotnet add package Macula` still resolves
 0.8.0, on the macula 12 wire, until wire 1.0 ships to the fleet.
 
+### Added
+
+- **The load path proves which wire libmacula links** (macula-go#18, #30). A
+  library that speaks another wire is refused as it loads, naming the release
+  it was built from (`macula_library_version()`) beside the wire it speaks
+  (`macula_wire_version()`) and the one this package speaks. It replaces the
+  old floor, which asked only whether `macula_stream_report` was exported: a
+  v0.26.0 library exports it and passes that check, and reaches no wire 1.0
+  station. `LibraryFloor` is therefore v0.27.0-rc.1, and
+  `scripts/fetch_libmacula.sh` checks the pinned release's `macula.h`
+  `MACULA_WIRE_VERSION` against the binding's, as it already checks the ABI.
+
 ### Changed
 
 - **The packaged libmacula is macula-go v0.27.0-rc.1** (was v0.26.0), which

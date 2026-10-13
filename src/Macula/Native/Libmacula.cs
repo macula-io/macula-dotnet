@@ -16,18 +16,37 @@ internal static unsafe partial class Libmacula
     // The ABI this binding is written against: MACULA_ABI_VERSION.
     internal const int AbiVersion = 1;
 
-    // The oldest macula-go release this binding supports: its libmacula exports every function below (a new function
-    // keeps the ABI version, so an older library passes that check without them), the newest being the seal report's
-    // macula_stream_report (v0.19.0), and it speaks handshake v5 (the channel binding, v0.20.0) and offers
-    // SecP384r1MLKEM1024 alone (v0.23.0, macula-go#20), which an older library would silently lack: it would land on
-    // SecP256r1MLKEM768 with every station. It refuses a UCAN whose issuer did:key is over 4,400 characters before
-    // decoding it (v0.26.0, macula#87): an older library spends CPU a caller chooses on one.
-    internal const string LibraryFloor = "v0.26.0";
+    // The wire this binding is written against: MACULA_WIRE_VERSION, which
+    // macula.h defines beside the ABI. libmacula says which wire it speaks
+    // (macula_wire_version), and the binding refuses any other (NativeCall).
+    internal const string WireVersion = "1.0";
+
+    // The oldest macula-go release this package ships a library from, and so
+    // the oldest one that can be beside this assembly: v0.27.0-rc.1's libmacula
+    // speaks wire 1.0 and says so. Every earlier release speaks an older wire,
+    // and is refused by name when the library is loaded (NativeCall), rather
+    // than by guessing at what it exports. Those earlier libraries are also the
+    // ones missing the bounds this package relies on: handshake v5's channel
+    // binding (v0.20.0), SecP384r1MLKEM1024 alone so no station can land it on
+    // SecP256r1MLKEM768 (v0.23.0, macula-go#20), and the refusal of a UCAN
+    // whose issuer did:key is over 4,400 characters before decoding it
+    // (v0.26.0, macula#87) that an older library would spend CPU on.
+    internal const string LibraryFloor = "v0.27.0-rc.1";
 
     // ---- The library ----
 
     [LibraryImport(Library)]
     internal static partial int macula_abi_version();
+
+    // Since macula-go v0.27.0 (cabi/CONTRACT.md "Version"): the release the
+    // library was built from ("v0.27.0-rc.1", or "devel") and the wire it
+    // speaks ("1.0"). Read at load, to refuse a library that is not this
+    // package's wire (NativeCall). The library owns both strings: never freed.
+    [LibraryImport(Library)]
+    internal static partial nint macula_library_version();
+
+    [LibraryImport(Library)]
+    internal static partial nint macula_wire_version();
 
     [LibraryImport(Library)]
     internal static partial void macula_free_string(nint s);
