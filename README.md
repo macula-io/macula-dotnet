@@ -28,13 +28,13 @@
 > there. Take the candidate with
 > `dotnet add package Macula --version 0.9.0-rc.1`.
 
-> **Status, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
+> **Status of 0.8.0, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
 > RSA-PSS-4096 composite in `pq_hybrid`, the fleet's profile), and signed
 > calls, replies and publications. Since 0.7.0, handshake v5 (the session
 > bound to its TLS channel) and macula 13's end-to-end sealing with the
 > caller's seal report, checked live against macula 13.2.2 both ways. Every feature is tested on each push
-> against in-process macula 12 stations on Linux, macOS and Windows. Checked
+> against the in-process stations at `libmacula.version` on Linux, macOS and Windows. Checked
 > on the public fleet with throwaway keys: connecting, the DHT,
 > publish/subscribe, calling `mcl-echo` in io.macula, serving calls and a
 > stream in a node's own namespace, and serving a procedure gated on a
