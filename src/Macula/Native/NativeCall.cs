@@ -33,15 +33,15 @@ internal static class NativeCall
         }
         // Which wire the library links, said by the library itself rather than
         // inferred from the functions it happens to export (cabi/CONTRACT.md
-        // "Version", macula-go#18, #30): a wire this package does not speak
-        // reaches no station, so it is refused here, naming both.
+        // "Version", macula-go#18, #30): another major reaches no station this
+        // package can speak with, so it is refused here, naming both.
         if (library == 0 || !NativeLibrary.TryGetExport(library, "macula_wire_version", out _))
         {
             throw new MaculaException(ErrorKind.Failed,
                 $"libmacula does not say which wire it speaks: this Macula package needs macula-go {Libmacula.LibraryFloor}'s library or later");
         }
         var wire = Marshal.PtrToStringUTF8(Libmacula.macula_wire_version());
-        if (wire != Libmacula.WireVersion)
+        if (!Libmacula.AcceptsWire(wire))
         {
             var release = Marshal.PtrToStringUTF8(Libmacula.macula_library_version());
             throw new MaculaException(ErrorKind.Failed,

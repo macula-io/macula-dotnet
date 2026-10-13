@@ -18,8 +18,29 @@ internal static unsafe partial class Libmacula
 
     // The wire this binding is written against: MACULA_WIRE_VERSION, which
     // macula.h defines beside the ABI. libmacula says which wire it speaks
-    // (macula_wire_version), and the binding refuses any other (NativeCall).
+    // (macula_wire_version), and the binding refuses any other major
+    // (AcceptsWire, NativeCall).
     internal const string WireVersion = "1.0";
+
+    // Whether a library reporting this wire is one this binding can speak.
+    // Another major is another wire, and every 1.x peer shares the frozen core,
+    // so a 1.1 library is spoken with, not refused (cabi/CONTRACT.md
+    // "Version"). A library that answers nothing recognizable is refused.
+    internal static bool AcceptsWire(string? libraryWire)
+    {
+        var major = WireMajor(libraryWire);
+        return major.Length != 0 && major == WireMajor(WireVersion);
+    }
+
+    private static string WireMajor(string? wire)
+    {
+        if (string.IsNullOrEmpty(wire))
+        {
+            return "";
+        }
+        var dot = wire.IndexOf('.');
+        return dot < 0 ? wire : wire[..dot];
+    }
 
     // The oldest macula-go release this package ships a library from, and so
     // the oldest one that can be beside this assembly: v0.27.0-rc.1's libmacula
