@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Macula.Native;
@@ -55,6 +56,45 @@ public sealed record IssuerFailed(string Error) : PoolEvent;
 
 /// <summary>A provider of a procedure, and the station it is served through.</summary>
 public sealed record Provider(MeshId Node, MeshId Station);
+
+/// <summary>
+/// A sealed group: a topic prefix whose second segment is its org
+/// (macula's DESIGN_E2E_SEALED_PUBSUB.md). Its members pull the group's epoch keys from the org's
+/// distributor over a sealed call, presenting the org's grant <see cref="Ucan"/> (a UCAN with <c>can</c>
+/// <c>group_keys</c>, minted by the org). <see cref="Distributor"/> names the node that must be the
+/// group's, required for a <c>~&lt;node_id&gt;</c> group.
+/// </summary>
+public sealed record Group
+{
+    /// <summary>A group whose members present <paramref name="ucan"/>, under <paramref name="prefix"/>.</summary>
+    public Group(string prefix, string? ucan = null, MeshId? distributor = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(prefix);
+        Prefix = prefix;
+        Ucan = ucan;
+        Distributor = distributor;
+    }
+
+    /// <summary>The group's topic prefix.</summary>
+    public string Prefix { get; }
+
+    /// <summary>
+    /// The org's grant for the node that presents it. Kept out of what a group prints: the grant is a bearer
+    /// credential, and a log line or a traceback is where one leaks.
+    /// </summary>
+    public string? Ucan { get; }
+
+    /// <summary>The group's distributor, when one is pinned; any the realm trusts when null.</summary>
+    public MeshId? Distributor { get; }
+
+    private bool PrintMembers(StringBuilder builder)
+    {
+        builder.Append("Prefix = ").Append(Prefix);
+        builder.Append(", Ucan = ").Append(Ucan is null ? "(none)" : "(set)");
+        builder.Append(", Distributor = ").Append(Distributor?.ToString() ?? "(any)");
+        return true;
+    }
+}
 
 /// <summary>How a call is made.</summary>
 public sealed class CallOptions
@@ -154,6 +194,23 @@ public sealed partial class Pool : IAsyncDisposable
         if (o.RespawnDelay != TimeSpan.Zero) json["respawn_delay_ms"] = (long)o.RespawnDelay.TotalMilliseconds;
         if (o.ConnectTimeout != TimeSpan.Zero) json["timeout_ms"] = (long)o.ConnectTimeout.TotalMilliseconds;
         json["kem_advertise"] = o.KemAdvertise ? 1 : 0;
+        return json.ToJsonString();
+    }
+
+    // A group's options as macula_pool_publish_group and
+    // macula_pool_subscribe_group take them: the prefix, the org's grant when
+    // there is one, and the distributor a ~<node_id> group requires, as hex.
+    private static string GroupOptionsJson(Group group)
+    {
+        var json = new JsonObject { ["prefix"] = group.Prefix };
+        if (group.Ucan is { } ucan)
+        {
+            json["ucan"] = ucan;
+        }
+        if (group.Distributor is { } distributor)
+        {
+            json["distributor"] = distributor.ToString();
+        }
         return json.ToJsonString();
     }
 
@@ -323,6 +380,63 @@ public sealed partial class Pool : IAsyncDisposable
         }
         NativeCall.Check(err);
         return new Subscription(handle);
+    }
+
+    /// <summary>
+    /// Publishes <paramref name="payload"/> on <paramref name="topic"/> in <paramref name="realm"/>, sealed under
+    /// <paramref name="group"/>'s current epoch; <paramref name="topic"/> must be under the group's prefix. The group
+    /// is joined first, which pulls its epoch from the org's distributor over a sealed call, so this takes a timeout
+    /// like a call. A refused join, or a publication that cannot be sealed, throws a <see cref="GroupException"/>
+    /// with the reason macula gave.
+    /// </summary>
+    public unsafe Task PublishGroupAsync(MeshId realm, string topic, JsonNode? payload, Group group,
+        TimeSpan? ttl = null, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(topic);
+        var payloadJson = Payload.ToJson(payload);
+        var optionsJson = GroupOptionsJson(group);
+        var ttlMs = Milliseconds(ttl);
+        var timeoutMs = Milliseconds(timeout);
+        return NativeCall.RunAsync(token =>
+        {
+            nint err = 0;
+            fixed (byte* r = realm.Bytes)
+            {
+                Libmacula.macula_pool_publish_group(_handle, r, topic, payloadJson, optionsJson, ttlMs, timeoutMs,
+                    token, ref err);
+            }
+            NativeCall.Check(err, cancellationToken);
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Subscribes to <paramref name="topic"/> in <paramref name="realm"/> as a member of <paramref name="group"/>:
+    /// every event under the group is opened, and one that cannot be arrives once with a null payload and
+    /// <see cref="MeshEvent.Unopened"/> naming why. The group is joined first, pulling its epoch from the org's
+    /// distributor over a sealed call. A join stays held once it succeeded, also when this subscribe then fails, so
+    /// the pool keeps refusing clear publishes under the prefix (<see cref="GroupException"/>, reason
+    /// <c>group_held</c>) from then on.
+    /// </summary>
+    public unsafe Task<Subscription> SubscribeGroupAsync(MeshId realm, string topic, Group group,
+        TimeSpan? timeout = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        ArgumentNullException.ThrowIfNull(topic);
+        var optionsJson = GroupOptionsJson(group);
+        var timeoutMs = Milliseconds(timeout);
+        return NativeCall.RunAsync(token =>
+        {
+            nint err = 0;
+            SubscriptionHandle handle;
+            fixed (byte* r = realm.Bytes)
+            {
+                handle = Libmacula.macula_pool_subscribe_group(_handle, r, topic, optionsJson, timeoutMs, token,
+                    ref err);
+            }
+            NativeCall.Check(err, cancellationToken);
+            return new Subscription(handle);
+        }, cancellationToken);
     }
 
     internal static long Milliseconds(TimeSpan? span)

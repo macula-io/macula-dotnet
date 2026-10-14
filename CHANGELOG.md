@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0-rc.2] - 2026-10-14
+
+Wire 1.0, the second release candidate on NuGet, carrying sealed groups.
+
+### Added
+
+- **Sealed groups** (macula 13.2, `DESIGN_E2E_SEALED_PUBSUB.md`, macula-go
+  v0.27.0-rc.3): a .NET app publishes and subscribes under a realm group, and
+  every station between it and a subscriber routes what it cannot read.
+  `Pool.PublishGroupAsync` seals a publication under the group's current
+  epoch; `Pool.SubscribeGroupAsync` joins the group and opens its events. Each
+  joins first, pulling the group's epoch keys from the org's distributor over
+  a sealed call with the org's grant — a UCAN with `can` `group_keys`, which
+  the org mints for a member — so each takes a timeout and a
+  `CancellationToken` like a call. `Group` names the prefix, the grant and,
+  for a `~<node id>` group, the distributor; the grant is a bearer credential
+  and stays out of what a `Group` prints.
+- `MeshEvent.Sealed` and `MeshEvent.SealKeyId` name the epoch an event was
+  opened under, and `MeshEvent.Unopened` says why one could not be opened —
+  `not_a_member`, `membership_unknown`, `unknown_epoch`, `epoch_expired`,
+  `no_distributor`, `no_group` or `tag_invalid`, with a null payload. A plain
+  `Subscribe` under a group prefix hears every such event as `no_group`. A
+  join stays held once it succeeded, so a clear `Publish` under the prefix is
+  refused `group_held` from then on.
+- `GroupException` (`ErrorKind.Group`) carries macula's reason, and the prefix
+  a `group_held` refusal names.
+- `scripts/interop/groups.sh`: sealed groups across macula 15.0.0-rc.2 and
+  this package, both ways, through macula's own Erlang distributor — an Erlang
+  member and a .NET member each open the other's sealed event under one epoch,
+  and a .NET node the distributor's removed set names is refused
+  `not_a_member`.
+
+### Changed
+
+- **The packaged libmacula is macula-go v0.27.0-rc.3** (was v0.27.0-rc.1),
+  which carries the sealed group calls. `LibraryFloor` moves with it:
+  v0.27.0-rc.1 speaks wire 1.0 and passes the wire check, but has no group
+  call at all, so a library from before the floor is refused by name as it
+  loads rather than linking one that cannot seal a group's publication
+  (macula-go#34).
+
 ## [0.9.0-rc.1] - 2026-10-13
 
 Wire 1.0, a release candidate on NuGet. NuGet has no dist-tag: the pre-release

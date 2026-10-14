@@ -3,9 +3,9 @@
 The unit tests hold every proof's bytes to its verifier's vector. These
 scripts go further, once per release: a proof this package makes is handed to
 the verifier that will judge it in the field, which must accept it once and
-refuse it changed and replayed. None runs in CI; each needs a macula
-checkout compiled (v12.12.0 or later). `Signer` is the .NET side of the proof
-checks, `Peer` of the handshake and sealing checks below.
+refuse it changed and replayed. None runs in CI; each needs a macula checkout
+compiled at the version its section names. `Signer` is the .NET side of the
+proof checks, `Peer` of the handshake, sealing and sealed-group checks below.
 
 ## Ownership proof v2, through mcl_om
 
@@ -66,6 +66,34 @@ provider clear and must be refused `sealed_required`. Every seal report, the
 and a key id. Both take the escripts and the teststation from macula-go at
 `libmacula.version` (needs Go, the .NET SDK, podman and, for `sealed.sh`,
 python3); `PEER` names the command that runs `Peer`.
+
+## Sealed groups, against macula's own distributor
+
+```sh
+MACULA_GO_DIR=<macula-go clone> MACULA_BUILD=<macula 15.0.0-rc.2 or later, compiled> scripts/interop/groups.sh [pq_hybrid|pq_pure]
+```
+
+`groups.sh` runs macula-go's teststation and macula-go's
+`erlang_groups.escript`, which serves the org's distributor
+(`macula_group_keys`, policy required) and takes the Erlang member's seat. An
+Erlang member and a .NET member each subscribe under the group, pulling its
+epoch from that distributor over a sealed call with the org's grant, write
+their barrier, and each publishes sealed under the group: each must open the
+other's event, and both print the one epoch's key id. Then a .NET node the
+distributor's removed set names must be refused `not_a_member`. Both halves
+come from macula-go at `libmacula.version` (needs Go, podman, python3 and the
+.NET SDK); `PEER` names the command that runs `Peer`.
+
+## Last run, 0.9.0-rc.2 (2026-10-14)
+
+- `groups.sh`, both profiles, against macula 15.0.0-rc.2 from hex compiled in
+  `ghcr.io/macula-io/macula-ci-otp@sha256:aff1d39b...82ac70` (OTP 28),
+  macula-go v0.27.0-rc.3's escript and teststation, libmacula v0.27.0-rc.3 as
+  fetched and verified: PASS. The Erlang member opened the .NET member's
+  sealed event and the .NET member opened the Erlang member's, both under one
+  epoch (`e6cfff76135dcfac` in pq_hybrid, `533b8000c4b7e3d1` in pq_pure), and
+  the .NET node the distributor had removed was refused `not_a_member` in
+  each.
 
 ## Last run, 0.7.0 (2026-09-29)
 

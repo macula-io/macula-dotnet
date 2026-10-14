@@ -43,16 +43,20 @@ internal static unsafe partial class Libmacula
     }
 
     // The oldest macula-go release this package ships a library from, and so
-    // the oldest one that can be beside this assembly: v0.27.0-rc.1's libmacula
-    // speaks wire 1.0 and says so. Every earlier release speaks an older wire,
-    // and is refused by name when the library is loaded (NativeCall), rather
-    // than by guessing at what it exports. Those earlier libraries are also the
-    // ones missing the bounds this package relies on: handshake v5's channel
-    // binding (v0.20.0), SecP384r1MLKEM1024 alone so no station can land it on
+    // the oldest one that can be beside this assembly: v0.27.0-rc.3's libmacula
+    // speaks wire 1.0, says so, and carries the sealed group calls. Every
+    // earlier release speaks an older wire, and is refused by name when the
+    // library is loaded (NativeCall), rather than by guessing at what it
+    // exports. v0.27.0-rc.1 is the one before this floor to watch for: it
+    // speaks wire 1.0 and passes the wire check, but has no group call at all,
+    // so it cannot seal a group's publication (macula-go#34) and fails the two
+    // declarations naming it. Older still are missing the bounds this package
+    // relies on: handshake v5's channel binding (v0.20.0),
+    // SecP384r1MLKEM1024 alone so no station can land it on
     // SecP256r1MLKEM768 (v0.23.0, macula-go#20), and the refusal of a UCAN
     // whose issuer did:key is over 4,400 characters before decoding it
     // (v0.26.0, macula#87) that an older library would spend CPU on.
-    internal const string LibraryFloor = "v0.27.0-rc.1";
+    internal const string LibraryFloor = "v0.27.0-rc.3";
 
     // ---- The library ----
 
@@ -60,7 +64,7 @@ internal static unsafe partial class Libmacula
     internal static partial int macula_abi_version();
 
     // Since macula-go v0.27.0 (cabi/CONTRACT.md "Version"): the release the
-    // library was built from ("v0.27.0-rc.1", or "devel") and the wire it
+    // library was built from ("v0.27.0-rc.3", or "devel") and the wire it
     // speaks ("1.0"). Read at load, to refuse a library that is not this
     // package's wire (NativeCall). The library owns both strings: never freed.
     [LibraryImport(Library)]
@@ -190,6 +194,22 @@ internal static unsafe partial class Libmacula
     internal static partial SubscriptionHandle macula_pool_subscribe(PoolHandle pool, byte* realm, string topic,
         ref nint err);
 
+    // Sealed groups, since macula-go v0.27.0-rc.3 (cabi/CONTRACT.md "Sealed
+    // groups"). Each joins the group first, pulling its epoch from the org's
+    // distributor over a sealed call, so each takes a timeout and a cancel
+    // token like a call. A join stays held once it succeeded, also when the
+    // subscribe after it fails. The options are {"prefix", "ucan"?,
+    // "distributor"?}.
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial void macula_pool_publish_group(PoolHandle pool, byte* realm, string topic,
+        string payloadJson, string optionsJson, long ttlMs, long timeoutMs, nuint cancel, ref nint err);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    internal static partial SubscriptionHandle macula_pool_subscribe_group(PoolHandle pool, byte* realm, string topic,
+        string optionsJson, long timeoutMs, nuint cancel, ref nint err);
+
+    // A sealed group's event also carries "sealed": 1, "seal_key_id" and
+    // "unopened" with a null payload when it could not be opened.
     [LibraryImport(Library)]
     internal static partial nint macula_subscription_next(SubscriptionHandle subscription, long timeoutMs,
         nuint cancel, out int closed, ref nint err);

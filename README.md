@@ -20,13 +20,13 @@
 
 ---
 
-> **Wire 1.0, 0.9.0-rc.1 (a NuGet pre-release):** built on libmacula from
-> macula-go v0.27.0-rc.1, it speaks wire 1.0 (macula 15) and nothing older, so
+> **Wire 1.0, 0.9.0-rc.2 (a NuGet pre-release):** built on libmacula from
+> macula-go v0.27.0-rc.3, it speaks wire 1.0 (macula 15) and nothing older, so
 > it reaches only a wire 1.0 station. NuGet has no dist-tag: the pre-release is
 > opt-in by version, and a plain `dotnet add package Macula` still resolves
 > 0.8.0, on the macula 12 wire, for the live fleet until wire 1.0 ships
 > there. Take the candidate with
-> `dotnet add package Macula --version 0.9.0-rc.1`.
+> `dotnet add package Macula --version 0.9.0-rc.2`.
 
 > **Status of 0.8.0, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
@@ -146,6 +146,7 @@ await foreach (var e in subscription.ReadAllAsync(cancellationToken))
 | UCANs | `Ucan.ProofId`, `Ucan.KeyId`, `Capability`, `UcanOptions`, `UcanPresentation`, `UcanRequired`, `RealmMemberRequired` |
 | proofs | `DeviceRequestProofs.Message`, `OwnershipProofs.Message`: the exact bytes each signs |
 | publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, `Dropped` |
+| sealed groups | `Pool.PublishGroupAsync`, `Pool.SubscribeGroupAsync`, `Group`, and `MeshEvent.Sealed`, `SealKeyId`, `Unopened` (below) |
 | content | `Pool.ShareContentAsync`, `UnshareContentAsync`, `GetContentAsync` |
 | the DHT | `Pool.FindRecordAsync`, `FindRecordsAsync`, `FindRecordsByTypeAsync`, `PutRecordAsync` |
 
@@ -156,7 +157,8 @@ where one fits (`OperationCanceledException`, `TimeoutException`,
 `MaculaException` with its `Kind`: `ProviderErrorException` (with the
 provider's `Code` and `Detail`), `RelayErrorException`, `NotSharedException`,
 `ContentUnavailableException` (with each sharer's failure),
-`ConfidentialityException` (with its `Reason`, `Named` and `Found`).
+`ConfidentialityException` (with its `Reason`, `Named` and `Found`), and
+`GroupException` (with its `Reason` and `Prefix`).
 
 ### Payloads
 
@@ -252,6 +254,52 @@ What stays visible: a request's UCAN and proofs, sizes, timing and routing.
 Content (`ShareContentAsync`) is public by design and travels in the clear.
 macula-go's `cabi/CONTRACT.md` ("Confidentiality", "The seal report") is the
 contract.
+
+### Sealed groups
+
+macula 13.2 seals a *group*: a topic prefix whose second segment is its org
+(macula's `docs/design/DESIGN_E2E_SEALED_PUBSUB.md`). The org's distributor
+hands the group's epoch keys to members over a sealed call, and a member
+presents the org's grant — a UCAN with `can` `group_keys`, which the org
+mints for it. Every station between a publisher and a subscriber routes an
+event it cannot read:
+
+```csharp
+// The group: its prefix, the org's grant, and the distributor, when the group is a ~<node id> one.
+var group = new Group("io.macula/acme/chat", orgGrant);
+
+// Publishing joins the group first, which pulls its epoch from the org's distributor, so it takes a
+// timeout like a call.
+await pool.PublishGroupAsync(realm, "io.macula/acme/chat/said_v1", new JsonObject { ["said"] = "hush" },
+    group, timeout: TimeSpan.FromSeconds(10));
+
+// Subscribing does too, and opens every event under the group.
+await using var subscription = await pool.SubscribeGroupAsync(realm, "io.macula/acme/chat/said_v1", group);
+await foreach (var e in subscription.ReadAllAsync(cancellationToken))
+{
+    // e.Sealed, e.SealKeyId (the epoch's key id, 16 hex) and the opened payload.
+}
+```
+
+- A refused join, or a publication that cannot be sealed, throws a
+  `GroupException` with the reason macula gave — `not_a_member`,
+  `membership_unknown`, `unknown_epoch`, `epoch_expired`, `no_distributor`,
+  `no_group`, `tag_invalid` — and `group_held` for a clear `Publish` under a
+  prefix this node holds a key for, which also names the `Prefix`.
+- An event under the group that cannot be opened arrives once with a null
+  payload and `MeshEvent.Unopened` naming the same closed set; a plain
+  `Subscribe` under a group prefix hears every such event as `no_group`.
+- A join stays held once it succeeded, also when the `SubscribeGroupAsync`
+  after it fails, so the pool keeps refusing clear publishes under the
+  prefix from then on.
+- The group's `Ucan` is a bearer credential and is kept out of what a `Group`
+  prints.
+- Epoch keys stay inside libmacula, in memory: nothing of them crosses the C
+  ABI, and rotation runs on its own.
+
+What stays visible: a topic and its prefix, who published, timing, sizes and
+routing. Writing the distributor itself is not part of this package; the org
+already runs one (macula's `macula_group_keys`).
 
 ### Proofs for a realm and for a service
 

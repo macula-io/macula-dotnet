@@ -1,20 +1,36 @@
 // The Macula package's side of the live checks against macula (scripts/interop/sealed.sh and v5.sh), the .NET twin of
-// macula-go's gosealed and gov5link:
+// macula-go's gosealed and gov5link, and of sealed groups (scripts/interop/groups.sh), the .NET twin of
+// macula-go's gogroups:
 //
 //   Peer serve <host:port@node_id hex> <profile> <realm hex> <hold s>
 //   Peer call <host:port@node_id hex> <profile> <realm hex> <provider node_id hex> [<peer>]
 //   Peer v5link <host> <port> <node_id hex> <profile> <hold s>
+//   Peer groups <host:port@node_id hex> <profile> <realm hex> <realm key hex> <work dir> <prefix> <topic> member
+//   Peer groups ... stranger
 //
 // serve connects with KemAdvertise, serves ~<self>/vault (a call) and ~<self>/watch (a server stream), both
 // Required, refuses any request that did not arrive sealed, prints "node <hex>" and "serving" and holds. call calls
 // ~<provider>/vault with CallReportAsync and opens ~<provider>/watch, both Required, expecting the peer's texts
 // ("kept by <peer>", "chunk from <peer>", "streamed by <peer>", peer "erlang" by default), and requires each seal
 // report to say sealed, the provider called and a 16-hex key id. v5link links to one station, holds the link while
-// the station probes it, and requires it still up. Each prints its outcomes and "verdict: PASS" or exits 1.
+// the station probes it, and requires it still up. groups connects a pool pinning the realm key, prints
+// "node <hex>", waits for <work>/grant.<hex> (the org's grant the script minted for this node) and takes the seat
+// macula-go's gogroups takes: member subscribes to topic under the group prefix, pulling its epoch from the Erlang
+// distributor over a sealed call, writes <work>/ready.go, waits for <work>/ready.erlang, publishes "from go" sealed
+// under the group, and waits for the Erlang member's "from erlang" to arrive opened; stranger, a node the
+// distributor's removed set names, checks its subscribe is refused not_a_member. Each prints its outcomes and
+// "verdict: PASS" or exits 1.
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Macula;
+
+// The seat macula-go's gogroups takes for sealed groups: the Erlang member writes ready.erlang and waits for
+// ready.go, so the .NET member owns ready.go, and the texts are the pair's.
+const string BarrierOwn = "ready.go";
+const string BarrierOther = "ready.erlang";
+const string SaysOwn = "from go";
+const string SaysOther = "from erlang";
 
 return await Run(args);
 
@@ -30,8 +46,11 @@ static async Task<int> Run(string[] args)
         case ["v5link", var host, var port, var node, var profile, var hold]:
             return await V5Link(new Seed(host, ushort.Parse(port), MeshId.Parse(node)), ProfileOf(profile),
                 TimeSpan.FromSeconds(int.Parse(hold)));
+        case ["groups", var station, var profile, var realm, var realmKey, var work, var prefix, var topic, var mode]:
+            return await Groups(Seed(station), ProfileOf(profile), MeshId.Parse(realm), realmKey, work, prefix, topic,
+                mode);
         default:
-            Console.Error.WriteLine("Peer serve|call|v5link ...");
+            Console.Error.WriteLine("Peer serve|call|v5link|groups ...");
             return 2;
     }
 }
@@ -166,4 +185,122 @@ static async Task<int> V5Link(Seed seed, Profile profile, TimeSpan hold)
     }
     Console.WriteLine($"verdict: {(up ? "PASS" : "FAIL")}");
     return up ? 0 : 1;
+}
+
+// ---- Sealed groups (scripts/interop/groups.sh) ----
+
+static async Task<int> Groups(Seed seed, Profile profile, MeshId realm, string realmKey, string work, string prefix,
+    string topic, string mode)
+{
+    using var key = await NodeKey.GenerateAsync(profile);
+    await using var pool = await Pool.ConnectAsync(key, [seed], new PoolOptions
+    {
+        RealmTrust = new Dictionary<MeshId, byte[]> { [realm] = Convert.FromHexString(realmKey) },
+        ConnectTimeout = TimeSpan.FromSeconds(60),
+    });
+    Console.WriteLine($"node {pool.NodeId}");
+    Console.Out.Flush();
+    var grant = (await Waited(work, $"grant.{pool.NodeId}")).Trim();
+    var outcome = mode switch
+    {
+        "member" => await GroupMember(pool, realm, work, prefix, topic, grant),
+        "stranger" => await GroupStranger(pool, realm, prefix, topic, grant),
+        _ => throw new ArgumentException($"a mode is member or stranger, not {mode}"),
+    };
+    Console.WriteLine($"verdict: {(outcome ? "PASS" : "FAIL")}");
+    return outcome ? 0 : 1;
+}
+
+// A file the orchestrating script writes, read once it is there.
+static async Task<string> Waited(string work, string name)
+{
+    var path = Path.Combine(work, name);
+    for (var i = 0; i < 900; i++)
+    {
+        if (File.Exists(path))
+        {
+            return await File.ReadAllTextAsync(path);
+        }
+        await Task.Delay(200);
+    }
+    throw new FileNotFoundException($"no {path}");
+}
+
+// Subscribing under group, waiting while the distributor's advertisement has not reached the DHT yet (macula-go's
+// subscribed: only no_distributor is the DHT's own reach, every other reason is macula's).
+static async Task<Subscription> Subscribed(Pool pool, MeshId realm, string topic, Macula.Group group)
+{
+    for (var i = 0; i < 150; i++)
+    {
+        try
+        {
+            return await pool.SubscribeGroupAsync(realm, topic, group);
+        }
+        catch (GroupException e) when (e.Reason == "no_distributor")
+        {
+        }
+        await Task.Delay(200);
+    }
+    return await pool.SubscribeGroupAsync(realm, topic, group);
+}
+
+// The payload as the text a member published, when it is one.
+static string? Text(JsonNode? payload) =>
+    payload is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+static async Task<bool> GroupMember(Pool pool, MeshId realm, string work, string prefix, string topic, string grant)
+{
+    var group = new Macula.Group(prefix, grant);
+    await using var subscription = await Subscribed(pool, realm, topic, group);
+    Console.WriteLine("subscribed");
+    await File.WriteAllTextAsync(Path.Combine(work, BarrierOwn), "");
+    await Waited(work, BarrierOther);
+    await pool.PublishGroupAsync(realm, topic, JsonValue.Create(SaysOwn), group);
+    Console.WriteLine("published");
+    using var watching = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+    try
+    {
+        await foreach (var e in subscription.ReadAllAsync(watching.Token))
+        {
+            if (Text(e.Payload) == SaysOwn)
+            {
+                continue;
+            }
+            if (e.Unopened is { } unopened)
+            {
+                Console.WriteLine($"unopened: {unopened}");
+                return false;
+            }
+            if (e.Sealed && Text(e.Payload) == SaysOther &&
+                Regex.IsMatch(e.SealKeyId ?? "", "^[0-9a-f]{16}$"))
+            {
+                Console.WriteLine($"opened from erlang under {e.SealKeyId}");
+                return true;
+            }
+            Console.WriteLine($"unexpected: sealed {e.Sealed}, payload {Text(e.Payload)}");
+            return false;
+        }
+    }
+    catch (OperationCanceledException)
+    {
+    }
+    Console.WriteLine("nothing from erlang");
+    return false;
+}
+
+// A node the Erlang distributor's removed set names: the group it holds no key for must not be joined, and the
+// refusal must travel by name.
+static async Task<bool> GroupStranger(Pool pool, MeshId realm, string prefix, string topic, string grant)
+{
+    try
+    {
+        await using var subscription = await Subscribed(pool, realm, topic, new Macula.Group(prefix, grant));
+        Console.WriteLine("stranger subscribe: served");
+        return false;
+    }
+    catch (GroupException e)
+    {
+        Console.WriteLine($"stranger subscribe: {e.Message}");
+        return e.Reason == "not_a_member";
+    }
 }

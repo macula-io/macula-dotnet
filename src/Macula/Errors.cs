@@ -37,6 +37,8 @@ public enum ErrorKind
     NotSettled,
     /// <summary>A seal report asked of a served stream: only the caller has one.</summary>
     NotACaller,
+    /// <summary>A sealed group's refusal or failure (<see cref="GroupException"/>).</summary>
+    Group,
     /// <summary>Anything else.</summary>
     Failed,
 }
@@ -106,6 +108,23 @@ public sealed class ConfidentialityException(string message, string reason, stri
     public string? Found { get; } = found;
 }
 
+/// <summary>
+/// A sealed group's refusal or failure (macula 13.2's sealed groups; cabi/CONTRACT.md "Sealed groups").
+/// <see cref="Reason"/> is one from macula's closed set: <c>not_a_member</c>, <c>membership_unknown</c>,
+/// <c>unknown_epoch</c>, <c>epoch_expired</c>, <c>no_distributor</c>, <c>no_group</c> or <c>tag_invalid</c>,
+/// and <c>group_held</c> for a clear publish under a prefix this node holds a key for, which also names
+/// the group's <see cref="Prefix"/> (else null).
+/// </summary>
+public sealed class GroupException(string message, string reason, string? prefix)
+    : MaculaException(ErrorKind.Group, message)
+{
+    /// <summary>Why the group refused it, or why it failed.</summary>
+    public string Reason { get; } = reason;
+
+    /// <summary>The group's prefix, when the reason names one (<c>group_held</c>).</summary>
+    public string? Prefix { get; } = prefix;
+}
+
 internal static class Errors
 {
     // The exception an err_out's JSON stands for.
@@ -133,14 +152,16 @@ internal static class Errors
             "closed" => new MaculaException(ErrorKind.Closed, message),
             "refused" => new MaculaException(ErrorKind.Refused, message),
             "confidentiality" => new ConfidentialityException(message, root.GetProperty("reason").GetString()!,
-                KeyIdOf(root, "named"), KeyIdOf(root, "found")),
+                TextOf(root, "named"), TextOf(root, "found")),
             "not_settled" => new MaculaException(ErrorKind.NotSettled, message),
             "not_a_caller" => new MaculaException(ErrorKind.NotACaller, message),
+            "group" => new GroupException(message, root.GetProperty("reason").GetString()!, TextOf(root, "prefix")),
             _ => new MaculaException(ErrorKind.Failed, message),
         };
     }
 
-    // A key id field: hex, or null when it is null or absent.
-    private static string? KeyIdOf(JsonElement root, string name) =>
+    // A field that carries a string when the native layer has one: a key id, a
+    // named or found key, a group's prefix. Null when it is null or absent.
+    private static string? TextOf(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

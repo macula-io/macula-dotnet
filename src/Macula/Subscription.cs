@@ -13,8 +13,19 @@ namespace Macula;
 /// <param name="PublishedAt">When it was published, in Unix milliseconds.</param>
 /// <param name="Payload">What it carries.</param>
 /// <param name="DeliveredVia">How it arrived: <c>direct</c> or <c>plumtree</c>.</param>
+/// <param name="Sealed">
+/// Whether it arrived sealed, which a group subscription opens: it then also carries <paramref name="SealKeyId"/>.
+/// Set for any event whose publisher sealed it, so a plain subscription under a group prefix hears the same event
+/// with <paramref name="Payload"/> null and <paramref name="Unopened"/> <c>no_group</c>.
+/// </param>
+/// <param name="SealKeyId">The 8-byte id, as hex, of the epoch it was opened under; null when it was not sealed.</param>
+/// <param name="Unopened">
+/// Why an event under a group could not be opened, from macula's closed set: <c>not_a_member</c>,
+/// <c>membership_unknown</c>, <c>unknown_epoch</c>, <c>epoch_expired</c>, <c>no_distributor</c>, <c>no_group</c> or
+/// <c>tag_invalid</c>. Null when the event carries its payload.
+/// </param>
 public sealed record MeshEvent(MeshId Publisher, MeshId Realm, string Topic, ulong Seq, ulong PublishedAt,
-    JsonNode? Payload, string DeliveredVia);
+    JsonNode? Payload, string DeliveredVia, bool Sealed = false, string? SealKeyId = null, string? Unopened = null);
 
 /// <summary>
 /// A subscription to a topic. Its events wait for a reader in libmacula (256 at most; one arriving to a
@@ -44,8 +55,14 @@ public sealed class Subscription : IAsyncDisposable
         return new MeshEvent(MeshId.Parse(e.GetProperty("publisher").GetString()!),
             MeshId.Parse(e.GetProperty("realm").GetString()!), e.GetProperty("topic").GetString()!,
             e.GetProperty("seq").GetUInt64(), e.GetProperty("published_at").GetUInt64(),
-            Payload.FromElement(e.GetProperty("payload")), e.GetProperty("delivered_via").GetString()!);
+            Payload.FromElement(e.GetProperty("payload")), e.GetProperty("delivered_via").GetString()!,
+            Sealed: e.TryGetProperty("sealed", out var sealedFlag) && sealedFlag.GetInt32() == 1,
+            SealKeyId: TextOf(e, "seal_key_id"), Unopened: TextOf(e, "unopened"));
     }
+
+    // A field the event carries as a string when it has one at all.
+    private static string? TextOf(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
     /// <summary>The subscription's events as they arrive, until it is disposed or its pool closes.</summary>
     public async IAsyncEnumerable<MeshEvent> ReadAllAsync(

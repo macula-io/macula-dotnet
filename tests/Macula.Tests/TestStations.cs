@@ -32,6 +32,8 @@ public class TestStations : IAsyncLifetime
     public string RealmName { get; private set; } = "";
     public byte[] RealmKey { get; private set; } = [];
     public string Org { get; private set; } = "";
+    // The org key's key id, as hex: what a distributor's policy names the org by.
+    public string OrgKeyId { get; private set; } = "";
     public string KeyDirectory { get; } = Directory.CreateTempSubdirectory("macula-dotnet-keys-").FullName;
 
     public async Task InitializeAsync()
@@ -75,6 +77,7 @@ public class TestStations : IAsyncLifetime
         RealmName = root.GetProperty("realm_name").GetString()!;
         RealmKey = Convert.FromHexString(root.GetProperty("realm_key").GetString()!);
         Org = root.GetProperty("org").GetString()!;
+        OrgKeyId = root.GetProperty("org_key_id").GetString()!;
     }
 
     private static string RepositoryRoot()
@@ -97,6 +100,28 @@ public class TestStations : IAsyncLifetime
             await _harness.StandardInput.FlushAsync();
             var answer = await _harness.StandardOutput.ReadLineAsync();
             Assert.Equal($"admitted {node}", answer);
+        }
+        finally
+        {
+            _commands.Release();
+        }
+    }
+
+    /// <summary>
+    /// The org's <c>group_keys</c> grant for <paramref name="node"/>: the org key's UCAN over
+    /// <c>mri:org:&lt;realm name&gt;/&lt;org&gt;</c>, living an hour. The org key itself is the harness's, so only
+    /// the station can mint with it, and <see cref="OrgKeyId"/> is what a distributor's policy names it by.
+    /// </summary>
+    public async Task<string> GrantAsync(MeshId node)
+    {
+        await _commands.WaitAsync();
+        try
+        {
+            await _harness!.StandardInput.WriteLineAsync($"grant {node}");
+            await _harness.StandardInput.FlushAsync();
+            var answer = await _harness.StandardOutput.ReadLineAsync();
+            Assert.StartsWith("grant ", answer);
+            return answer!["grant ".Length..];
         }
         finally
         {
@@ -154,4 +179,32 @@ public sealed class HybridTestStations : TestStations
 public sealed class HybridStationsCollection : ICollectionFixture<HybridTestStations>
 {
     public const string Name = "hybrid stations";
+}
+
+/// <summary>
+/// A station pair for the sealed-group tests alone. Serving under an org resolves the realm's org directory from
+/// the DHT on every advertisement and every pull, and a pair whose DHT carries every other class's records is the
+/// one that resolution times out on: the group tests give themselves a DHT of their own, as the hybrid profile
+/// gives itself a harness of its own.
+/// </summary>
+public sealed class GroupTestStations : TestStations;
+
+[CollectionDefinition(Name)]
+public sealed class GroupStationsCollection : ICollectionFixture<GroupTestStations>
+{
+    public const string Name = "group stations";
+}
+
+/// <summary>The same pair in pq_hybrid, the fleet's profile.</summary>
+public sealed class GroupHybridTestStations : TestStations
+{
+    public GroupHybridTestStations() : base(Profile.PqHybrid)
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class GroupHybridStationsCollection : ICollectionFixture<GroupHybridTestStations>
+{
+    public const string Name = "group hybrid stations";
 }
