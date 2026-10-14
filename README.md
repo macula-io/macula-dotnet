@@ -20,13 +20,13 @@
 
 ---
 
-> **Wire 1.0, 0.9.0-rc.2 (a NuGet pre-release):** built on libmacula from
+> **Wire 1.0, 0.9.0-rc.3 (a NuGet pre-release):** built on libmacula from
 > macula-go v0.27.0-rc.3, it speaks wire 1.0 (macula 15) and nothing older, so
 > it reaches only a wire 1.0 station. NuGet has no dist-tag: the pre-release is
 > opt-in by version, and a plain `dotnet add package Macula` still resolves
 > 0.8.0, on the macula 12 wire, for the live fleet until wire 1.0 ships
 > there. Take the candidate with
-> `dotnet add package Macula --version 0.9.0-rc.2`.
+> `dotnet add package Macula --version 0.9.0-rc.3`.
 
 > **Status of 0.8.0, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
@@ -211,6 +211,11 @@ await caller.CallAsync(realm, procedure, payload, new CallOptions { Ucan = new U
 
 A token is minted for the node that will present it. `RealmMemberRequired(keyId, can)`
 gates on a realm key instead, named by `Ucan.KeyId(realmPublicKey, profile)`.
+A `UcanPresentation` never prints its token, or any proof of its chain: the
+token is the credential, so what it prints is what the token carries in the
+clear — its audience, when it expires, how many capabilities it grants and how
+long its chain is — and `(unreadable)` for a token that is not a UCAN. A
+`Group`'s grant is kept out of what it prints for the same reason.
 macula's `test/vectors/UCAN_V1.md` is the contract.
 
 ### Sealing

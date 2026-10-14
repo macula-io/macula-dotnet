@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0-rc.3] - 2026-10-14
+
+### Changed
+
+- **`UcanPresentation` no longer prints its token** (macula-dotnet#15). The
+  record's synthesized `ToString` printed the whole token and its proofs, so a
+  log line, an exception message or a debugger view that formatted one handed
+  whoever read it a grant they could present. What it prints now is what a
+  UCAN carries in the clear — its audience, when it expires, how many
+  capabilities it grants and how long its chain is — and `(unreadable)` for a
+  token that is not one this can read, a value rather than an exception
+  because this runs on the way to a log. The issuer is not printed:
+  it is a whole public key in a `did:key`, thousands of characters of nothing
+  a log wants. `Group`'s grant was already kept out of what it prints.
+  `MeshEvent`, `Request`, `Reported` and the stream frames are unchanged: they
+  print their payload, which is the app's own data rather than a credential —
+  noting it here so the difference is a decision rather than an oversight.
+
 ## [0.9.0-rc.2] - 2026-10-14
 
 Wire 1.0, the second release candidate on NuGet, carrying sealed groups.

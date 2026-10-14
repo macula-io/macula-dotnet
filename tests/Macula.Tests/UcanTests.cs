@@ -103,6 +103,50 @@ public sealed class UcanVectorTests
         Assert.Throws<ArgumentException>(() => Ucan.KeyId(new byte[2592], Profile.PqHybrid));
         Assert.Throws<ArgumentException>(() => Ucan.KeyId(new byte[3118], Profile.PqPure));
     }
+
+    // macula-dotnet#15: the token is the credential — its signature is what a provider accepts — so a value
+    // that prints one hands a usable grant to whoever reads the log, the traceback or the debugger view.
+    [Fact]
+    public async Task APresentationPrintsItsClaimsAndNeverItsToken()
+    {
+        using var root = await NodeKey.GenerateAsync(Profile.PqPure);
+        var audience = new MeshId(new byte[32]);
+        var chained = new MeshId([.. Enumerable.Repeat((byte)0x11, 32)]);
+        var expires = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 300);
+        var token = root.CreateUcan(audience, [new Capability("mri:org:io.macula/acme", "invoke")], expires);
+        var proof = root.CreateUcan(chained, [new Capability("mri:realm:io.macula", "invoke")], expires);
+        var printed = new UcanPresentation(token, [proof]).ToString();
+        Assert.DoesNotContain(token, printed);
+        Assert.DoesNotContain(proof, printed);
+        // Not even a piece of either, in case a redaction ever cut the text rather than leaving it out: the
+        // signature is the part that authorises, and the payload alone still names what was granted.
+        foreach (var part in token.Split('.').Concat(proof.Split('.')))
+        {
+            Assert.DoesNotContain(part, printed);
+        }
+        // And what it prints instead: what the token carries in the clear.
+        Assert.Contains(audience.ToString(), printed);
+        Assert.Contains(expires.ToString("u"), printed);
+        Assert.Contains("Capabilities = 1", printed);
+        Assert.Contains("Proofs = 1", printed);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not a ucan")]
+    [InlineData("a.b")]
+    [InlineData("a.b.c")]
+    [InlineData("a.!!!not!base64!!!.c")]
+    public void APresentationOfSomethingElseSaysSoAndDoesNotThrow(string? token)
+    {
+        // A token this package did not mint reaches a presentation from a caller's own configuration, and
+        // printing one is what happens on the way to a log: a formatting method that throws is worse than one
+        // that says it could not read it.
+        var printed = new UcanPresentation(token!).ToString();
+        Assert.Contains("(unreadable)", printed);
+        Assert.Contains("Proofs = 0", printed);
+    }
 }
 
 /// <summary>The gated serving checks, run over one station harness.</summary>

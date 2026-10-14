@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Macula.Native;
 
@@ -50,7 +51,27 @@ public sealed class UcanOptions
 /// <summary>A UCAN a call or a stream open presents, and the tokens of its chain, parents first or not.</summary>
 /// <param name="Token">The token.</param>
 /// <param name="Proofs">The chain's other tokens, each named by a <see cref="UcanOptions.Parent"/>.</param>
-public sealed record UcanPresentation(string Token, IReadOnlyList<string>? Proofs = null);
+public sealed record UcanPresentation(string Token, IReadOnlyList<string>? Proofs = null)
+{
+    // What a presentation prints, and what it deliberately does not. The token is the credential: its
+    // signature is what a provider accepts, so a log line, an exception message or a debugger view that
+    // formatted this record would hand whoever reads it a grant they can present. Nothing here prints it, or
+    // any proof of the chain, for the same reason Group keeps its grant out of what it prints.
+    //
+    // What it prints instead is what a UCAN carries in the clear (Ucan.Claims): its audience, when it
+    // expires, how many capabilities it grants and how long its chain is. None of that needs the token to
+    // leave the process, and a reader can tell one presentation from another by it. The issuer is not
+    // printed: it is a whole public key in a did:key, thousands of characters of nothing a log wants.
+    private bool PrintMembers(StringBuilder builder)
+    {
+        var claims = Ucan.Claims(Token);
+        builder.Append("Audience = ").Append(claims?.Audience.ToString() ?? "(unreadable)");
+        builder.Append(", Expires = ").Append(claims is { } c ? c.Expires.ToString("u") : "(unreadable)");
+        builder.Append(", Capabilities = ").Append(claims?.Capabilities ?? 0);
+        builder.Append(", Proofs = ").Append(Proofs?.Count ?? 0);
+        return true;
+    }
+}
 
 /// <summary>
 /// What a gated procedure requires of a caller's UCAN. The provider checks each call and stream open before
@@ -104,6 +125,53 @@ public sealed record RealmMemberRequired : AuthPolicy
 public static class Ucan
 {
     private static readonly byte[] KeyIdLabel = "MACULA-KEY-ID-V1"u8.ToArray();
+
+    /// <summary>The claims of a UCAN, for a value that names one without printing its token.</summary>
+    internal sealed record UcanClaims(MeshId Audience, DateTimeOffset Expires, int Capabilities);
+
+    /// <summary>
+    /// What a UCAN carries in the clear: its audience, when it expires and how many capabilities it grants.
+    /// Null when the text is not a UCAN this can read. A UCAN is a JWT — <c>header.payload.signature</c>, each
+    /// base64url — and its payload is the issuer's own text, readable by anyone holding the token, so none of
+    /// this is a secret; no part of this reads <c>fct</c>, which is whatever the issuer chose to put there.
+    /// </summary>
+    internal static UcanClaims? Claims(string token)
+    {
+        // Nothing readable, not an error: this is called from a formatting method, which has no way to report one.
+        if (string.IsNullOrEmpty(token))
+        {
+            return null;
+        }
+        var parts = token.Split('.');
+        if (parts.Length != 3)
+        {
+            return null;
+        }
+        try
+        {
+            using var json = JsonDocument.Parse(Base64Url(parts[1]));
+            var claims = json.RootElement;
+            return new UcanClaims(
+                MeshId.Parse(claims.GetProperty("aud").GetString()!),
+                DateTimeOffset.FromUnixTimeSeconds(claims.GetProperty("exp").GetInt64()),
+                claims.TryGetProperty("cap", out var capabilities) && capabilities.ValueKind == JsonValueKind.Array
+                    ? capabilities.GetArrayLength()
+                    : 0);
+        }
+        // Anything at all. This is read from a log line or a debugger, from a token this package did not mint:
+        // a formatting method that throws is worse than one that says it could not read it.
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    // base64url as a JWT carries it: two characters swapped, and no padding.
+    private static byte[] Base64Url(string text)
+    {
+        var swapped = text.Replace('-', '+').Replace('_', '/');
+        return Convert.FromBase64String(swapped.PadRight(swapped.Length + (4 - swapped.Length % 4) % 4, '='));
+    }
 
     /// <summary>The id a child's parent names <paramref name="token"/> by: lowercase hex SHA-384 of its text.</summary>
     public static string ProofId(string token)
