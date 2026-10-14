@@ -18,7 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   UCAN carries in the clear — its audience, when it expires, how many
   capabilities it grants and how long its chain is — and `(unreadable)` for a
   token that is not one this can read, a value rather than an exception
-  because this runs on the way to a log. The issuer is not printed:
+  because this runs on the way to a log, and `(unreadable)` for the
+  capability count too rather than `0`, which would read as a token that
+  grants nothing. A claims segment over 64 KB is refused before it is
+  decoded, so a formatter is never handed a token nobody could have meant to
+  allocate without a bound. The issuer is not printed:
   it is a whole public key in a `did:key`, thousands of characters of nothing
   a log wants. `Group`'s grant was already kept out of what it prints.
   `MeshEvent`, `Request`, `Reported` and the stream frames are unchanged: they

@@ -67,7 +67,8 @@ public sealed record UcanPresentation(string Token, IReadOnlyList<string>? Proof
         var claims = Ucan.Claims(Token);
         builder.Append("Audience = ").Append(claims?.Audience.ToString() ?? "(unreadable)");
         builder.Append(", Expires = ").Append(claims is { } c ? c.Expires.ToString("u") : "(unreadable)");
-        builder.Append(", Capabilities = ").Append(claims?.Capabilities ?? 0);
+        // "(unreadable)" rather than 0, which would read as a token that grants nothing.
+        builder.Append(", Capabilities = ").Append(claims is { } g ? g.Capabilities.ToString() : "(unreadable)");
         builder.Append(", Proofs = ").Append(Proofs?.Count ?? 0);
         return true;
     }
@@ -143,7 +144,9 @@ public static class Ucan
             return null;
         }
         var parts = token.Split('.');
-        if (parts.Length != 3)
+        // A token this package did not mint: the formatter allocates nothing without a bound, so a segment
+        // nobody could have meant is refused before it is decoded rather than after.
+        if (parts.Length != 3 || parts[1].Length > MaxClaimsChars)
         {
             return null;
         }
@@ -165,6 +168,10 @@ public static class Ucan
             return null;
         }
     }
+
+    // A UCAN's claims are a few hundred bytes of JSON. This is the segment's characters, base64url, so the
+    // decode is bounded with it.
+    private const int MaxClaimsChars = 64 * 1024;
 
     // base64url as a JWT carries it: two characters swapped, and no padding.
     private static byte[] Base64Url(string text)

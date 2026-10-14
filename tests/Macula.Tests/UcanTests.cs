@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -144,8 +145,52 @@ public sealed class UcanVectorTests
         // printing one is what happens on the way to a log: a formatting method that throws is worse than one
         // that says it could not read it.
         var printed = new UcanPresentation(token!).ToString();
-        Assert.Contains("(unreadable)", printed);
+        Assert.Contains("Audience = (unreadable)", printed);
+        Assert.Contains("Expires = (unreadable)", printed);
+        // Not "Capabilities = 0", which would read as a token that grants nothing rather than one that could
+        // not be read.
+        Assert.Contains("Capabilities = (unreadable)", printed);
         Assert.Contains("Proofs = 0", printed);
+    }
+
+    // A JWT with the claims given, for the tokens that get past the base64 step and fail on their claims.
+    private static string ClaimsToken(string claimsJson)
+    {
+        static string Part(string json) =>
+            Convert.ToBase64String(Encoding.UTF8.GetBytes(json)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        return $"{Part("{\"alg\":\"none\"}")}.{Part(claimsJson)}.signature";
+    }
+
+    [Theory]
+    [InlineData("{\"aud\":\"did:key:z6Mk\",\"exp\":1791983997}")]                          // aud is not a node id
+    [InlineData("{\"aud\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"exp\":\"soon\"}")]
+    [InlineData("{\"aud\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"exp\":99999999999999999}")]
+    [InlineData("{\"exp\":1791983997}")]                                                    // no audience
+    [InlineData("not json")]
+    public void APresentationOfATokenWhoseClaimsAreNotItsReadsAsUnreadable(string claims)
+    {
+        // Base64 is one thing and a UCAN is another: a token that decodes and then does not carry an audience a
+        // node could be, or an expiry that is a time, is not one this can name.
+        var printed = new UcanPresentation(ClaimsToken(claims)).ToString();
+        Assert.Contains("Audience = (unreadable)", printed);
+        Assert.Contains("Capabilities = (unreadable)", printed);
+        Assert.DoesNotContain(claims, printed);
+    }
+
+    [Fact]
+    public void APresentationRefusesAnOversizedTokenBeforeDecodingIt()
+    {
+        // The claims are padded past the bound while still being valid ones: without the bound this would parse
+        // and print as an ordinary presentation, so the null is the bound rather than a parse that failed.
+        var claims = "{\"aud\":\"" + new string('0', 64) + "\",\"exp\":1791983997,\"fct\":\""
+            + new string('x', 70 * 1024) + "\"}";
+        var token = ClaimsToken(claims);
+        Assert.True(token.Length > 64 * 1024);
+        Assert.Null(Ucan.Claims(token));
+        Assert.Contains("(unreadable)", new UcanPresentation(token).ToString());
+        // The control: the same claims without the padding are read, so it is the size that was refused rather
+        // than the claims themselves.
+        Assert.NotNull(Ucan.Claims(ClaimsToken("{\"aud\":\"" + new string('0', 64) + "\",\"exp\":1791983997}")));
     }
 }
 
