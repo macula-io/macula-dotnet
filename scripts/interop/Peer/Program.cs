@@ -271,14 +271,20 @@ static async Task<bool> GroupMember(Pool pool, MeshId realm, string work, string
                 Console.WriteLine($"unopened: {unopened}");
                 return false;
             }
-            if (e.Sealed && Text(e.Payload) == SaysOther &&
-                Regex.IsMatch(e.SealKeyId ?? "", "^[0-9a-f]{16}$"))
+            if (Text(e.Payload) != SaysOther)
             {
-                Console.WriteLine($"opened from erlang under {e.SealKeyId}");
-                return true;
+                Console.WriteLine($"unexpected: sealed {e.Sealed}, payload {Text(e.Payload)}");
+                return false;
             }
-            Console.WriteLine($"unexpected: sealed {e.Sealed}, payload {Text(e.Payload)}");
-            return false;
+            // The point of the run: the peer's event arrives because the member opened it under the group, not
+            // because it was published clear.
+            if (!e.Sealed || !Regex.IsMatch(e.SealKeyId ?? "", "^[0-9a-f]{16}$"))
+            {
+                Console.WriteLine($"unexpected: \"{SaysOther}\" arrived unsealed ({e.Sealed}), key id {e.SealKeyId}");
+                return false;
+            }
+            Console.WriteLine($"opened from erlang under {e.SealKeyId}");
+            return true;
         }
     }
     catch (OperationCanceledException)

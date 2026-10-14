@@ -273,11 +273,16 @@ var group = new Group("io.macula/acme/chat", orgGrant);
 await pool.PublishGroupAsync(realm, "io.macula/acme/chat/said_v1", new JsonObject { ["said"] = "hush" },
     group, timeout: TimeSpan.FromSeconds(10));
 
-// Subscribing does too, and opens every event under the group.
+// Subscribing does too, and opens every event the group seals.
 await using var subscription = await pool.SubscribeGroupAsync(realm, "io.macula/acme/chat/said_v1", group);
 await foreach (var e in subscription.ReadAllAsync(cancellationToken))
 {
-    // e.Sealed, e.SealKeyId (the epoch's key id, 16 hex) and the opened payload.
+    // Check e.Sealed unless the group's policy is required: a clear event under the prefix is
+    // delivered as it is. e.SealKeyId is the epoch's key id (16 hex), named whether or not it opened.
+    if (!e.Sealed)
+    {
+        continue;
+    }
 }
 ```
 
@@ -286,9 +291,18 @@ await foreach (var e in subscription.ReadAllAsync(cancellationToken))
   `membership_unknown`, `unknown_epoch`, `epoch_expired`, `no_distributor`,
   `no_group`, `tag_invalid` — and `group_held` for a clear `Publish` under a
   prefix this node holds a key for, which also names the `Prefix`.
-- An event under the group that cannot be opened arrives once with a null
-  payload and `MeshEvent.Unopened` naming the same closed set; a plain
-  `Subscribe` under a group prefix hears every such event as `no_group`.
+- **A clear event under the prefix is not refused for you.** The library
+  refuses one only when the group's *own* policy is `required`, and the
+  distributor sets that policy, not the subscriber; under any other policy —
+  and for a node that holds no group at all — a clear event that any realm
+  member published under the prefix is delivered as it is, with
+  `MeshEvent.Sealed` false and a payload. A subscriber that wants sealed
+  events alone checks `MeshEvent.Sealed`; nothing in the binding can decide
+  that for it.
+- An event that arrived sealed but cannot be opened arrives once with a null
+  payload and `MeshEvent.Unopened` naming the same closed set, and still
+  carries `SealKeyId`, the epoch it arrived under; a plain `Subscribe` under a
+  group prefix hears every sealed event as `no_group`.
 - A join stays held once it succeeded, also when the `SubscribeGroupAsync`
   after it fails, so the pool keeps refusing clear publishes under the
   prefix from then on.
@@ -364,7 +378,10 @@ check proofs this package signs against the verifiers themselves: mcl_om's
 provider receives it, and the realm's. `scripts/interop/v5.sh` and
 `scripts/interop/sealed.sh` run handshake v5 against a macula station, and
 sealed calls and streams with their seal reports both ways against a macula
-node. See `scripts/interop/README.md`.
+node. `scripts/interop/groups.sh` runs sealed groups both ways against
+macula's own Erlang distributor: an Erlang member and a .NET member open each
+other's sealed event under one epoch, and a node the distributor removed is
+refused `not_a_member`. See `scripts/interop/README.md`.
 
 ## License
 

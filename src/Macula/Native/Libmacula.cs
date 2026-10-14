@@ -47,16 +47,26 @@ internal static unsafe partial class Libmacula
     // speaks wire 1.0, says so, and carries the sealed group calls. Every
     // earlier release speaks an older wire, and is refused by name when the
     // library is loaded (NativeCall), rather than by guessing at what it
-    // exports. v0.27.0-rc.1 is the one before this floor to watch for: it
-    // speaks wire 1.0 and passes the wire check, but has no group call at all,
-    // so it cannot seal a group's publication (macula-go#34) and fails the two
-    // declarations naming it. Older still are missing the bounds this package
-    // relies on: handshake v5's channel binding (v0.20.0),
-    // SecP384r1MLKEM1024 alone so no station can land it on
+    // exports. A release that speaks *this* wire and still predates the floor
+    // is caught by the one export the floor stands for (FloorExport), not by
+    // its number: v0.27.0-rc.1 and rc.2 are ABI 1 and wire 1.0, so nothing
+    // else here would notice them, and their first group call would die on the
+    // declaration instead of on a MaculaException. Probing one symbol is sound
+    // for a capability, and was unsound as the old wire floor: a library that
+    // exports a function says nothing about the wire it reaches, which is why
+    // the wire check replaced that. Older releases are also the ones missing
+    // the bounds this package relies on: handshake v5's channel binding
+    // (v0.20.0), SecP384r1MLKEM1024 alone so no station can land it on
     // SecP256r1MLKEM768 (v0.23.0, macula-go#20), and the refusal of a UCAN
     // whose issuer did:key is over 4,400 characters before decoding it
     // (v0.26.0, macula#87) that an older library would spend CPU on.
     internal const string LibraryFloor = "v0.27.0-rc.3";
+
+    // The call the floor stands for, asked of the library itself as it loads
+    // (NativeCall). v0.27.0-rc.1 gained macula_wire_version, so a library that
+    // answers the wire check is not thereby one this package can seal a
+    // group's publication with (macula-go#34); this export is.
+    internal const string FloorExport = "macula_pool_publish_group";
 
     // ---- The library ----
 

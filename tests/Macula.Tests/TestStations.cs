@@ -182,10 +182,13 @@ public sealed class HybridStationsCollection : ICollectionFixture<HybridTestStat
 }
 
 /// <summary>
-/// A station pair for the sealed-group tests alone. Serving under an org resolves the realm's org directory from
-/// the DHT on every advertisement and every pull, and a pair whose DHT carries every other class's records is the
-/// one that resolution times out on: the group tests give themselves a DHT of their own, as the hybrid profile
-/// gives itself a harness of its own.
+/// A station pair for the sealed-group tests alone. On a pair shared with the rest of the suite, serving under an
+/// org fails for the group tests once the collection has run a while —
+/// <c>stationlink: the org directory of "mcl-binding": no verified reply within the call's timeout</c>, from the
+/// pool that serves the distributor — and the same tests pass on a pair of their own. That the pair is separate is
+/// a workaround with the reason still unknown, macula-dotnet#14: the first explanation given was the DHT's size, and
+/// it does not hold, so the issue carries what was ruled out instead of a story. It says nothing about production
+/// stations; these run in process.
 /// </summary>
 public sealed class GroupTestStations : TestStations;
 

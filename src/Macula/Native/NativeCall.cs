@@ -47,6 +47,22 @@ internal static class NativeCall
             throw new MaculaException(ErrorKind.Failed,
                 $"libmacula is {release} and speaks wire {wire}, and this Macula package speaks wire {Libmacula.WireVersion}");
         }
+        // What LibraryFloor stands for, asked of the library rather than
+        // assumed from its number: v0.27.0-rc.1 and rc.2 are ABI 1 and speak
+        // this wire, so both checks above pass them, and neither has a sealed
+        // group call at all. Without this they load and die on the first
+        // publish or subscribe under a group with an
+        // EntryPointNotFoundException instead of a MaculaException naming the
+        // release. Asked here because the load path is where a library that
+        // cannot do the job is refused, and one symbol answers for the
+        // capability, where a release number could not be compared without
+        // inventing an ordering that "devel" does not have.
+        if (library == 0 || !NativeLibrary.TryGetExport(library, Libmacula.FloorExport, out _))
+        {
+            var release = Marshal.PtrToStringUTF8(Libmacula.macula_library_version());
+            throw new MaculaException(ErrorKind.Failed,
+                $"libmacula is {release} and has no {Libmacula.FloorExport}: this Macula package needs macula-go {Libmacula.LibraryFloor}'s library or later");
+        }
     }
 
     // Loads the ABI check on first use.

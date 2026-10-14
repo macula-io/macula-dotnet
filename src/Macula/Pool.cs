@@ -412,11 +412,13 @@ public sealed partial class Pool : IAsyncDisposable
 
     /// <summary>
     /// Subscribes to <paramref name="topic"/> in <paramref name="realm"/> as a member of <paramref name="group"/>:
-    /// every event under the group is opened, and one that cannot be arrives once with a null payload and
-    /// <see cref="MeshEvent.Unopened"/> naming why. The group is joined first, pulling its epoch from the org's
-    /// distributor over a sealed call. A join stays held once it succeeded, also when this subscribe then fails, so
-    /// the pool keeps refusing clear publishes under the prefix (<see cref="GroupException"/>, reason
-    /// <c>group_held</c>) from then on.
+    /// every event the group seals is opened, and one that cannot be opened arrives once with a null payload and
+    /// <see cref="MeshEvent.Unopened"/> naming why. A <em>clear</em> event under the prefix is not refused for you:
+    /// only a group whose own policy is <c>required</c> has that refused, and the policy is the distributor's to
+    /// set, so a subscriber that wants sealed events alone must check <see cref="MeshEvent.Sealed"/>. The group is
+    /// joined first, pulling its epoch from the org's distributor over a sealed call. A join stays held once it
+    /// succeeded, also when this subscribe then fails, so the pool keeps refusing clear publishes under the prefix
+    /// (<see cref="GroupException"/>, reason <c>group_held</c>) from then on.
     /// </summary>
     public unsafe Task<Subscription> SubscribeGroupAsync(MeshId realm, string topic, Group group,
         TimeSpan? timeout = null, CancellationToken cancellationToken = default)

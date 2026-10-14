@@ -31,8 +31,9 @@ public abstract class GroupTests(TestStations stations)
     private const int KeySize = 32;
 
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(20);
-    // A distributor's advertisement reaching the DHT, which a join waits for and a direct call does not: both
-    // collections run side by side, each with its own pair of stations.
+    // How long an advertisement reaching the DHT is waited for, by a join and by UntilAdvertisedAsync. Generous
+    // because the suite runs several station pairs side by side, and a join that is refused for any other reason is
+    // not retried at all.
     private static readonly TimeSpan Reach = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(15);
 
@@ -660,9 +661,14 @@ public abstract class GroupTests(TestStations stations)
         foreach (var (name, transform) in Malformed(distributor.Serves[0]))
         {
             distributor.Transform = transform;
+            var seen = distributor.Seen.Count;
             var refused = await Assert.ThrowsAsync<GroupException>(() =>
                 member.SubscribeGroupAsync(stations.Realm, topic, MemberGroup(distributor, grant)));
             Assert.Equal("no_distributor", refused.Reason);
+            // And the refusal is the member rejecting a reply the handler really sent: no_distributor is also
+            // what an outage or an advertisement that has not propagated gives, so without this the case would
+            // pass on a run where no malformed reply was ever parsed.
+            Assert.Equal(seen + 1, distributor.Seen.Count);
         }
         // The control: the same procedure, the same member, only the reply back to the protocol's — and the join
         // is held.

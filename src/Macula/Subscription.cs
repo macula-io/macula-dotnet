@@ -15,10 +15,17 @@ namespace Macula;
 /// <param name="DeliveredVia">How it arrived: <c>direct</c> or <c>plumtree</c>.</param>
 /// <param name="Sealed">
 /// Whether it arrived sealed, which a group subscription opens: it then also carries <paramref name="SealKeyId"/>.
-/// Set for any event whose publisher sealed it, so a plain subscription under a group prefix hears the same event
-/// with <paramref name="Payload"/> null and <paramref name="Unopened"/> <c>no_group</c>.
+/// False for a clear event, and a clear event under a group's prefix is delivered as it is unless the group's own
+/// policy is <c>required</c> — which the distributor sets, not the subscriber, and which the library is the only
+/// thing that knows. So a subscriber that wants sealed events alone checks this: any realm member may publish a
+/// clear event under the prefix, and it arrives here with <paramref name="Sealed"/> false and a payload. Set for
+/// any event whose publisher sealed it, so a plain subscription under a group prefix hears such an event with its
+/// <paramref name="Payload"/> null and <paramref name="Unopened"/> <c>no_group</c>.
 /// </param>
-/// <param name="SealKeyId">The 8-byte id, as hex, of the epoch it was opened under; null when it was not sealed.</param>
+/// <param name="SealKeyId">
+/// The 8-byte id, as hex, of the epoch the event arrived under — named whether or not it opened, so an event with
+/// <paramref name="Unopened"/> set still carries it. Null when the event did not arrive sealed at all.
+/// </param>
 /// <param name="Unopened">
 /// Why an event under a group could not be opened, from macula's closed set: <c>not_a_member</c>,
 /// <c>membership_unknown</c>, <c>unknown_epoch</c>, <c>epoch_expired</c>, <c>no_distributor</c>, <c>no_group</c> or

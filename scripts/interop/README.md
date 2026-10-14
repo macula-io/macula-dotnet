@@ -91,7 +91,7 @@ come from macula-go at `libmacula.version` (needs Go, podman, python3 and the
   macula-go v0.27.0-rc.3's escript and teststation, libmacula v0.27.0-rc.3 as
   fetched and verified: PASS. The Erlang member opened the .NET member's
   sealed event and the .NET member opened the Erlang member's, both under one
-  epoch (`e6cfff76135dcfac` in pq_hybrid, `533b8000c4b7e3d1` in pq_pure), and
+  epoch (`deed85c6da7befcc` in pq_hybrid, `8e57ea778983b5a2` in pq_pure), and
   the .NET node the distributor had removed was refused `not_a_member` in
   each.
 

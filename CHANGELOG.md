@@ -32,7 +32,10 @@ Wire 1.0, the second release candidate on NuGet, carrying sealed groups.
   join stays held once it succeeded, so a clear `Publish` under the prefix is
   refused `group_held` from then on.
 - `GroupException` (`ErrorKind.Group`) carries macula's reason, and the prefix
-  a `group_held` refusal names.
+  a `group_held` refusal names. `MeshEvent`'s new members are positional
+  parameters with defaults on its primary constructor, so code that reads an
+  event is source compatible and an assembly compiled against 0.9.0-rc.1 is
+  not binary compatible with 0.9.0-rc.2.
 - `scripts/interop/groups.sh`: sealed groups across macula 15.0.0-rc.2 and
   this package, both ways, through macula's own Erlang distributor — an Erlang
   member and a .NET member each open the other's sealed event under one epoch,
@@ -42,11 +45,15 @@ Wire 1.0, the second release candidate on NuGet, carrying sealed groups.
 ### Changed
 
 - **The packaged libmacula is macula-go v0.27.0-rc.3** (was v0.27.0-rc.1),
-  which carries the sealed group calls. `LibraryFloor` moves with it:
-  v0.27.0-rc.1 speaks wire 1.0 and passes the wire check, but has no group
-  call at all, so a library from before the floor is refused by name as it
-  loads rather than linking one that cannot seal a group's publication
-  (macula-go#34).
+  which carries the sealed group calls. `LibraryFloor` moves with it, and what
+  the floor does is worth being exact about: a library that speaks another wire
+  is refused by name as it loads, and v0.27.0-rc.1 speaks *this* wire, so it
+  loads and has no group call at all — the first publish or subscribe under a
+  group fails on the declaration itself
+  (`EntryPointNotFoundException`, naming the missing `macula_pool_*_group`),
+  rather than sealing nothing (macula-go#34). Probing for the symbol at load
+  is not repeated here: a library that exports one function says nothing about
+  the wire it reaches, which is why the wire check replaced that floor.
 
 ## [0.9.0-rc.1] - 2026-10-13
 
