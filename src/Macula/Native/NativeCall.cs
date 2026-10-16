@@ -10,12 +10,35 @@ namespace Macula.Native;
 // cancel token (cabi/CONTRACT.md "Threads and blocking", "Cancellation").
 internal static class NativeCall
 {
-    // Every way into libmacula passes here first (a key or a pool is made
-    // through NativeCall, and every handle comes from one), so the resolver is
-    // in place, and the ABI checked, before any call into it.
+    // The resolver is registered here, before any member of this type can be
+    // reached, so no call into libmacula finds the runtime without one.
+    // Nothing that can fail belongs in a static constructor: every way into
+    // libmacula passes through EnsureLoaded first (a key or a pool is made
+    // through NativeCall, and every handle comes from one), and what that
+    // throws reaches the caller as itself (macula-dotnet#12).
     static NativeCall()
     {
         NativeLibrary.SetDllImportResolver(typeof(NativeCall).Assembly, Resolve);
+    }
+
+    // The library, loaded and checked once, on the first call into it. Held as
+    // a Lazy rather than run in the static constructor above so that what the
+    // checks throw is what the caller sees: a static constructor that threw
+    // arrives as TypeInitializationException, with the MaculaException one
+    // level down in InnerException, and the message that says what to do
+    // (wrong ABI, a wire this package does not speak, libmacula too old to say
+    // which wire it speaks) is not the one on screen (macula-dotnet#12). The
+    // second caller gets that same MaculaException rather than a second
+    // attempt at a load that has already failed.
+    private static readonly Lazy<bool> Loaded = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    // Loads and checks libmacula on first use.
+    internal static void EnsureLoaded() => _ = Loaded.Value;
+
+    // The load and the checks, once; true when the library may be used. What
+    // this throws, the caller gets (EnsureLoaded).
+    private static bool Load()
+    {
         // libmacula's Go runtime sets its signal handlers while the library
         // loads (its constructor, inside dlopen); the load must leave the
         // runtime's suspension signal as it found it (SuspensionSignal). The
@@ -63,10 +86,8 @@ internal static class NativeCall
             throw new MaculaException(ErrorKind.Failed,
                 $"libmacula is {release} and has no {Libmacula.FloorExport}: this Macula package needs macula-go {Libmacula.LibraryFloor}'s library or later");
         }
+        return true;
     }
-
-    // Loads the ABI check on first use.
-    internal static void EnsureLoaded() { }
 
     // libmacula's file for this runtime, as the package lays it out. NuGet
     // resolves runtimes/<rid>/native for a package reference; a project that

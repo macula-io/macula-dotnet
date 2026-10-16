@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A libmacula this package cannot use is refused with the message that says
+  what to do** (macula-dotnet#12). The ABI, wire and capability checks ran in
+  `NativeCall`'s static constructor, and a static constructor that throws
+  reaches the first caller as `TypeInitializationException`, with the real
+  `MaculaException` one level down in `InnerException`. What a caller who put
+  the wrong library beside the package saw first was "The type initializer for
+  'Macula.Native.NativeCall' threw an exception", not the sentence naming
+  their release and what this package needs. The checks now run on the first
+  call into libmacula, held once in a `Lazy`, so the `MaculaException` is what
+  is thrown at them, unwrapped. Pre-existing, and not in the wire 1.0
+  pre-release: the checks themselves are unchanged.
+
 ## [0.9.0-rc.3] - 2026-10-14
 
 ### Changed

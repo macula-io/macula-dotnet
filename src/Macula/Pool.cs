@@ -150,7 +150,7 @@ public sealed record DhtRecord(int Type, string KeyId, long CreatedAt, long Expi
 public sealed record DhtRecords(IReadOnlyList<DhtRecord> Records, int Dropped);
 
 /// <summary>
-/// A node's pool of links to macula 12 stations: calls and streams by direct dial, serving, publish and
+/// A node's pool of links to macula 15 stations: calls and streams by direct dial, serving, publish and
 /// subscribe, node-served content and the DHT. Dispose it to close every link, subscription, served
 /// procedure and stream it holds.
 /// </summary>

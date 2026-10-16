@@ -29,9 +29,12 @@ if [ "$header_abi" != "$binding_abi" ]; then
   echo "fetch_libmacula.sh: $tag's macula.h is ABI $header_abi, the binding is ABI $binding_abi" >&2
   exit 1
 fi
-# The wire the release speaks, against the one the binding is written for:
-# the load path refuses another, so a pin that drifted from it would ship a
-# package that refuses its own library.
+# The wire the release speaks, against the one the binding is written for.
+# The whole string is compared, where the load path refuses another major
+# only (AcceptsWire, NativeCall): a pin names one macula-go release, and what
+# a build lays out under native/ has to be the release the binding was
+# written and verified against, not merely one of the same wire major, which
+# is all a library a caller puts beside the package has to be.
 header_wire=$(awk '$1 == "#define" && $2 == "MACULA_WIRE_VERSION" { gsub(/"/, "", $3); print $3 }' "$download/macula.h")
 binding_wire=$(awk -F'"' '/internal const string WireVersion/ { print $2 }' "$root/src/Macula/Native/Libmacula.cs")
 if [ "$header_wire" != "$binding_wire" ]; then
