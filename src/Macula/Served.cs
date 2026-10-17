@@ -151,7 +151,8 @@ public sealed partial class Pool
     /// exception's message. With a <paramref name="policy"/>, only calls whose UCAN it accepts reach the
     /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/>
     /// says whether it is sealed (<see cref="ServedConfidential"/>; the library's default, Preferred, when null), and
-    /// <see cref="Request.Sealed"/> whether a call came sealed.
+    /// <see cref="Request.Sealed"/> whether a call came sealed. Returns once a station has accepted the advertisement; a refusal, or no
+    /// answer within 30 seconds, throws a <see cref="MaculaException"/> of kind <see cref="ErrorKind.Refused"/>.
     /// </summary>
     public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler,
         AuthPolicy? policy = null, ServedConfidential? confidential = null)
@@ -175,7 +176,7 @@ public sealed partial class Pool
     /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>. With a
     /// <paramref name="policy"/>, only opens whose UCAN it accepts start a session; the rest are refused with
     /// a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/> as
-    /// <see cref="Serve"/>'s.
+    /// <see cref="Serve"/>'s, and so is the wait for a station's acceptance.
     /// </summary>
     public unsafe Served ServeStream(MeshId realm, string procedure, StreamMode mode,
         Func<MeshStream, CancellationToken, Task> handler, AuthPolicy? policy = null,
