@@ -29,7 +29,7 @@ public enum ErrorKind
     Answered,
     /// <summary>The pool, subscription, served procedure or stream has ended.</summary>
     Closed,
-    /// <summary>The network refused it.</summary>
+    /// <summary>The network refused it (<see cref="RefusedException"/>).</summary>
     Refused,
     /// <summary>A call, stream or served procedure that could not be kept confidential (<see cref="ConfidentialityException"/>).</summary>
     Confidentiality,
@@ -125,6 +125,27 @@ public sealed class GroupException(string message, string reason, string? prefix
     public string? Prefix { get; } = prefix;
 }
 
+/// <summary>
+/// The network refused it. For a serve or subscribe (macula-go v0.27.0-rc.4 on, macula#12) it is the station's
+/// verdict: <see cref="Reason"/> is the station's (<c>too_many_providers</c>, <c>advertiser_quota</c>,
+/// <c>name_too_long</c>, <c>record_refused</c>, <c>not_authorized</c>, <c>too_many_realms</c>, <c>refused</c>)
+/// or <c>unacknowledged</c> when no station answered within 30 seconds, <see cref="Registration"/> is
+/// <c>advertise</c> or <c>subscribe</c>, and <see cref="Station"/> the station's node_id as hex. Any other
+/// refusal (an admission, a key) has all three null.
+/// </summary>
+public sealed class RefusedException(string message, string? reason, string? registration, string? station)
+    : MaculaException(ErrorKind.Refused, message)
+{
+    /// <summary>The station's reason, or <c>unacknowledged</c>; null for a refusal that is not a registration's.</summary>
+    public string? Reason { get; } = reason;
+
+    /// <summary>The registration refused: <c>advertise</c> or <c>subscribe</c>.</summary>
+    public string? Registration { get; } = registration;
+
+    /// <summary>The station's node_id, as hex.</summary>
+    public string? Station { get; } = station;
+}
+
 internal static class Errors
 {
     // The exception an err_out's JSON stands for.
@@ -150,7 +171,8 @@ internal static class Errors
             "no_provider" => new MaculaException(ErrorKind.NoProvider, message),
             "answered" => new MaculaException(ErrorKind.Answered, message),
             "closed" => new MaculaException(ErrorKind.Closed, message),
-            "refused" => new MaculaException(ErrorKind.Refused, message),
+            "refused" => new RefusedException(message, TextOf(root, "reason"), TextOf(root, "registration"),
+                TextOf(root, "station")),
             "confidentiality" => new ConfidentialityException(message, root.GetProperty("reason").GetString()!,
                 TextOf(root, "named"), TextOf(root, "found")),
             "not_settled" => new MaculaException(ErrorKind.NotSettled, message),
@@ -161,7 +183,8 @@ internal static class Errors
     }
 
     // A field that carries a string when the native layer has one: a key id, a
-    // named or found key, a group's prefix. Null when it is null or absent.
+    // named or found key, a group's prefix, a refusal's reason, registration or
+    // station. Null when it is null or absent.
     private static string? TextOf(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 }

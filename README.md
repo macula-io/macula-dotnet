@@ -20,13 +20,13 @@
 
 ---
 
-> **Wire 1.0, 0.9.0-rc.4 (a NuGet pre-release):** built on libmacula from
-> macula-go v0.27.0-rc.7, it speaks wire 1.0 (macula 15) and nothing older, so
+> **Wire 1.0, 0.9.0-rc.5 (a NuGet pre-release):** built on libmacula from
+> macula-go v0.27.0-rc.8, it speaks wire 1.0 (macula 15) and nothing older, so
 > it reaches only a wire 1.0 station. NuGet has no dist-tag: the pre-release is
 > opt-in by version, and a plain `dotnet add package Macula` still resolves
 > 0.8.0, on the macula 12 wire, for the live fleet until wire 1.0 ships
 > there. Take the candidate with
-> `dotnet add package Macula --version 0.9.0-rc.4`.
+> `dotnet add package Macula --version 0.9.0-rc.5`.
 
 > **Status of 0.8.0, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
@@ -157,8 +157,10 @@ where one fits (`OperationCanceledException`, `TimeoutException`,
 `MaculaException` with its `Kind`: `ProviderErrorException` (with the
 provider's `Code` and `Detail`), `RelayErrorException`, `NotSharedException`,
 `ContentUnavailableException` (with each sharer's failure),
-`ConfidentialityException` (with its `Reason`, `Named` and `Found`), and
-`GroupException` (with its `Reason` and `Prefix`).
+`ConfidentialityException` (with its `Reason`, `Named` and `Found`),
+`GroupException` (with its `Reason` and `Prefix`), and `RefusedException` (a
+station's verdict on a serve or subscribe: its `Reason`, the `Registration`
+and the `Station`'s node_id).
 
 ### Payloads
 

@@ -368,8 +368,9 @@ public sealed partial class Pool : IAsyncDisposable
     /// <summary>
     /// Subscribes to <paramref name="topic"/> in <paramref name="realm"/>. Read the events with
     /// <see cref="Subscription.ReadAllAsync"/>; dispose the subscription to stop it. Returns once a station has
-    /// accepted the subscription; a refusal, or no answer within 30 seconds, throws a <see cref="MaculaException"/>
-    /// of kind <see cref="ErrorKind.Refused"/>, and with no link up one of kind <see cref="ErrorKind.Failed"/>.
+    /// accepted the subscription; a refusal, or no answer within 30 seconds, throws a <see cref="RefusedException"/>
+    /// naming the station's reason and the station, and with no link up a <see cref="MaculaException"/> of kind
+    /// <see cref="ErrorKind.Failed"/>.
     /// </summary>
     public unsafe Subscription Subscribe(MeshId realm, string topic)
     {

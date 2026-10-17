@@ -152,7 +152,7 @@ public sealed partial class Pool
     /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/>
     /// says whether it is sealed (<see cref="ServedConfidential"/>; the library's default, Preferred, when null), and
     /// <see cref="Request.Sealed"/> whether a call came sealed. Returns once a station has accepted the advertisement; a refusal, or no
-    /// answer within 30 seconds, throws a <see cref="MaculaException"/> of kind <see cref="ErrorKind.Refused"/>.
+    /// answer within 30 seconds, throws a <see cref="RefusedException"/> naming the station's reason and the station.
     /// </summary>
     public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler,
         AuthPolicy? policy = null, ServedConfidential? confidential = null)
