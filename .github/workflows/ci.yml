@@ -9,6 +9,23 @@ permissions:
   contents: read
 
 jobs:
+  # The Go interop capture helper, held to the structural floor
+  # (macula-codebase-checks#9): nestif 4, gocognit 15, funlen 60, with no
+  # baseline and no inline disables. The thresholds live in
+  # scripts/interop/capture/.golangci.yml.
+  structural-lint:
+    name: lint scripts/interop/capture (structural floor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: scripts/interop/capture/go.mod
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
+          working-directory: scripts/interop/capture
+
   test:
     name: test (${{ matrix.os }})
     strategy:
