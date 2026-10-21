@@ -1,0 +1,5 @@
+# The structural floor (macula-codebase-checks#9): a method's cyclomatic
+# complexity may not pass 9. .NET's default for CA1502 is 25, far looser.
+# Directory.Build.props hands this file to every project as an AdditionalFiles
+# item, which is what the analyzer reads it from.
+CA1502: 9

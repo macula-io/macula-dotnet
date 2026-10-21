@@ -1,0 +1,19 @@
+<Project>
+
+  <!--
+    The structural floor, shared by every project in this repository
+    (macula-codebase-checks#9):
+
+    - CodeMetricsConfig.txt sets CA1502's threshold at 9. Its default, 25, is
+      far looser than the floor.
+    - .editorconfig turns CA1502 on as an error, for every project here, since
+      a rule disabled by default is enabled by naming its severity.
+
+    These live at the root rather than in each .csproj so a new project
+    inherits them without anyone remembering to add them.
+  -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" />
+  </ItemGroup>
+
+</Project>

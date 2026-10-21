@@ -1,0 +1,8 @@
+# The structural floor (macula-codebase-checks#9), for every project here.
+#
+# CA1502 (avoid excessive complexity) is off by default in the .NET analyzers
+# and its default threshold is 25. Naming its severity turns it on, and error
+# makes a method past the cap fail the build. The cap itself (9) is in
+# CodeMetricsConfig.txt, which Directory.Build.props hands to every project.
+[*.cs]
+dotnet_diagnostic.CA1502.severity = error
