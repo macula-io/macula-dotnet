@@ -166,15 +166,20 @@ internal static class Program
     }
 
     /// What the provider's server stream said: its first chunk, its reply and
-    /// the seal report the stream settled on.
+    /// the seal report the stream settled on, or why reading it failed.
     readonly record struct Streamed(string? Chunk, string? Reply, SealReport? Report, string? Error)
     {
-        /// True when every part of the stream is the peer's, and sealed to it.
+        /// True when the stream read cleanly and every part of it is the
+        /// peer's, sealed to it.
         public bool Ok(string peer, MeshId provider) =>
-            Chunk == $"chunk from {peer}" && Reply == $"streamed by {peer}" && SealedTo(Report, provider);
+            Error is null && Chunk == $"chunk from {peer}" && Reply == $"streamed by {peer}" && SealedTo(Report, provider);
 
         public void Print()
         {
+            if (Error is not null)
+            {
+                Console.WriteLine($"sealed stream error: {Error}");
+            }
             Console.WriteLine($"sealed stream: chunk {Chunk}, reply {Reply}");
             Console.WriteLine($"stream report: {Report}");
         }
@@ -185,6 +190,7 @@ internal static class Program
         string? chunk = null;
         string? reply = null;
         SealReport? report = null;
+        string? error = null;
         try
         {
             await using var stream = await pool.OpenStreamAsync(realm, watch, StreamMode.Server, new JsonObject(),
@@ -206,9 +212,9 @@ internal static class Program
         }
         catch (Exception e)
         {
-            Console.WriteLine($"sealed stream error: {e.GetType().Name} {e.Message}");
+            error = $"{e.GetType().Name} {e.Message}";
         }
-        var streamed = new Streamed(chunk, reply, report, null);
+        var streamed = new Streamed(chunk, reply, report, error);
         streamed.Print();
         return streamed;
     }
