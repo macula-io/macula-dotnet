@@ -21,8 +21,18 @@ jobs:
     permissions:
       contents: read
     uses: macula-io/macula-ci-images/.github/workflows/doc-snippets-csharp.yml@d25a36c1b6ba7b8e72db17873aa7c2c7793eba70
+  # A dependency the packages restore with a published advisory does not publish
+  # (macula-codebase-checks#11). It runs here as well as in ci.yml because a green
+  # main is not a gate on the tag.
+  advisories:
+    permissions:
+      contents: read
+    uses: macula-io/macula-ci-images/.github/workflows/dependency-advisories.yml@dbc9533eb409c2118f45110613160060cc582f5d
+    with:
+      ecosystem: csharp
+
   publish:
-    needs: [release-guard, docs]
+    needs: [release-guard, docs, advisories]
     name: publish to NuGet
     runs-on: ubuntu-24.04
     environment: release

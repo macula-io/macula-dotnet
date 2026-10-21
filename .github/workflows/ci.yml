@@ -91,3 +91,15 @@ jobs:
     permissions:
       contents: read
     uses: macula-io/macula-ci-images/.github/workflows/doc-snippets-csharp.yml@d25a36c1b6ba7b8e72db17873aa7c2c7793eba70
+
+  # A dependency the packages restore with a published advisory fails the build
+  # (macula-codebase-checks#11). dotnet list reads the shipping projects and
+  # their transitive packages. release.yml runs it on the tagged commit too, so
+  # the release waits on it.
+  advisories:
+    name: Dependency advisories
+    permissions:
+      contents: read
+    uses: macula-io/macula-ci-images/.github/workflows/dependency-advisories.yml@dbc9533eb409c2118f45110613160060cc582f5d
+    with:
+      ecosystem: csharp
