@@ -72,3 +72,12 @@ jobs:
       - name: Pack, and check the natives are in it
         if: matrix.os == 'ubuntu-24.04'
         run: scripts/check_package.sh
+
+  # Every C# block README.md publishes compiles against this package, and a doc
+  # change runs this (macula-codebase-checks#8). The pin is a full commit SHA;
+  # the release waits on this job too.
+  docs:
+    name: docs (C# snippets)
+    permissions:
+      contents: read
+    uses: macula-io/macula-ci-images/.github/workflows/doc-snippets-csharp.yml@d25a36c1b6ba7b8e72db17873aa7c2c7793eba70

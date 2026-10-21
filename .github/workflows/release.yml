@@ -13,8 +13,16 @@ jobs:
     uses: macula-io/macula-ci-images/.github/workflows/release-guard.yml@2660ee4ce1c51ce3d2bf14043ebc8a2784065cd9
     with:
       version-root: src/Macula
+  # The docs check the repository runs on every push, run again on the tag: the
+  # package about to be published is the one the blocks are compiled against
+  # (macula-codebase-checks#8).
+  docs:
+    name: docs (C# snippets)
+    permissions:
+      contents: read
+    uses: macula-io/macula-ci-images/.github/workflows/doc-snippets-csharp.yml@d25a36c1b6ba7b8e72db17873aa7c2c7793eba70
   publish:
-    needs: [release-guard]
+    needs: [release-guard, docs]
     name: publish to NuGet
     runs-on: ubuntu-24.04
     environment: release
