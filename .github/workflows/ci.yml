@@ -52,14 +52,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: scripts/fetch_libmacula.sh
-      - run: dotnet build --configuration Release
-      # The interop peers are outside the solution, so the line above never
-      # sees them: the structural floor (CA1502 at 9, .editorconfig +
-      # CodeMetricsConfig.txt) reaches them only when they are built.
-      - name: Build the interop peers
+      # One line per project, named rather than left to a solution build:
+      # the structural floor (CA1502 at 9, .editorconfig + CodeMetricsConfig.txt)
+      # can only fail a project that is actually built, and the interop peers
+      # sit outside Macula.slnx entirely.
+      - name: Build every project
         run: |
-          dotnet build scripts/interop/Peer --configuration Release
-          dotnet build scripts/interop/Signer --configuration Release
+          dotnet build src/Macula/Macula.csproj --configuration Release
+          dotnet build tests/Macula.Tests/Macula.Tests.csproj --configuration Release
+          dotnet build examples/Macula.Examples.csproj --configuration Release
+          dotnet build scripts/interop/Peer/Peer.csproj --configuration Release
+          dotnet build scripts/interop/Signer/Signer.csproj --configuration Release
       # A test host that crashes leaves a minidump, kept for a week, so the
       # crash seen twice on a saturated box (macula-dotnet#7) can be read
       # the next time it happens instead of guessed at.
