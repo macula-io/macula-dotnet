@@ -21,10 +21,10 @@ code is 0.9.0-rc.5's plus the entries below.
   signed tbs, which is the key the provider holds now (macula-go v0.29.0, macula-dotnet#21).
 - **The release workflow fails on a duplicate version instead of skipping it** (`release.yml`): the
   NuGet push no longer passes `--skip-duplicate`, so a version already published fails the job
-  rather than reporting success over a publish that never happened. A release that published
-  nothing looked exactly like one that published everything, which is how 0.9.0 came to be prepared
-  a second time on 29 Oct under a number that went live on 19 Oct
-  (macula-io/macula-codebase-checks#37). No library code changes.
+  rather than reporting success over a publish that never happened. That flag never ran on this
+  week's miss: had 0.9.0 been tagged again on 29 Oct, under a number live since 19 Oct, the job
+  would have gone green and published nothing (macula-io/macula-codebase-checks#37). No library
+  code changes.
 
 ### What this release does not change
 
