@@ -82,5 +82,10 @@ jobs:
         with:
           user: ${{ secrets.NUGET_USER }}
 
+      # No --skip-duplicate: a version that is already on NuGet must fail this
+      # job, not be skipped over as though the release had published. A release
+      # that silently publishes nothing is what let 0.9.0 be prepared a second
+      # time on 29 Oct under a number published on 19 Oct
+      # (macula-io/macula-codebase-checks#37).
       - name: Push to NuGet
-        run: dotnet nuget push ./artifacts/Macula.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./artifacts/Macula.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json

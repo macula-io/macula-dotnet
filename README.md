@@ -32,7 +32,7 @@
 > it speaks wire 1.0 (macula 15) and nothing older, so it reaches only a wire
 > 1.0 station. The fleet moved to wire 1.0 on 19 Oct 2026 at 18:03 UTC, and
 > from then on 0.8.0 and everything before it can no longer connect. A plain
-> `dotnet add package Macula` resolves 0.9.0.
+> `dotnet add package Macula` resolved 0.9.0 until 0.10.0.
 
 > **Status of 0.8.0, 2026-09-29:** on the **macula 12** wire: TLS 1.3 with a hybrid
 > post-quantum key exchange, ML-DSA-87 identities (as the ML-DSA-87 +
