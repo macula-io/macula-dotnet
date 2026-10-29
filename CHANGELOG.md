@@ -7,13 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.0] - 2026-10-19
+## [0.9.0] - 2026-10-29
 
 The wire 1.0 release, for the fleet's flag day (19 Oct 2026, 18:03 UTC): from
 then on every live station speaks wire 1.0 (macula 15) and nothing older, and
-0.8.0 can no longer connect. libmacula is macula-go v0.27.0, whose code is
-v0.27.0-rc.8's; this package's code is 0.9.0-rc.5's. The entries for rc.1 to
-rc.5 below are what changed since 0.8.0.
+0.8.0 can no longer connect. libmacula is macula-go v0.29.0, the release that
+carries the A0 contract (v0.27.0 at the flag day); this package's code is
+0.9.0-rc.5's. The entries for rc.1 to rc.5 below are what changed since 0.8.0.
+
+### Changed since this entry was written
+
+- **A call a keyed provider refuses `sealed_required` is resealed and answered**, instead of the
+  caller failing on a stale keyless candidate: the caller seals again to the key in the refusal's
+  signed tbs, which is the key the provider holds now (macula-go v0.29.0, macula-dotnet#21).
+
+### What this release does not change
+
+- Sealing is the default where the provider names a key, and only there. A provider names a KEM key
+  only when it opts in with `KemAdvertise`, which is off by default (`src/Macula/Pool.cs:42`), so two
+  pools on default options talk in the clear. A served procedure is `ServedConfidential.Preferred`
+  by default, which names the key when the pool advertises one, and a caller still reaches a
+  provider that names no key in the clear. Refusing a clear call unless the caller opts out is not
+  in this release.
+- A procedure served with no policy is advertised open, unary and streaming alike: `Serve` and
+  `ServeStream` take the policy as an optional parameter, and omitting it serves any caller
+  (macula-dotnet#24 for streams, macula-dotnet#25 for unary).
 
 ## [0.9.0-rc.5] - 2026-10-17
 
