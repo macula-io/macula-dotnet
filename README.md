@@ -20,6 +20,14 @@
 
 ---
 
+> **A0, 0.10.0 (2026-10-29):** over libmacula from macula-go v0.29.0. A call a
+> keyed provider refuses `sealed_required` is now resealed to the key that
+> refusal carries and answered, instead of failing on a stale keyless candidate.
+> Sealing is still the default only where the provider names a KEM key, and a
+> procedure served with no policy is still open; refusing a clear call unless the
+> caller opts out is not in this release. A plain `dotnet add package Macula`
+> resolves 0.10.0.
+
 > **Wire 1.0, 0.9.0 (2026-10-19):** built on libmacula from macula-go v0.27.0,
 > it speaks wire 1.0 (macula 15) and nothing older, so it reaches only a wire
 > 1.0 station. The fleet moved to wire 1.0 on 19 Oct 2026 at 18:03 UTC, and
