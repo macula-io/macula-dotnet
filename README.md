@@ -239,11 +239,10 @@ var (result, report) = await caller.CallReportAsync(realm, procedure, payload,
 - `KemAdvertise` is off by default. Enable it only once every station runs
   macula 12.11 or later and every caller can seal (macula 13, macula-go 0.18,
   Macula .NET 0.7 or later).
-- A keyed provider that refuses a call `sealed_required`, because its key rotated
-  between the advertisement the caller read and the call, has the call resealed
-  to the key in the refusal's signed tbs and answered, the key that provider
-  holds now, rather than the caller failing on a stale keyless candidate
-  (macula-go v0.29.0).
+- A keyed provider that refuses a call `sealed_required`, because the
+  advertisement the caller read named no key, has the call resealed to the key in
+  the refusal's signed tbs and answered, the key that provider holds now, rather
+  than the caller failing on a stale keyless candidate (macula-go v0.29.0).
 - A served procedure is `ServedConfidential.Preferred` by default: it names
   the key when the pool advertises one, and still takes a clear call while its
   last keyless advertisement could be served. `Required` refuses every clear
