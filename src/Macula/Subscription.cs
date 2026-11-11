@@ -79,15 +79,31 @@ public sealed class Subscription : IAsyncDisposable
     private readonly NativePump<MeshItem> _pump;
 
     internal Subscription(SubscriptionHandle handle)
+        : this(handle, token => NextOf(handle, token))
+    {
+    }
+
+    // A subscription whose pump takes what a test says it takes, with no library behind it: what ReadAllAsync
+    // hands a reader is then shown with a notice's own text, which no library available to a test reports
+    // (macula-dotnet#25 r=1: a pump that reads every item as an event, and a reader that drops every notice,
+    // both left every other test green).
+    internal Subscription(SubscriptionHandle handle, Func<nuint, NativePump<MeshItem>.Taken> next)
     {
         _handle = handle;
-        _pump = new NativePump<MeshItem>("macula subscription", 64, token =>
-        {
-            nint err = 0;
-            var text = NativeCall.TakeString(Libmacula.macula_subscription_next(_handle, 0, token, out var closed, ref err));
-            NativeCall.Check(err);
-            return closed == 1 || text is null ? new(default!, true) : new(ItemOf(text), false);
-        });
+        _pump = new NativePump<MeshItem>("macula subscription", 64, next);
+    }
+
+    // One turn of the pump: the item libmacula handed over, read by its kind, or the end of the subscription.
+    internal static NativePump<MeshItem>.Taken ItemFrom(string? text, bool closed) =>
+        closed || text is null ? new(default!, true) : new(ItemOf(text), false);
+
+    // The native take, and the one step a reader's item is made by (ItemFrom).
+    private static NativePump<MeshItem>.Taken NextOf(SubscriptionHandle handle, nuint token)
+    {
+        nint err = 0;
+        var text = NativeCall.TakeString(Libmacula.macula_subscription_next(handle, 0, token, out var closed, ref err));
+        NativeCall.Check(err);
+        return ItemFrom(text, closed == 1);
     }
 
     // The one place an item's kind is read, and so the one place to hold to what each kind becomes.

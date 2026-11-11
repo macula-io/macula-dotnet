@@ -35,8 +35,29 @@ public sealed class AbiHeaderTests
         Assert.Equal(ErrorKind.Failed, e.Kind);
         Assert.Contains($"ABI {other}", e.Message);
         Assert.Contains($"ABI {Libmacula.AbiVersion}", e.Message);
+        // An older library too: the case that happens in the field. macula-go v0.30.0 is ABI 1, it exports
+        // both macula_wire_version and the floor export, so the P/Invoke declarations bind and this number is
+        // the only thing that refuses it.
+        var older = Libmacula.AbiVersion - 1;
+        var old = Assert.Throws<MaculaException>(() => NativeCall.RefuseAnotherAbi(older));
+        Assert.Equal(ErrorKind.Failed, old.Kind);
+        Assert.Contains($"ABI {older}", old.Message);
+        Assert.Contains($"ABI {Libmacula.AbiVersion}", old.Message);
         // The ABI this package is written against is accepted, and handed back.
         Assert.Equal(Libmacula.AbiVersion, NativeCall.RefuseAnotherAbi(Libmacula.AbiVersion));
+    }
+
+    // The load path's own refusal, driven through Load: every other test loads a library of this package's
+    // ABI, so a check deleted beside this one leaves them all green. The ABI is handed in, as macula-php's
+    // reportAbi does, because no library available to a test reports another one.
+    [Fact]
+    public void TheLoadPathRefusesALibraryOfAnotherAbi()
+    {
+        var older = Libmacula.AbiVersion - 1;
+        var e = Assert.Throws<MaculaException>(() => NativeCall.Load(older));
+        Assert.Equal(ErrorKind.Failed, e.Kind);
+        Assert.Contains($"ABI {older}", e.Message);
+        Assert.Contains($"ABI {Libmacula.AbiVersion}", e.Message);
     }
 
     // What the load path accepted is the number the load path itself checked, not one written beside it: a

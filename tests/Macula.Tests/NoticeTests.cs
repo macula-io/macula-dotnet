@@ -1,3 +1,5 @@
+using Macula.Native;
+
 namespace Macula.Tests;
 
 // Every item a subscription hands over carries a kind (macula-go's cabi/CONTRACT.md, "Inboxes"), and a
@@ -56,6 +58,32 @@ public sealed class NoticeTests
             """));
         Assert.Equal("plumtree", e.DeliveredVia);
         Assert.Null(e.Payload);
+    }
+
+    // A notice reaches a reader as a notice: through the pump's own step and ReadAllAsync's own path, not
+    // ItemOf called by hand. Two ways of losing that are otherwise invisible: a pump that reads every item as
+    // an event (which fails on the first link lost), and a reader that hands over events alone (which drops
+    // the gap that says to resync).
+    [Fact]
+    public async Task ANoticeReachesAReaderThroughThePump()
+    {
+        var handedOver = new Queue<string?>([
+            """{"kind":"gap","from_ms":1762992000000,"to_ms":1762992060000,"reason":"goodbye"}""",
+            null,
+        ]);
+        await using var subscription = new Subscription(new SubscriptionHandle(),
+            _ => Subscription.ItemFrom(handedOver.Dequeue(), false));
+
+        var items = new List<MeshItem>();
+        await foreach (var item in subscription.ReadAllAsync())
+        {
+            items.Add(item);
+        }
+
+        var notice = Assert.IsType<MeshNotice>(Assert.Single(items));
+        Assert.Equal(MeshNotice.Gap, notice.Kind);
+        Assert.Equal(1762992060000UL, notice.ToMs);
+        Assert.Equal("goodbye", notice.Reason);
     }
 
     [Fact]

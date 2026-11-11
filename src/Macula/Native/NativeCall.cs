@@ -30,7 +30,7 @@ internal static class NativeCall
     // which wire it speaks) is not the one on screen (macula-dotnet#12). The
     // second caller gets that same MaculaException rather than a second
     // attempt at a load that has already failed.
-    private static readonly Lazy<bool> Loaded = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+    private static readonly Lazy<bool> Loaded = new(() => Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
     // Loads and checks libmacula on first use.
     internal static void EnsureLoaded() => _ = Loaded.Value;
@@ -57,9 +57,18 @@ internal static class NativeCall
         return libraryAbi;
     }
 
-    // The load and the checks, once; true when the library may be used. What
-    // this throws, the caller gets (EnsureLoaded).
-    private static bool Load()
+    /// <summary>
+    /// The load and the checks, once; true when the library may be used. What this throws, the caller gets
+    /// (EnsureLoaded).
+    /// <para>
+    /// <paramref name="reportedAbi"/> is for a test: it stands in for the number the library reports, which no
+    /// library available to a test is another of, so the refusal this path makes is otherwise unreachable (the
+    /// same seam macula-php's <c>reportAbi</c> gives, macula-dotnet#25 r=1). The real load passes nothing, and
+    /// the library's own report is read here, after the load and where its runtime's signals have been put back.
+    /// </para>
+    /// </summary>
+    /// <param name="reportedAbi">The ABI to check in place of the library's own report; null for the library's.</param>
+    internal static bool Load(int? reportedAbi = null)
     {
         // libmacula's Go runtime sets its signal handlers while the library
         // loads (its constructor, inside dlopen); the load must leave the
@@ -70,7 +79,7 @@ internal static class NativeCall
         var suspension = SuspensionSignal.Save();
         var library = Resolve(Libmacula.Library, typeof(NativeCall).Assembly, null);
         suspension?.Restore();
-        var version = Libmacula.macula_abi_version();
+        var version = reportedAbi ?? Libmacula.macula_abi_version();
         CheckedAbi = RefuseAnotherAbi(version);
         // Which wire the library links, said by the library itself rather than
         // inferred from the functions it happens to export (cabi/CONTRACT.md
