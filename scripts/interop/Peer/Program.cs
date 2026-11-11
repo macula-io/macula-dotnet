@@ -294,6 +294,13 @@ internal static class Program
     static string? Text(JsonNode? payload) =>
         payload is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
+    // An item that is not an event: a notice that events may have been missed, or a kind this peer
+    // does not read. Printed, and the wait goes on.
+    static void Missed(MeshItem item) =>
+        Console.WriteLine(item is MeshNotice notice
+            ? $"may have missed events: {notice.Kind}, {notice.Reason}"
+            : $"a subscription item this peer does not read: {item}");
+
     static async Task<bool> GroupMember(Pool pool, MeshId realm, string work, string prefix, string topic, string grant)
     {
         var group = new Macula.Group(prefix, grant);
@@ -310,7 +317,7 @@ internal static class Program
             {
                 if (item is not MeshEvent e)
                 {
-                    Console.WriteLine($"may have missed events: {((MeshNotice)item).Kind}, {((MeshNotice)item).Reason}");
+                    Missed(item);
                     continue;
                 }
                 if (Text(e.Payload) == SaysOwn)

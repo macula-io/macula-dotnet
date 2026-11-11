@@ -20,6 +20,15 @@
 
 ---
 
+> **ABI 2, 0.11.0 (2026-11-11):** over libmacula from macula-go v0.31.0, the C ABI 2 library.
+> Every serve names who may call it: `Pool.Serve` and `Pool.ServeStream` take an `AuthPolicy`, and a
+> procedure that serves anyone says `new Open()` in the source rather than leaving an argument out,
+> which no longer compiles. The library refuses serve options that name no policy, and the package
+> reads its ABI and wire from `abi/macula.h`, the header that release ships, instead of from a
+> literal. A subscription hands a notice over as itself, a `MeshNotice` when events may have been
+> missed, never as a `MeshEvent`. **Breaking:** 0.10.0 code that served without naming a policy must
+> name one, and `ReadAllAsync`'s items are `MeshItem` (`MeshEvent` or `MeshNotice`).
+
 > **A0, 0.10.0 (2026-10-29):** over libmacula from macula-go v0.29.0. A call a
 > keyed provider refuses `sealed_required` is now resealed to the key that
 > refusal carries and answered, instead of failing on a stale keyless candidate.
@@ -100,7 +109,10 @@ dotnet add package Macula
 .NET 10. Each libmacula in the package is the file of a macula-go release,
 checked against its `SHA256SUMS` and its GitHub build provenance attestation
 before it was packed (`scripts/fetch_libmacula.sh`); `libmacula.version`
-names the release.
+names the release. The ABI and the wire this package is written against are
+not literals in the code: they are read from `abi/macula.h`, the header that
+release ships (at the commit in `abi/MACULA_GO_REF`), when the package builds,
+and the library is refused at load if it reports another ABI.
 
 ## Quick start
 
@@ -124,19 +136,25 @@ await using var pool = await Pool.ConnectAsync(key, seeds, new PoolOptions
 });
 
 // Serve a procedure in this node's own namespace: only this node can.
+// The policy is required, and Open says this one serves anyone.
 var greet = pool.OwnProcedure("greet");
 await using var served = pool.Serve(realm, greet, (request, cancellationToken) =>
-    ValueTask.FromResult<JsonNode?>(new JsonObject { ["hello"] = request.Caller.ToString() }));
+    ValueTask.FromResult<JsonNode?>(new JsonObject { ["hello"] = request.Caller.ToString() }),
+    new Open());
 
 // Call a service under an org, by direct dial to a provider the realm trusts.
 var reply = await pool.CallAsync(realm, "mcl-echo/echo", new JsonObject { ["message"] = "hi" });
 
-// Publish and subscribe.
+// Publish and subscribe. A subscription hands over a MeshItem: an event, or a notice that events
+// may have been missed.
 await using var subscription = pool.Subscribe(realm, "news");
 pool.Publish(realm, "news", new JsonObject { ["headline"] = "macula 12" });
-await foreach (var e in subscription.ReadAllAsync(cancellationToken))
+await foreach (var item in subscription.ReadAllAsync(cancellationToken))
 {
-    Console.WriteLine($"{e.Publisher}: {e.Payload}");
+    if (item is MeshEvent e)
+    {
+        Console.WriteLine($"{e.Publisher}: {e.Payload}");
+    }
 }
 ```
 
@@ -147,11 +165,11 @@ await foreach (var e in subscription.ReadAllAsync(cancellationToken))
 | `NodeKey` | `GenerateAsync`, `Load`, `LoadOrCreateAsync`, `Save`, `NodeId`, `PublicKey`, `Sign`, `Verify`; `CreateUcan`, `DeviceRequestProof`, `OwnershipProof` (below) |
 | `Pool` | `ConnectAsync` (`PoolOptions.KemAdvertise`, below), `NodeId`, `OwnProcedure`, `Status`, `EventsAsync`, `DisposeAsync` |
 | calls | `Pool.CallAsync` (`CallOptions.Ucan` presents a UCAN, `CallOptions.Confidential` seals it), `Pool.CallReportAsync`, `Pool.ProvidersAsync` |
-| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose, each optionally gated on an `AuthPolicy` and sealed (`ServedConfidential`) |
+| serving | `Pool.Serve` (a handler per call), `Pool.ServeStream` (a handler per session), each a `Served` to dispose, each naming its `AuthPolicy` (`new Open()` serves anyone) and optionally sealed (`ServedConfidential`) |
 | streams | `Pool.OpenStreamAsync` (its `ucan` presents one, its `confidential` seals it), and `MeshStream`: `Send`, `CloseSend`, `Reply`, `Abort`, `Close`, `ReadAllAsync`, `Report` |
 | UCANs | `Ucan.ProofId`, `Ucan.KeyId`, `Capability`, `UcanOptions`, `UcanPresentation`, `UcanRequired`, `RealmMemberRequired` |
 | proofs | `DeviceRequestProofs.Message`, `OwnershipProofs.Message`: the exact bytes each signs |
-| publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, `Dropped` |
+| publish/subscribe | `Pool.Publish`, `Pool.Subscribe`, and `Subscription.ReadAllAsync`, which hands over a `MeshItem`: a `MeshEvent` for a publication, a `MeshNotice` when events may have been missed; and `Dropped` |
 | sealed groups | `Pool.PublishGroupAsync`, `Pool.SubscribeGroupAsync`, `Group`, and `MeshEvent.Sealed`, `SealKeyId`, `Unopened` (below) |
 | content | `Pool.ShareContentAsync`, `UnshareContentAsync`, `GetContentAsync` |
 | the DHT | `Pool.FindRecordAsync`, `FindRecordsAsync`, `FindRecordsByTypeAsync`, `PutRecordAsync` |
@@ -198,7 +216,12 @@ the realm's key in `PoolOptions.RealmTrust`.
 
 ### UCANs
 
-A procedure served with an `AuthPolicy` answers only callers presenting a
+Every serve names who may call it, and the policy has no default: `new Open()` serves anyone, and
+the policies below admit only a caller whose UCAN chain they accept, answering the rest
+`unauthorized`. Advertising a procedure to the whole mesh is a line in the source, not an argument
+left out, and the C ABI refuses serve options that name no policy (ABI 2).
+
+A procedure served with a `UcanRequired` or `RealmMemberRequired` answers only callers presenting a
 UCAN (macula 12's post-quantum capability token) the policy accepts. The
 provider checks each call and stream open before the handler sees it, as
 macula does, and answers the rest `unauthorized` (or `malformed_frame` for a
@@ -235,7 +258,8 @@ until a provider opts in, and a caller seals whenever it can:
 ```csharp
 // The provider names its KEM key in its advertisements.
 await using var provider = await Pool.ConnectAsync(key, seeds, new PoolOptions { RealmTrust = trust, KemAdvertise = true });
-await using var served = provider.Serve(realm, procedure, handler, confidential: ServedConfidential.Required);
+await using var served = provider.Serve(realm, procedure, handler,
+    policy: new Open(), confidential: ServedConfidential.Required);
 
 // The caller seals to it: Preferred (the default) whenever the provider's advertisement names a key,
 // Required never calls one that names none.

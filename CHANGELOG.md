@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-11
+
+The ABI 2 release: libmacula is macula-go v0.31.0, whose C ABI is version 2, and
+every serve names its policy. A serve is a line in the source that says who may
+call the procedure, not an argument left out.
+
+### Changed
+
+- **`Pool.Serve` and `Pool.ServeStream` take an `AuthPolicy` with no default**
+  (macula-dotnet#25): a procedure that serves anyone says `new Open()`. 0.10.0 made the policy
+  optional and defaulted to open, so omitting it advertised the procedure to every realm member
+  (macula-dotnet#24 for streams, #25 for unary). Omitting it is now a compile error (`CS7036`), and
+  the C ABI itself refuses serve options that name no policy (`invalid_argument`, naming both the
+  open policy and the gated door), so nothing downstream can fall back to open either (ABI 2,
+  macula-go#57, #60).
+- **libmacula from macula-go v0.31.0** (was v0.29.0), the release that carries C ABI 2: the serve
+  doors that took no options (`macula_pool_serve`, `macula_pool_serve_stream`) are gone, and
+  `macula_pool_serve_opts`/`_serve_stream_opts` refuse options that name no policy.
+- **`Libmacula.AbiVersion` and `Libmacula.WireVersion` are no longer literals in this package**: a
+  `GenerateMaculaAbi` target in `Macula.csproj` reads them from `abi/macula.h` at build time, the
+  header the release at `libmacula.version` ships (its commit is in `abi/MACULA_GO_REF`). The header
+  cannot move to another ABI without this package moving in the same commit, and the load path
+  refuses a library that reports another ABI, naming both numbers (`NativeCall.RefuseAnotherAbi`).
+  `scripts/fetch_libmacula.sh` compares the release's header with `abi/macula.h` byte for byte.
+
+### Added
+
+- **`Open`: the policy that serves anyone** (`{"kind":"open"}`), beside `UcanRequired` and
+  `RealmMemberRequired`, so advertising a procedure to the whole mesh is written where the
+  procedure is served.
+- **`MeshItem`, and `MeshNotice` for events a subscription may have missed** (macula-dotnet#24's
+  protocol side, in this release's binding): `Subscription.ReadAllAsync` hands over a `MeshItem` — a
+  `MeshEvent` for a publication, or a `MeshNotice` when the library reports an interruption
+  (`Kind` `interrupted`, `FromMs`, `Reason`) or a gap (`Kind` `gap`, `FromMs`, `ToMs`). Read as an
+  event, a notice was a failure on the first link lost, and the gap that says to resync was lost
+  with it. A kind this package does not read is a `MaculaException` naming it, never an event.
+
+### What this release does not change
+
+- Sealing is still the default only where the provider names a KEM key: `KemAdvertise` is off by
+  default (`src/Macula/Pool.cs`), and a served procedure is `ServedConfidential.Preferred` unless it
+  says otherwise. Refusing a clear call unless the caller opts out is not in this release.
+- A gated stream still judges each open, not the first: a caller whose chain the policy refuses is
+  answered a stream error of code `unauthorized`, and the procedure keeps serving the callers it
+  admits (macula-dotnet#24, held by `UcanTests.AGatedStreamJudgesEachOpen`).
+
 ## [0.10.0] - 2026-10-29
 
 The A0 release: libmacula is macula-go v0.29.0, the release that carries the A0

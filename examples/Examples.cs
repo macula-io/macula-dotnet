@@ -120,12 +120,15 @@ internal static class PublishSubscribe
         {
             await foreach (var item in subscription.ReadAllAsync(heard.Token))
             {
-                if (item is MeshEvent e)
+                switch (item)
                 {
-                    Console.WriteLine($"heard seq {e.Seq} from {e.Publisher} via {e.DeliveredVia}: {e.Payload?.ToJsonString()}");
-                    return;
+                    case MeshNotice notice:
+                        Console.WriteLine($"may have missed events: {notice.Kind}, {notice.Reason}");
+                        continue;
+                    case MeshEvent e:
+                        Console.WriteLine($"heard seq {e.Seq} from {e.Publisher} via {e.DeliveredVia}: {e.Payload?.ToJsonString()}");
+                        return;
                 }
-                Console.WriteLine($"may have missed events: {((MeshNotice)item).Kind}, {((MeshNotice)item).Reason}");
             }
         }, cancellationToken);
         while (!listening.IsCompleted)
