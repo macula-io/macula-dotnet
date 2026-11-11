@@ -71,6 +71,7 @@ public sealed class NoticeTests
             """{"kind":"gap","from_ms":1762992000000,"to_ms":1762992060000,"reason":"goodbye"}""",
             null,
         ]);
+        // The handle is never reached: the step is the test's, so no library stands behind this subscription.
         await using var subscription = new Subscription(new SubscriptionHandle(),
             _ => Subscription.ItemFrom(handedOver.Dequeue(), false));
 
