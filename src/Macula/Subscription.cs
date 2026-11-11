@@ -90,7 +90,8 @@ public sealed class Subscription : IAsyncDisposable
         });
     }
 
-    private static MeshItem ItemOf(string text)
+    // The one place an item's kind is read, and so the one place to hold to what each kind becomes.
+    internal static MeshItem ItemOf(string text)
     {
         using var json = JsonDocument.Parse(text);
         var e = json.RootElement;
