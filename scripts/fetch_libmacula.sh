@@ -26,9 +26,14 @@ gh attestation verify "$download/macula.h" --repo "$repo" > /dev/null
 # abi/MACULA_GO_REF names, the binding reads the ABI and the wire out of it
 # when it builds (Macula.csproj, GenerateMaculaAbi), and it binds
 # cabi/macula.h's declarations. So the two files are the same file, not merely
-# two that agree on two numbers.
-if ! cmp -s "$download/macula.h" "$root/abi/macula.h"; then
-  echo "fetch_libmacula.sh: $tag's macula.h is not abi/macula.h (abi/MACULA_GO_REF)" >&2
+# two that agree on two numbers. By sha256 rather than by cmp, which Git for
+# Windows' bash does not carry; and the header is -text in .gitattributes, so a
+# Windows checkout's copy is the release's bytes and not the same bytes with
+# CRLF endings.
+header_sum=$(sha256sum "$download/macula.h" | awk '{print $1}')
+binding_sum=$(sha256sum "$root/abi/macula.h" | awk '{print $1}')
+if [ "$header_sum" != "$binding_sum" ]; then
+  echo "fetch_libmacula.sh: $tag's macula.h ($header_sum) is not abi/macula.h ($binding_sum)" >&2
   exit 1
 fi
 header_abi=$(awk '$1 == "#define" && $2 == "MACULA_ABI_VERSION" { print $3 }' "$download/macula.h")

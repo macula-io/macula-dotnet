@@ -1,2 +1,7 @@
 # The test vectors are pinned by sha256, byte for byte: never convert their line endings.
 tests/Macula.Tests/fixtures/** -text
+
+# The ABI header is the release artifact scripts/fetch_libmacula.sh compares with the one the tag
+# ships, byte for byte: a Windows checkout that turned its endings into CRLF would fail that
+# comparison for a reason the release does not have (the test matrix's windows-2025 job, macula-dotnet#25).
+abi/macula.h -text
