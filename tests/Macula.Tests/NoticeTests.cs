@@ -61,19 +61,19 @@ public sealed class NoticeTests
     }
 
     // A notice reaches a reader as a notice: through the pump's own step and ReadAllAsync's own path, not
-    // ItemOf called by hand. Two ways of losing that are otherwise invisible: a pump that reads every item as
-    // an event (which fails on the first link lost), and a reader that hands over events alone (which drops
-    // the gap that says to resync).
+    // ItemOf called by hand. Three ways of losing that are otherwise invisible: a pump that reads every item as
+    // an event (which fails on the first link lost), a reader that hands over events alone (which drops the gap
+    // that says to resync), and a step the pump never runs at all. So the test fakes only the native take — the
+    // text and the closed flag macula_subscription_next answers — and NextOf, with its ItemFrom call, runs.
     [Fact]
     public async Task ANoticeReachesAReaderThroughThePump()
     {
-        var handedOver = new Queue<string?>([
-            """{"kind":"gap","from_ms":1762992000000,"to_ms":1762992060000,"reason":"goodbye"}""",
-            null,
+        var handedOver = new Queue<Subscription.NativeTake>([
+            new("""{"kind":"gap","from_ms":1762992000000,"to_ms":1762992060000,"reason":"goodbye"}""", false),
+            new(null, true),
         ]);
-        // The handle is never reached: the step is the test's, so no library stands behind this subscription.
-        await using var subscription = new Subscription(new SubscriptionHandle(),
-            _ => Subscription.ItemFrom(handedOver.Dequeue(), false));
+        // The handle is never reached: the take is the test's, so no library stands behind this subscription.
+        await using var subscription = new Subscription(new SubscriptionHandle(), _ => handedOver.Dequeue());
 
         var items = new List<MeshItem>();
         await foreach (var item in subscription.ReadAllAsync())
