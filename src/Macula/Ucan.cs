@@ -75,9 +75,13 @@ public sealed record UcanPresentation(string Token, IReadOnlyList<string>? Proof
 }
 
 /// <summary>
-/// What a gated procedure requires of a caller's UCAN. The provider checks each call and stream open before
-/// the handler sees it, as macula's link does, and refuses the rest with <c>unauthorized</c> (or
-/// <c>malformed_frame</c> for a proof no token in the chain names).
+/// Who may call a served procedure, or open a served stream: <see cref="Open"/> serves anyone, and a UCAN
+/// policy admits only a caller whose chain it accepts. Every serve names one (<see cref="Pool.Serve"/>,
+/// <see cref="Pool.ServeStream"/>), because the C ABI refuses serve options that name none (ABI 2,
+/// macula-go#57, #60): advertising a procedure to the whole mesh is a line in the source, <see cref="Open"/>,
+/// rather than an argument left out. The provider checks each call and stream open before the handler sees it,
+/// as macula's link does, and refuses the rest with <c>unauthorized</c> (or <c>malformed_frame</c> for a proof
+/// no token in the chain names).
 /// </summary>
 public abstract record AuthPolicy
 {
@@ -86,6 +90,16 @@ public abstract record AuthPolicy
     }
 
     internal abstract JsonObject ToJson();
+}
+
+/// <summary>
+/// Serves anyone. The C ABI refuses serve options that name no policy (ABI 2, macula-go#57, #60), so an open
+/// procedure or stream is one whose own serve says <c>policy: new Open()</c>, as macula-io/macula#150 made the
+/// Erlang SDK say <c>auth =&gt; open</c>.
+/// </summary>
+public sealed record Open : AuthPolicy
+{
+    internal override JsonObject ToJson() => new() { ["kind"] = "open" };
 }
 
 /// <summary>A chain rooted at the identity key of the node <see cref="Issuer"/>.</summary>

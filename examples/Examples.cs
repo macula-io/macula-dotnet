@@ -48,7 +48,7 @@ internal static class ServeAndCall
             {
                 ["greeting"] = $"hello, {request.Payload?["name"]?.GetValue<string>() ?? "stranger"}",
                 ["caller"] = request.Caller.ToString(),
-            }));
+            }), policy: new Open());
         var reply = await caller.CallAsync(Mesh.Realm, greet, new JsonObject { ["name"] = ".NET" },
             new CallOptions { Timeout = TimeSpan.FromSeconds(15) }, cancellationToken);
         Console.WriteLine($"{greet} answered {reply?.ToJsonString()}");
@@ -118,10 +118,14 @@ internal static class PublishSubscribe
         using var heard = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var listening = Task.Run(async () =>
         {
-            await foreach (var e in subscription.ReadAllAsync(heard.Token))
+            await foreach (var item in subscription.ReadAllAsync(heard.Token))
             {
-                Console.WriteLine($"heard seq {e.Seq} from {e.Publisher} via {e.DeliveredVia}: {e.Payload?.ToJsonString()}");
-                return;
+                if (item is MeshEvent e)
+                {
+                    Console.WriteLine($"heard seq {e.Seq} from {e.Publisher} via {e.DeliveredVia}: {e.Payload?.ToJsonString()}");
+                    return;
+                }
+                Console.WriteLine($"may have missed events: {((MeshNotice)item).Kind}, {((MeshNotice)item).Reason}");
             }
         }, cancellationToken);
         while (!listening.IsCompleted)
@@ -151,7 +155,7 @@ internal static class Streams
             stream.Send("raw bytes"u8);
             stream.Reply("counted");
             return Task.CompletedTask;
-        });
+        }, policy: new Open());
         await using var opened = await caller.OpenStreamAsync(Mesh.Realm, count, StreamMode.Server,
             new JsonObject { ["to"] = 3 }, timeout: TimeSpan.FromSeconds(15), cancellationToken: cancellationToken);
         await foreach (var frame in opened.ReadAllAsync(cancellationToken))
@@ -227,7 +231,7 @@ internal static class ErrorHandling
         {
             await release.Task.WaitAsync(deadline);
             return null;
-        }))
+        }, policy: new Open()))
         {
             try
             {

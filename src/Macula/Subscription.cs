@@ -5,6 +5,15 @@ using Macula.Native;
 
 namespace Macula;
 
+/// <summary>
+/// One item a subscription hands over: a <see cref="MeshEvent"/> for a publication, or a
+/// <see cref="MeshNotice"/> when libmacula reports that events may have been missed. Every item on the wire
+/// carries a <c>kind</c> (macula-go's cabi/CONTRACT.md, "Inboxes"), and a notice has none of an event's
+/// fields: read as an event it would be a failure on the first link lost, and the gap that says to resync
+/// would be lost the same way.
+/// </summary>
+public abstract record MeshItem;
+
 /// <summary>A publication a subscription heard, its signature verified.</summary>
 /// <param name="Publisher">The node that published it.</param>
 /// <param name="Realm">The realm it was published in.</param>
@@ -32,7 +41,33 @@ namespace Macula;
 /// <c>tag_invalid</c>. Null when the event carries its payload.
 /// </param>
 public sealed record MeshEvent(MeshId Publisher, MeshId Realm, string Topic, ulong Seq, ulong PublishedAt,
-    JsonNode? Payload, string DeliveredVia, bool Sealed = false, string? SealKeyId = null, string? Unopened = null);
+    JsonNode? Payload, string DeliveredVia, bool Sealed = false, string? SealKeyId = null, string? Unopened = null)
+    : MeshItem;
+
+/// <summary>
+/// What a subscription reports when events may have been missed: its last link to a station ended
+/// (<see cref="Interrupted"/>: <see cref="FromMs"/> is when that link last heard from its station, and
+/// <see cref="Reason"/> why it ended), or a station carries the subscription again (<see cref="Gap"/>: what
+/// fell between <see cref="FromMs"/> and <see cref="ToMs"/> may be gone, so resync). The times are this
+/// node's clock, hints and not a filter on <see cref="MeshEvent.PublishedAt"/>.
+/// <para>
+/// A notice arrives only where no other link carried the subscription through, and never at the first
+/// subscribe. It is handed over as itself, never as a <see cref="MeshEvent"/> (macula-go's cabi/CONTRACT.md,
+/// "Inboxes"); a <see cref="Kind"/> this package does not read is refused by name instead.
+/// </para>
+/// </summary>
+/// <param name="Kind">Which notice this is: <see cref="Interrupted"/> or <see cref="Gap"/>.</param>
+/// <param name="FromMs">From when events may have been missed, in Unix milliseconds.</param>
+/// <param name="ToMs">For a gap, until when; null for an interruption, which names no time it was carried again.</param>
+/// <param name="Reason">The library's reason, such as <c>liveness_lost</c> or <c>goodbye</c>.</param>
+public sealed record MeshNotice(string Kind, ulong FromMs, ulong? ToMs, string Reason) : MeshItem
+{
+    /// <summary>The kind of a notice saying the subscription's last link to a station ended.</summary>
+    public const string Interrupted = "interrupted";
+
+    /// <summary>The kind of a notice saying a station carries the subscription again, and what fell between.</summary>
+    public const string Gap = "gap";
+}
 
 /// <summary>
 /// A subscription to a topic. Its events wait for a reader in libmacula (256 at most; one arriving to a
@@ -41,43 +76,61 @@ public sealed record MeshEvent(MeshId Publisher, MeshId Realm, string Topic, ulo
 public sealed class Subscription : IAsyncDisposable
 {
     private readonly SubscriptionHandle _handle;
-    private readonly NativePump<MeshEvent> _pump;
+    private readonly NativePump<MeshItem> _pump;
 
     internal Subscription(SubscriptionHandle handle)
     {
         _handle = handle;
-        _pump = new NativePump<MeshEvent>("macula subscription", 64, token =>
+        _pump = new NativePump<MeshItem>("macula subscription", 64, token =>
         {
             nint err = 0;
             var text = NativeCall.TakeString(Libmacula.macula_subscription_next(_handle, 0, token, out var closed, ref err));
             NativeCall.Check(err);
-            return closed == 1 || text is null ? new(default!, true) : new(EventOf(text), false);
+            return closed == 1 || text is null ? new(default!, true) : new(ItemOf(text), false);
         });
     }
 
-    private static MeshEvent EventOf(string text)
+    private static MeshItem ItemOf(string text)
     {
         using var json = JsonDocument.Parse(text);
         var e = json.RootElement;
-        return new MeshEvent(MeshId.Parse(e.GetProperty("publisher").GetString()!),
+        var kind = e.TryGetProperty("kind", out var k) && k.ValueKind == JsonValueKind.String ? k.GetString() : "event";
+        return kind switch
+        {
+            "event" => EventOf(e),
+            MeshNotice.Interrupted or MeshNotice.Gap => NoticeOf(kind, e),
+            _ => throw new MaculaException(ErrorKind.Failed,
+                $"a subscription item of kind \"{kind}\", which this Macula package does not read"),
+        };
+    }
+
+    private static MeshNotice NoticeOf(string kind, JsonElement e) =>
+        new(kind, e.GetProperty("from_ms").GetUInt64(),
+            e.TryGetProperty("to_ms", out var to) && to.ValueKind == JsonValueKind.Number ? to.GetUInt64() : null,
+            e.GetProperty("reason").GetString()!);
+
+    private static MeshEvent EventOf(JsonElement e) =>
+        new(MeshId.Parse(e.GetProperty("publisher").GetString()!),
             MeshId.Parse(e.GetProperty("realm").GetString()!), e.GetProperty("topic").GetString()!,
             e.GetProperty("seq").GetUInt64(), e.GetProperty("published_at").GetUInt64(),
             Payload.FromElement(e.GetProperty("payload")), e.GetProperty("delivered_via").GetString()!,
             Sealed: e.TryGetProperty("sealed", out var sealedFlag) && sealedFlag.GetInt32() == 1,
             SealKeyId: TextOf(e, "seal_key_id"), Unopened: TextOf(e, "unopened"));
-    }
 
     // A field the event carries as a string when it has one at all.
     private static string? TextOf(JsonElement e, string name) =>
         e.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
 
-    /// <summary>The subscription's events as they arrive, until it is disposed or its pool closes.</summary>
-    public async IAsyncEnumerable<MeshEvent> ReadAllAsync(
+    /// <summary>
+    /// The subscription's items as they arrive, until it is disposed or its pool closes: a
+    /// <see cref="MeshEvent"/> for a publication, a <see cref="MeshNotice"/> when events may have been missed.
+    /// </summary>
+    public async IAsyncEnumerable<MeshItem> ReadAllAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        await foreach (var e in _pump.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+        await foreach (var item in _pump.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
         {
-            yield return e;
+            yield return item;
         }
     }
 

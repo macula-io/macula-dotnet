@@ -93,7 +93,7 @@ internal static class Program
             request.Sealed
                 ? ValueTask.FromResult<JsonNode?>("kept by dotnet")
                 : throw new InvalidOperationException("a clear request reached the handler"),
-            confidential: ServedConfidential.Required);
+            confidential: ServedConfidential.Required, policy: new Open());
         await using var watch = pool.ServeStream(realm, pool.OwnProcedure("watch"), StreamMode.Server, (stream, _) =>
         {
             if (!stream.Request.Sealed)
@@ -103,7 +103,7 @@ internal static class Program
             stream.Send("chunk from dotnet"u8);
             stream.Reply("streamed by dotnet");
             return Task.CompletedTask;
-        }, confidential: ServedConfidential.Required);
+        }, confidential: ServedConfidential.Required, policy: new Open());
         Console.WriteLine("serving");
         await Task.Delay(hold);
         return 0;
@@ -306,8 +306,13 @@ internal static class Program
         using var watching = new CancellationTokenSource(TimeSpan.FromSeconds(60));
         try
         {
-            await foreach (var e in subscription.ReadAllAsync(watching.Token))
+            await foreach (var item in subscription.ReadAllAsync(watching.Token))
             {
+                if (item is not MeshEvent e)
+                {
+                    Console.WriteLine($"may have missed events: {((MeshNotice)item).Kind}, {((MeshNotice)item).Reason}");
+                    continue;
+                }
                 if (Text(e.Payload) == SaysOwn)
                 {
                     continue;

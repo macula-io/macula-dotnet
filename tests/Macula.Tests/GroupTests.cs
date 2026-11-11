@@ -224,9 +224,12 @@ public abstract class GroupTests(TestStations stations)
         using var reading = new CancellationTokenSource(timeout);
         try
         {
-            await foreach (var e in subscription.ReadAllAsync(reading.Token))
+            await foreach (var item in subscription.ReadAllAsync(reading.Token))
             {
-                return e;
+                if (item is MeshEvent e)
+                {
+                    return e;
+                }
             }
         }
         catch (OperationCanceledException)

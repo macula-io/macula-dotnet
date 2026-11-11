@@ -22,26 +22,24 @@ gh release download "$tag" --repo "$repo" --dir "$download" \
 (cd "$download" && sha256sum --check --strict SHA256SUMS)
 gh attestation verify "$download/macula.h" --repo "$repo" > /dev/null
 # The header the release was built from must be the one this binding is
-# written against: Native/Libmacula.cs binds cabi/macula.h's ABI.
+# written against: abi/macula.h is the release's own header at the release
+# abi/MACULA_GO_REF names, the binding reads the ABI and the wire out of it
+# when it builds (Macula.csproj, GenerateMaculaAbi), and it binds
+# cabi/macula.h's declarations. So the two files are the same file, not merely
+# two that agree on two numbers.
+if ! cmp -s "$download/macula.h" "$root/abi/macula.h"; then
+  echo "fetch_libmacula.sh: $tag's macula.h is not abi/macula.h (abi/MACULA_GO_REF)" >&2
+  exit 1
+fi
 header_abi=$(awk '$1 == "#define" && $2 == "MACULA_ABI_VERSION" { print $3 }' "$download/macula.h")
-binding_abi=$(awk -F'= ' '/internal const int AbiVersion/ { gsub(";", "", $2); print $2 }' "$root/src/Macula/Native/Libmacula.cs")
-if [ "$header_abi" != "$binding_abi" ]; then
-  echo "fetch_libmacula.sh: $tag's macula.h is ABI $header_abi, the binding is ABI $binding_abi" >&2
-  exit 1
-fi
-# The wire the release speaks, against the one the binding is written for.
-# The whole string is compared, where the load path refuses another major
-# only (AcceptsWire, NativeCall): a pin names one macula-go release, and what
-# a build lays out under native/ has to be the release the binding was
-# written and verified against, not merely one of the same wire major, which
-# is all a library a caller puts beside the package has to be.
+# The wire the release speaks. The whole string is compared, where the load
+# path refuses another major only (AcceptsWire, NativeCall): a pin names one
+# macula-go release, and what a build lays out under native/ has to be the
+# release the binding was written and verified against, not merely one of the
+# same wire major, which is all a library a caller puts beside the package has
+# to be.
 header_wire=$(awk '$1 == "#define" && $2 == "MACULA_WIRE_VERSION" { gsub(/"/, "", $3); print $3 }' "$download/macula.h")
-binding_wire=$(awk -F'"' '/internal const string WireVersion/ { print $2 }' "$root/src/Macula/Native/Libmacula.cs")
-if [ "$header_wire" != "$binding_wire" ]; then
-  echo "fetch_libmacula.sh: $tag's macula.h is wire $header_wire, the binding is wire $binding_wire" >&2
-  exit 1
-fi
-echo "verified macula.h ($tag): ABI $header_abi, wire $header_wire"
+echo "verified macula.h ($tag): ABI $header_abi, wire $header_wire, the header abi/macula.h holds"
 
 # release file, runtime id, the name .NET loads
 while read -r file rid name; do

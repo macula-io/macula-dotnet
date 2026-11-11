@@ -44,4 +44,47 @@
     <InternalsVisibleTo Include="Macula.Tests" />
   </ItemGroup>
 
+  <!--
+    The ABI and the wire this binding is written against, read from the header
+    the release ships (abi/macula.h, at abi/MACULA_GO_REF) rather than written
+    as a literal here: a header that moves to another ABI moves this binding
+    with it in the same commit, and nothing can edit one and forget the other.
+    scripts/fetch_libmacula.sh refuses a release whose header is not this one.
+  -->
+  <PropertyGroup>
+    <MaculaAbiHeader>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../abi/macula.h'))</MaculaAbiHeader>
+  </PropertyGroup>
+
+  <!--
+    IntermediateOutputPath is set when the SDK's targets are imported, after
+    this file is read, so the source's path is spelled out in the target's
+    Inputs/Outputs and built inside it rather than in an outer PropertyGroup.
+  -->
+  <Target Name="GenerateMaculaAbi" BeforeTargets="CoreCompile"
+          Inputs="$(MaculaAbiHeader)" Outputs="$(IntermediateOutputPath)MaculaAbi.g.cs">
+    <PropertyGroup>
+      <_MaculaSource>$(IntermediateOutputPath)MaculaAbi.g.cs</_MaculaSource>
+      <_MaculaHeader>$([System.IO.File]::ReadAllText('$(MaculaAbiHeader)'))</_MaculaHeader>
+      <_MaculaAbi>$([System.Text.RegularExpressions.Regex]::Match($(_MaculaHeader), '#define MACULA_ABI_VERSION (\d+)').Groups[1].Value)</_MaculaAbi>
+      <_MaculaWire>$([System.Text.RegularExpressions.Regex]::Match($(_MaculaHeader), '#define MACULA_WIRE_VERSION "([^"]+)"').Groups[1].Value)</_MaculaWire>
+    </PropertyGroup>
+    <Error Condition="'$(_MaculaAbi)' == '' or '$(_MaculaWire)' == ''"
+           Text="$(MaculaAbiHeader) does not define MACULA_ABI_VERSION and MACULA_WIRE_VERSION" />
+    <ItemGroup>
+      <_MaculaAbiLines Include="// &lt;auto-generated /&gt; The ABI and the wire, read from abi/macula.h at build time." />
+      <_MaculaAbiLines Include="// Editing this file does nothing: the header is the source, and GenerateMaculaAbi writes this." />
+      <_MaculaAbiLines Include="namespace Macula.Native%3B" />
+      <_MaculaAbiLines Include="internal static partial class Libmacula" />
+      <_MaculaAbiLines Include="{" />
+      <_MaculaAbiLines Include="    internal const int AbiVersion = $(_MaculaAbi)%3B" />
+      <_MaculaAbiLines Include="    internal const string WireVersion = &quot;$(_MaculaWire)&quot;%3B" />
+      <_MaculaAbiLines Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_MaculaSource)" Lines="@(_MaculaAbiLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(_MaculaSource)" />
+      <FileWrites Include="$(_MaculaSource)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

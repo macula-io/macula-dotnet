@@ -94,13 +94,13 @@ internal static class Sealing
     }
 
     // A served procedure's options as macula_pool_serve_opts and macula_pool_serve_stream_opts take them.
-    internal static string ServeOptionsJson(AuthPolicy? policy, ServedConfidential? confidential)
+    // The policy is always sent: ABI 2 refuses options that name none (macula-go#57, #60), so serving anyone
+    // is said out loud with Open. A null policy never reaches the library: it is refused here, before a
+    // handle exists and before any station hears of the procedure.
+    internal static string ServeOptionsJson(AuthPolicy policy, ServedConfidential? confidential)
     {
-        var json = new JsonObject();
-        if (policy is not null)
-        {
-            json["policy"] = policy.ToJson();
-        }
+        ArgumentNullException.ThrowIfNull(policy);
+        var json = new JsonObject { ["policy"] = policy.ToJson() };
         if (confidential is { } c)
         {
             json["confidential"] = Name(c);

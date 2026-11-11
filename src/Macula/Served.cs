@@ -148,14 +148,20 @@ public sealed partial class Pool
     /// (<see cref="OwnProcedure"/>), or under an org that delegated it to this node. Each call runs
     /// <paramref name="handler"/>, whose cancellation token ends at the call's deadline; its result is
     /// the reply, and an exception it throws answers the caller with a <c>handler_error</c> carrying the
-    /// exception's message. With a <paramref name="policy"/>, only calls whose UCAN it accepts reach the
-    /// handler; the rest are answered <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/>
+    /// exception's message.
+    /// <para>
+    /// <paramref name="policy"/> is required, and names who may call: <see cref="Open"/> serves anyone, and
+    /// <see cref="UcanRequired"/> or <see cref="RealmMemberRequired"/> admits only a call whose UCAN it accepts,
+    /// answered <c>unauthorized</c> otherwise (<see cref="AuthPolicy"/>). There is no default, so advertising a
+    /// procedure to the whole mesh is a line in the source rather than an argument left out.
+    /// </para>
+    /// <paramref name="confidential"/>
     /// says whether it is sealed (<see cref="ServedConfidential"/>; the library's default, Preferred, when null), and
     /// <see cref="Request.Sealed"/> whether a call came sealed. Returns once a station has accepted the advertisement; a refusal, or no
     /// answer within 30 seconds, throws a <see cref="RefusedException"/> naming the station's reason and the station.
     /// </summary>
     public unsafe Served Serve(MeshId realm, string procedure, Func<Request, CancellationToken, ValueTask<JsonNode?>> handler,
-        AuthPolicy? policy = null, ServedConfidential? confidential = null)
+        AuthPolicy policy, ServedConfidential? confidential = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);
         ArgumentNullException.ThrowIfNull(handler);
@@ -173,13 +179,14 @@ public sealed partial class Pool
     /// <summary>
     /// Serves <paramref name="procedure"/> in <paramref name="realm"/> as a stream of
     /// <paramref name="mode"/>. Each session runs <paramref name="handler"/> with its stream, which is closed
-    /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>. With a
-    /// <paramref name="policy"/>, only opens whose UCAN it accepts start a session; the rest are refused with
-    /// a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/> as
-    /// <see cref="Serve"/>'s, and so is the wait for a station's acceptance.
+    /// when the handler returns; an exception it throws aborts the stream with <c>handler_error</c>.
+    /// <paramref name="policy"/> as <see cref="Serve"/>'s: <see cref="Open"/> serves anyone, and a UCAN policy
+    /// admits only an open whose chain it accepts, judging every open rather than the first, and refusing the
+    /// rest with a stream error of code <c>unauthorized</c> (<see cref="AuthPolicy"/>). <paramref name="confidential"/>
+    /// as <see cref="Serve"/>'s, and so is the wait for a station's acceptance.
     /// </summary>
     public unsafe Served ServeStream(MeshId realm, string procedure, StreamMode mode,
-        Func<MeshStream, CancellationToken, Task> handler, AuthPolicy? policy = null,
+        Func<MeshStream, CancellationToken, Task> handler, AuthPolicy policy,
         ServedConfidential? confidential = null)
     {
         ArgumentNullException.ThrowIfNull(procedure);

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Macula.Native;
 
-// libmacula's C ABI as macula-go's cabi/macula.h declares it (ABI 1), one
+// libmacula's C ABI as macula-go's cabi/macula.h declares it (ABI 2), one
 // declaration per function, in the header's order. cabi/CONTRACT.md says what
 // each means; this file only binds them. A returned char* or uint8_t* is
 // freed with macula_free_string / macula_free_bytes (NativeText, NativeBytes),
@@ -13,14 +13,14 @@ internal static unsafe partial class Libmacula
     // macula.dll would be the managed Macula.dll beside it.
     internal const string Library = "libmacula";
 
-    // The ABI this binding is written against: MACULA_ABI_VERSION.
-    internal const int AbiVersion = 1;
-
-    // The wire this binding is written against: MACULA_WIRE_VERSION, which
-    // macula.h defines beside the ABI. libmacula says which wire it speaks
-    // (macula_wire_version), and the binding refuses any other major
-    // (AcceptsWire, NativeCall).
-    internal const string WireVersion = "1.0";
+    // AbiVersion (MACULA_ABI_VERSION) and WireVersion (MACULA_WIRE_VERSION) are
+    // written into this class when the package builds, read from abi/macula.h,
+    // the header the release at abi/MACULA_GO_REF ships (Macula.csproj,
+    // GenerateMaculaAbi). The header is the source of truth for both: a header
+    // that moves to another ABI moves this binding in the same commit, and
+    // scripts/fetch_libmacula.sh refuses a release whose header is not this one.
+    // libmacula says which ABI and which wire it speaks (macula_abi_version,
+    // macula_wire_version), and the load path refuses any other (NativeCall).
 
     // Whether a library reporting this wire is one this binding can speak.
     // Another major is another wire, and every 1.x peer shares the frozen core,
@@ -42,25 +42,24 @@ internal static unsafe partial class Libmacula
         return dot < 0 ? wire : wire[..dot];
     }
 
-    // The oldest macula-go release this package ships a library from, and so
-    // the oldest one that can be beside this assembly: v0.27.0-rc.3's libmacula
-    // speaks wire 1.0, says so, and carries the sealed group calls. Every
-    // earlier release speaks an older wire, and is refused by name when the
-    // library is loaded (NativeCall), rather than by guessing at what it
-    // exports. A release that speaks *this* wire and still predates the floor
-    // is caught by the one export the floor stands for (FloorExport), not by
-    // its number: v0.27.0-rc.1 and rc.2 are ABI 1 and wire 1.0, so nothing
-    // else here would notice them, and their first group call would die on the
-    // declaration instead of on a MaculaException. Probing one symbol is sound
-    // for a capability, and was unsound as the old wire floor: a library that
-    // exports a function says nothing about the wire it reaches, which is why
-    // the wire check replaced that. Older releases are also the ones missing
-    // the bounds this package relies on: handshake v5's channel binding
-    // (v0.20.0), SecP384r1MLKEM1024 alone so no station can land it on
-    // SecP256r1MLKEM768 (v0.23.0, macula-go#20), and the refusal of a UCAN
-    // whose issuer did:key is over 4,400 characters before decoding it
+    // The oldest macula-go release this package ships a library from, and so the
+    // oldest one that can be beside this assembly: v0.31.0, whose libmacula is
+    // ABI 2, speaks wire 1.0, says so, and carries the sealed group calls.
+    // ABI 2 is what this binding is written for, and it is the release a serve
+    // names its policy in: its serve options refuse one that names none
+    // (macula-go#57, #60), and macula_pool_serve and macula_pool_serve_stream,
+    // which served anyone when an argument was left out, are gone from the
+    // header. Every earlier release is refused by name when the library is
+    // loaded (NativeCall), by its ABI rather than by guessing at what it
+    // exports. A release that is ABI 2 and still predates the floor is caught
+    // by the one export the floor stands for (FloorExport): probing a symbol is
+    // sound for a capability where a release number is not. Older releases are
+    // also the ones missing the bounds this package relies on: handshake v5's
+    // channel binding (v0.20.0), SecP384r1MLKEM1024 alone so no station can
+    // land it on SecP256r1MLKEM768 (v0.23.0, macula-go#20), and the refusal of
+    // a UCAN whose issuer did:key is over 4,400 characters before decoding it
     // (v0.26.0, macula#87) that an older library would spend CPU on.
-    internal const string LibraryFloor = "v0.27.0-rc.3";
+    internal const string LibraryFloor = "v0.31.0";
 
     // The call the floor stands for, asked of the library itself as it loads
     // (NativeCall). v0.27.0-rc.1 gained macula_wire_version, so a library that

@@ -39,7 +39,7 @@ public sealed class PoolTests(TestStations stations)
                 ["raw"] = Payload.Bytes([1, 2, 255]),
                 ["max"] = long.MaxValue,
             });
-        });
+        }, policy: new Open());
         var result = await caller.CallAsync(stations.Realm, procedure, new JsonObject { ["n"] = 9007199254740993 },
             new CallOptions { Timeout = Patience });
         Assert.Equal(9007199254740993, result!["n"]!.GetValue<long>());
@@ -56,7 +56,7 @@ public sealed class PoolTests(TestStations stations)
         await using var caller = await stations.JoinAsync("disappointed caller", station: 1);
         var procedure = provider.OwnProcedure("fail");
         await using var served = provider.Serve(stations.Realm, procedure,
-            (_, _) => throw new InvalidOperationException("no such thing"));
+            (_, _) => throw new InvalidOperationException("no such thing"), policy: new Open());
         var error = await Assert.ThrowsAsync<ProviderErrorException>(() =>
             caller.CallAsync(stations.Realm, procedure, null, new CallOptions { Timeout = Patience }));
         Assert.Equal("handler_error", error.Code);
@@ -70,7 +70,7 @@ public sealed class PoolTests(TestStations stations)
         await using var caller = await stations.JoinAsync("boolean caller", station: 1);
         var procedure = provider.OwnProcedure("yes");
         await using var served = provider.Serve(stations.Realm, procedure,
-            (_, _) => ValueTask.FromResult<JsonNode?>(JsonValue.Create(true)));
+            (_, _) => ValueTask.FromResult<JsonNode?>(JsonValue.Create(true)), policy: new Open());
         var error = await Assert.ThrowsAsync<ProviderErrorException>(() =>
             caller.CallAsync(stations.Realm, procedure, null, new CallOptions { Timeout = Patience }));
         Assert.Contains("boolean", error.Detail);
@@ -97,7 +97,7 @@ public sealed class PoolTests(TestStations stations)
         {
             await release.Task.WaitAsync(token);
             return null;
-        });
+        }, policy: new Open());
 
         using var cancel = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         var started = DateTime.UtcNow;
@@ -131,8 +131,8 @@ public sealed class PoolTests(TestStations stations)
             await Task.Delay(TimeSpan.FromSeconds(2.5), token);
             return "answered";
         };
-        await using var servedFirst = first.Serve(stations.Realm, procedure, slow);
-        await using var servedSecond = second.Serve(stations.Realm, procedure, slow);
+        await using var servedFirst = first.Serve(stations.Realm, procedure, slow, new Open());
+        await using var servedSecond = second.Serve(stations.Realm, procedure, slow, new Open());
         using var patience = new CancellationTokenSource(Patience);
         while ((await caller.ProvidersAsync(stations.Realm, procedure, Patience)).Count < 2)
         {
@@ -154,7 +154,7 @@ public sealed class PoolTests(TestStations stations)
         await stations.AdmitAsync(provider.NodeId);
         var procedure = stations.Org + "/greet";
         await using var served = provider.Serve(stations.Realm, procedure,
-            (_, _) => ValueTask.FromResult<JsonNode?>("hello"));
+            (_, _) => ValueTask.FromResult<JsonNode?>("hello"), policy: new Open());
         using var patience = new CancellationTokenSource(Patience);
         while (true)
         {
@@ -194,7 +194,7 @@ public sealed class PoolTests(TestStations stations)
             publisher.Publish(stations.Realm, "dotnet.news", new JsonObject { ["headline"] = "cabi" });
             await Task.WhenAny(heard, Task.Delay(200, patience.Token));
         }
-        var e = (await heard)!;
+        var e = Assert.IsType<MeshEvent>((await heard)!);
         Assert.Equal("cabi", e.Payload!["headline"]!.GetValue<string>());
         Assert.Equal(publisher.NodeId, e.Publisher);
         Assert.Equal(0UL, subscription.Dropped);
@@ -217,7 +217,7 @@ public sealed class PoolTests(TestStations stations)
         {
             stream.Send("one"u8);
             return Task.CompletedTask;
-        });
+        }, policy: new Open());
         await using var opened = await caller.OpenStreamAsync(stations.Realm, procedure, StreamMode.Server, timeout: Patience);
         var frames = new List<StreamFrame>();
         using var patience = new CancellationTokenSource(Patience);
@@ -248,7 +248,7 @@ public sealed class PoolTests(TestStations stations)
                     return;
                 }
             }
-        });
+        }, policy: new Open());
         await using var opened = await caller.OpenStreamAsync(stations.Realm, procedure, StreamMode.Client, timeout: Patience);
         opened.Send("first"u8);
         await took.Task.WaitAsync(Patience);
@@ -278,7 +278,7 @@ public sealed class PoolTests(TestStations stations)
             stream.Send([7, 8]);
             stream.Reply("done");
             return Task.CompletedTask;
-        });
+        }, policy: new Open());
         await using var opened = await caller.OpenStreamAsync(stations.Realm, procedure, StreamMode.Server,
             new JsonObject { ["to"] = 2 }, timeout: Patience);
         var frames = new List<StreamFrame>();

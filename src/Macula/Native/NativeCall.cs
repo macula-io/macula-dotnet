@@ -35,6 +35,28 @@ internal static class NativeCall
     // Loads and checks libmacula on first use.
     internal static void EnsureLoaded() => _ = Loaded.Value;
 
+    /// <summary>
+    /// The ABI the library this process loaded reports, once the load path has accepted it; -1 until then. It is
+    /// what <see cref="RefuseAnotherAbi"/> answered, so a test reads the number the load path itself checked rather
+    /// than a number written beside it.
+    /// </summary>
+    internal static int CheckedAbi { get; private set; } = -1;
+
+    /// <summary>
+    /// <paramref name="libraryAbi"/> when it is the ABI this package is written against (abi/macula.h's
+    /// MACULA_ABI_VERSION), and a <see cref="MaculaException"/> naming both when it is not. Called by the load path
+    /// with what libmacula reports (Load); a library of another ABI is refused before any call is made into it.
+    /// </summary>
+    internal static int RefuseAnotherAbi(int libraryAbi)
+    {
+        if (libraryAbi != Libmacula.AbiVersion)
+        {
+            throw new MaculaException(ErrorKind.Failed,
+                $"libmacula is ABI {libraryAbi}, and this Macula package is written against ABI {Libmacula.AbiVersion}");
+        }
+        return libraryAbi;
+    }
+
     // The load and the checks, once; true when the library may be used. What
     // this throws, the caller gets (EnsureLoaded).
     private static bool Load()
@@ -49,11 +71,7 @@ internal static class NativeCall
         var library = Resolve(Libmacula.Library, typeof(NativeCall).Assembly, null);
         suspension?.Restore();
         var version = Libmacula.macula_abi_version();
-        if (version != Libmacula.AbiVersion)
-        {
-            throw new MaculaException(ErrorKind.Failed,
-                $"libmacula is ABI {version}, and this Macula package is written against ABI {Libmacula.AbiVersion}");
-        }
+        CheckedAbi = RefuseAnotherAbi(version);
         // Which wire the library links, said by the library itself rather than
         // inferred from the functions it happens to export (cabi/CONTRACT.md
         // "Version", macula-go#18, #30): another major reaches no station this
